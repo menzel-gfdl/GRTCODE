@@ -169,15 +169,17 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Water Concentration.  Default reads from INPUT.NC, else supply global"
-     " PartialPressure(atm) value",
+     " value (ppmv).  Layer partial pressure = (layer pressure)*"
+     "(water concentration/10^6).",
      -2},
 
     {"co2",
      '2',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Carbon Dioxide Concentration.  Supply global PartialPressure(atm)"
-     " value",
+     "Carbon Dioxide Concentration.  Supply global value (ppmv)."
+     "   Layer partial pressure = (layer pressure)*"
+     "(carbon dioxide concentration/10^6).",
      -2},
 
     {"o3",
@@ -185,36 +187,44 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Ozone Concentration.  Default reads from INPUT.NC, else supply global"
-     " PartialPressure(atm) value",
+     " value (ppmv).  Layer partial pressure = (layer pressure)*"
+     "(ozone concentration/10^6).",
      -2},
 
     {"n2o",
      '4',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Nitrous Oxide. Supply global PartialPressure(atm) value",
+     "Nitrous Oxide. Supply global value (ppmv)."
+     "  Layer partial pressure = (layer pressure)*"
+     "(nitrous oxide concentration/10^6).",
      -2},
 
     {"co",
      '5',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Carbon Monoxide Concentration.  Supply global PartialPressure(atm)"
-     " value",
+     "Carbon Monoxide Concentration.  Supply global value (ppmv)."
+     "  Layer partial pressure = (layer pressure)*"
+     "(carbon monoxide concentration/10^6).",
      -2},
 
     {"ch4",
      '6',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Methane Conentration.  Supply PartialPressure(atm) global value",
+     "Methane Conentration.  Supply global value (ppmv)."
+     "  Layer partial pressure = (layer pressure)*"
+     "(methane concentration/10^6).",
      -2},
 
     {"o2",
      '7',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Oxygen Concentration.  Supply PartialPressure(atm) global value",
+     "Oxygen Concentration.  Supply global value (ppmv)."
+     "  Layer partial pressure = (layer_pressure)*"
+     "(oxygen concentration/10^6).",
      -2},
 
     {"ctm",
@@ -488,21 +498,12 @@ static void setGlobalPartialPres(double val,
                 /* get an offset for this t,lat,lon,mol */
                 ps_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
                          lon*NUM_MOL*nlvl + ps_off_mol;
-
-                /*RLM BUGFIX: Need to multiply the concentration by the
-                  layer pressure.*/
                 p_off = time*(nlat*nlon*nlvl) + lat*(nlon*nlvl) + lon*nlvl;
 
                 /* itr over levels */
                 for (itr=0;itr<nlvl;++itr)
                 {
-/*
-                    PS[ps_off + itr] = val;
-*/
-
-                    /*RLM BUGFIX: Need to multiply the concentration by the
-                      layer pressure.*/
-                    PS[ps_off+itr] = val*P[p_off+itr];
+                    PS[ps_off+itr] = (val/1.e6)*P[p_off+itr];
                 }
             }
         }
@@ -513,26 +514,19 @@ static void setGlobalPartialPres(double val,
 
 /*---------------------------------------------------------------------------*/
 /*Calculate the number density (1/cm^3) of the molecule from the ideal gas
-  law.  The quantity P_atm is the pressure (atm).  The quantity V_cm3 is the
-  volume (cm^3).  The quantity T_k is the temperature (K).*/
+  law.  The quantity P_atm is the pressure (atm).  The quantity T_k is the
+  temperature (K).*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
 REAL_t idealGasNumberDensity(const REAL_t P_atm,
-                             const REAL_t V_cm3,
                              const REAL_t T_k)
 {
     /*Local variables*/
     const REAL_t R = 82.057338; /*Gas constant (cm^3*atm*K^-1*mol^-1).*/
     const REAL_t AV = 6.022E23; /*Avagadro's number (1/mol).*/
 
-    return P_atm*V_cm3*AV/(R*T_k);
-
-/*
-    RLM BUG FIX: do not multipy by the volume.  Number density is per
-    volume.
-    return P_atm*AV/(R*T_k);
-*/
+    return (P_atm*AV)/(R*T_k);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -565,7 +559,7 @@ static void setGlobalNumberDensity(REAL_t* const N,
         {
             for(lon=0;lon<nlon;++lon)
             {
-                /* get an offset for this t,lat,lon,mol */
+                /*Get the array offsets.*/
                 off = time*nlat*nlon*nlvl + lat*nlon*nlvl + lon*nlvl;
                 n_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
                         lon*NUM_MOL*nlvl + n_off_mol;
@@ -573,10 +567,7 @@ static void setGlobalNumberDensity(REAL_t* const N,
                 /*Loop over the pressure layers.*/
                 for (itr=0;itr<nlvl;++itr)
                 {
-                    /* uses ideal gas law, but there is an implied "unit area" so V became 1 */
-                    /* DEPENDS units */
                     N[n_off + itr] = idealGasNumberDensity(PartialPres[n_off+itr],
-                                                           1.,
                                                            T[off+itr]);
                 }
             }
@@ -587,6 +578,8 @@ static void setGlobalNumberDensity(REAL_t* const N,
 }
 
 /*---------------------------------------------------------------------------*/
+/*Calculate the molecular parital pressures (atm) and number densities
+  (1/cm^3).*/
 static void checkMolConfig(struct arguments* args,
                            const unsigned int molid,
                            radiationOutputFields_t* atmosData,
@@ -599,10 +592,10 @@ static void checkMolConfig(struct arguments* args,
     const size_t nlvl = atmosData->npfull; /*Number of pressure layers.*/
     int abort = 0;                         /*Abort flag.*/
 
-    /*Calculate the partial pressure for the molecule.  If the molecule is
-      either h2o or o3 and the concentration was not specified on the command
-      line (or the value of 'a' was given), then the partial pressure that
-      was previously read in from the inputted NetCDF file is used.*/
+    /*Calculate the partial pressure (atm) for the molecule.  If the molecule
+      is either h2o or o3 and the concentration was not specified on the
+      command line (or the value of 'a' was given), then the partial pressure
+      that was previously calculated from the inputted NetCDF file is used.*/
     switch(molid)
     {
         case 1:
@@ -763,18 +756,6 @@ static void checkMolConfig(struct arguments* args,
                            nlat,
                            nlon,
                            nlvl);
-
-/*
-    RLM DEBUG: print to check units.
-    printf("Mol ID:                  %d\n",molid);
-    printf("Number density (1/cm^3): %e\n",(atmosData->N)[1]);
-    printf("Pressure (atm):          %e\n",(atmosData->P)[1]);
-    printf("Temperature (K):         %e\n",(atmosData->T)[1]);
-    printf("Delta z (cm):            %e\n",(atmosData->DELTAZ)[1]);
-    printf("Partial pressure (atm):  %e\n",(atmosData->PS)[1]);
-    printf("\n");
-    exit(EXIT_SUCCESS);
-*/
 
     return;
 }

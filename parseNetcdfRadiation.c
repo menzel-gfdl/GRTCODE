@@ -243,17 +243,6 @@ int readInputFieldsFromFile(char fname[],
         NCERR(retval);
     }
 
-/*
-    RLM DEBUG: print values of radiation input fields.
-    printf("\n");
-    printf("Radiation input fields [1]:\n");
-    printf("RH2O (kg/kg): %e\n",(in->RH2O)[1]);
-    printf("Q03 (kg/kg):  %e\n",(in->QO3)[1]);
-    printf("DPFLUX (hPa): %e\n",(in->DPFLUX)[1]);
-    printf("PRESSM (Pa):  %e\n",(in->PRESSM)[1]);
-    printf("TEMP (K):     %e\n",(in->TEMP)[1]);
-    printf("DELTAZ (m):   %e\n",(in->DELTAZ)[1]);
-*/
     return EXIT_SUCCESS;
 }
 
@@ -511,18 +500,6 @@ int setOutputFields(radiationInputFields_t *in,
     /*Free the radiation input fields.*/
     radiationInputFieldsFree(in);
 
-/*
-    RLM DEBUG: print values of radiation input fields.
-    printf("\n");
-    printf("Radiation output fields [1]:\n");
-    printf("P (atm):     %e\n",(out->P)[1]);
-    printf("T (K):       %e\n",(out->T)[1]);
-    printf("DELTAZ (cm): %e\n",(out->DELTAZ)[1]);
-    printf("PS (atm):    %e\n",(out->PS)[1]);
-    printf("P (Pa):      %e\n",((out->P)[1])/9.86923E-6);
-    printf("DELTAZ (m):  %e\n",((out->DELTAZ)[1])/100.);
-*/
-
     return EXIT_SUCCESS;
 }
 
@@ -555,7 +532,7 @@ int getAndSetAtmosFieldsFromFile(char fname[],
     setOutputFields(&in,
                     out);
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
 /*---------------------------------------------------------------------------*/
