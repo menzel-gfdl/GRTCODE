@@ -2,7 +2,7 @@
 
 CC = cc
 NVCC = nvcc
-CFLAGS = ' -Wall -Wextra -g -O0 '
+CFLAGS = ' -Wall -Wextra -Wno-missing-field-initializers -g -O0 '
 CLIBS = -lnetcdf -lhdf5 -lhdf5_hl
 CFLAGS += $(CLIBS)
 NVCCFLAGS = --compiler-options $(CFLAGS) -g -O0

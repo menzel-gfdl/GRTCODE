@@ -11,7 +11,8 @@
 #define NCERR(e) {fprintf(stderr, "Error: %s\n", nc_strerror(e)); exit(EXIT_FAILURE);}
 
 /*---------------------------------------------------------------------------*/
-/*Read in the optical depth from the grtcode NetCDF output file.*/
+/*Read in the optical depth from the grtcode NetCDF output file.  The smallest
+  wavenumber in the file is one, not zero like the RFM reference.*/
 int readOpticalDepthFromGrtcodeFile(char fname[],
                                     OpticalDepth_t *GrtOutput)
 {
@@ -175,7 +176,8 @@ int readOpticalDepthFromGrtcodeFile(char fname[],
 }
 
 /*---------------------------------------------------------------------------*/
-/*Read in the optical depth from the RFM output file.*/
+/*Read in the optical depth from the RFM output file. These optical depth
+  values include values calculated at wavenumber = 0.*/
 int readOpticalDepthFromRfmFile(char fname[],
                                 OpticalDepth_t *RfmOutput,
                                 size_t num_layers,
