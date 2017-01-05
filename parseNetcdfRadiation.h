@@ -20,42 +20,72 @@
 
 #include "myreal.h"
 
-typedef struct radiationInputFields_t {
-  float* RH2O;
-  float* QO3;
-  float* DPFLUX;
-  float* PRESSM;
-  float* TEMP;
-  float* DELTAZ;
-  size_t nlat;
-  size_t nlon;
-  size_t npfull;
-  size_t nphalf;
-  size_t ntime;
+/*Notes on units in the input NetCDF files:
+    time = Days since 01/01/1982 (days).
+    lat = Latitude grid points (degrees eastward from ???).
+    lon = longitude grid points (degrees northward from ???).
+    pfull = Array of pressure layers (hPa).
+    phalf = Array of pressure layer interfaces (hPa). This array is one bigger
+            than pfull.
+
+    The input arrays are stored as (time,pressure,lat,lon).
+*/
+typedef struct radiationInputFields_t
+{
+    float* RH2O;   /*Layer water vapor mixing ratios (kg/kg).*/
+    float* QO3;    /*Layer ozone mixing ratios (kg/kg).*/
+    float* DPFLUX; /*Radiation flus layer thicknesses [(dP/dz)*delta_z] (hPa).*/
+    float* PRESSM; /*Layer pressures (Pa).*/
+    float* TEMP;   /*Layer Temperatures (K).*/
+    float* DELTAZ; /*Layer thicknesses [delta_z] (m).*/
+    size_t nlat;   /*Number of latitude grid points.*/
+    size_t nlon;   /*Number of longitude grid points.*/
+    size_t npfull; /*Number of pressure layers.*/
+    size_t nphalf; /*Number of pressure layer interfaces.*/
+    size_t ntime;  /*Number of time grid points.*/
 } radiationInputFields_t;
 
-typedef struct radiationOutputFields_t {
-  REAL_t* N;
-  REAL_t* P;
-  REAL_t* T;
-  REAL_t* DELTAZ;
-  REAL_t* PS;
-  size_t nlat;
-  size_t nlon;
-  size_t npfull;
-  size_t nphalf;
-  size_t ntime;
+/*Notes on units in the radiation output fields.:
+    The output arrays are stored as (time,lat,lon,pressure).
+*/
+typedef struct radiationOutputFields_t
+{
+    REAL_t* N;      /*Layer molecular number densities (1/cm^3).*/
+    REAL_t* P;      /*Layer pressures (atm).*/
+    REAL_t* T;      /*Layer temperatures (K).*/
+    REAL_t* DELTAZ; /*Layer thicknesses (cm).*/
+    REAL_t* PS;     /*Layer parital pressures (atm).*/
+    size_t nlat;    /*Number of latitude grid points.*/
+    size_t nlon;    /*Number of longitude grid points.*/
+    size_t npfull;  /*Number of pressure layers.*/
+    size_t nphalf;  /*NUmber of pressure layer interfaces.*/
+    size_t ntime;   /*NUmber of time grid points.*/
 } radiationOutputFields_t;
 
 int radiationInputFieldsMalloc(radiationInputFields_t* in);
+
 int radiationOutputFieldsMalloc(radiationOutputFields_t* out);
+
 int radiationInputFieldsFree(radiationInputFields_t* in);
+
 int radiationOutputFieldsFree(radiationOutputFields_t* out);
-int readInputFieldsFromFile(char fname[], radiationInputFields_t* in);
-REAL_t getNumberDensity( const REAL_t rh2o , const REAL_t dpflux, const int hitranMolId );
-REAL_t getPartialPres(REAL_t rh2o, REAL_t pressm, const REAL_t molarMass);
-int setOutputFields(radiationInputFields_t *in, radiationOutputFields_t *out);
-int getAndSetAtmosFieldsFromFile(char fname[], radiationOutputFields_t* out);
+
+int readInputFieldsFromFile(char fname[],
+                            radiationInputFields_t* in);
+
+REAL_t getNumberDensity(const REAL_t rh2o,
+                        const REAL_t dpflux,
+                        const int hitranMolId);
+
+REAL_t getPartialPres(REAL_t rh2o,
+                      REAL_t pressm,
+                      const REAL_t molarMass);
+
+int setOutputFields(radiationInputFields_t *in,
+                    radiationOutputFields_t *out);
+
+int getAndSetAtmosFieldsFromFile(char fname[],
+                                 radiationOutputFields_t* out);
 
 int test(char fname[]);
 

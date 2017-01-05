@@ -34,435 +34,733 @@
 #include "voigt.h"
 #include "continuum.h"
 
-/* begin data structure helpers */
 
-/* these happen to be HITRAN_MOLID-1 ...*/
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*Helper data structures.*/
+
+/*These are equal to HITRAN_MOLID-1.*/
 typedef enum MoleculeNumber_t
 {
-  H2O = 0,
-  CO2 = 1,
-  O3  = 2,
-  N2O = 3,
-  CO  = 4,
-  CH4 = 5,
-  O2  = 6,
-  NUM_MOL = 7
+    H2O = 0,
+    CO2 = 1,
+    O3  = 2,
+    N2O = 3,
+    CO  = 4,
+    CH4 = 5,
+    O2  = 6,
+    NUM_MOL = 7
 } MoleculeNumber_t;
 
-/* end data structures helpers */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*Argp variables and functions.*/
 
-/* for argp doc */
+/*---------------------------------------------------------------------------*/
+/*Set argp variables.*/
+
 const char *argp_program_version = "lbl-dev 0.1";
 const char *argp_program_bug_address = "<garrett.wright@noaa.gov>";
 static char doc[] = "GFDL style documentation goes >/\n\n\\"
-    "<^here.\n\v"
-    "Other Documentation goes here.";
-/* A description of the arguments we accept. */
+                    "<^here.\n\v"
+                    "Other Documentation goes here.";
 #define minNhitfiles 1
 #define maxNhitfiles NUM_MOL
 static const unsigned int minNargs=minNhitfiles;
 static const unsigned int maxNargs=maxNhitfiles;
-static char args_doc[] = "-aINPUT.nc -oOUT.nc [molecule concentration specifications] HITFILES";
-/* options we'd like to understand */
-static struct argp_option options[] = {
-  {"verbose", 'v', 0, 0, "Opens the elevator door"},
-  {"quiet",   'q', 0, 0, "Closes the elevator door"},
-  {"silent",  's', 0, OPTION_ALIAS },
-  {"device",  'd', "VAL", OPTION_ARG_OPTIONAL, "Use gpu implimentation on specifed DEVICE. "
-   "\n\tDefault DEVICE is simply GPU0"
-   "\n\tIncompatible with --host."
-   "\n\t --mpi modifies this flag to prescribe numDevices per node."},
-  {"host",    'h', 0, 0, "Use HOST cpu implimentation. \n\t(incompatible with --device)"},
-  {"mpi",     'M', 0, 0, "Use MPI: Ranks taken from MPI_Comm_World. (Must be compiled for MPI!)"},
-  {"output",  'o', "FILE", 0, "Output to FILE" },
-  {"atmos",   'a', "INPUT.NC", 0,"NC file containing model atmosphere."},
-  {"minw",    'w', "VAL", OPTION_ARG_OPTIONAL, "minimum Wavenumber (lower bound, inclusive), defaults 1", -3},
-  {"maxw",    'W', "VAL", OPTION_ARG_OPTIONAL, "maximum Wavenumber (upper bound, inclusive), defaults 50000", -3},
-  {"mint",    't', "VAL", OPTION_ARG_OPTIONAL, "minimum time (lower bound, inclusive), defaults 0", -3},
-  {"maxt",    'T', "VAL", OPTION_ARG_OPTIONAL, "maximum time (upper bound, inclusive), defaults 0", -3},
-  {"res",     'r', "VAL", OPTION_ARG_OPTIONAL, "Resolution (wavenumber), defaults 1.0", -3},
-  {"wings",   'c', "VAL", OPTION_ARG_OPTIONAL, "Wings cutoff (+/- integer wavenumber), defaults 25", -3},
-  {"h2o",     '1', "VAL", OPTION_ARG_OPTIONAL, "Water Concentration.  Default reads from INPUT.NC, else supply global PartialPressure(atm) value",-2},
-  {"co2",     '2', "VAL", OPTION_ARG_OPTIONAL, "Carbon Dioxide Concentration.  Supply global PartialPressure(atm) value",-2},
-  {"o3",      '3', "VAL", OPTION_ARG_OPTIONAL, "Ozone Concentration.  Default reads from INPUT.NC, else supply global PartialPressure(atm) value",-2},
-  {"n2o",     '4', "VAL", OPTION_ARG_OPTIONAL, "Nitrous Oxide. Supply global PartialPressure(atm) value",-2},
-  {"co",      '5', "VAL", OPTION_ARG_OPTIONAL, "Carbon Monoxide Concentration.  Supply global PartialPressure(atm) value",-2},
-  {"ch4",     '6', "VAL", OPTION_ARG_OPTIONAL, "Methane Conentration.  Supply PartialPressure(atm) global value",-2},
-  {"o2",      '7', "VAL", OPTION_ARG_OPTIONAL, "Oxygen Concentration.  Supply PartialPressure(atm) global value",-2},
-  {"ctm",     'C', 0, 0, "Enables the continuum codes for testing",-1},
-  {0}
+static char args_doc[] = "-aINPUT.nc -oOUT.nc"
+                         " [molecule concentration specifications] HITFILES";
+
+/*Command line options.*/
+static struct argp_option options[] =
+{
+    {"verbose",
+     'v',
+     0,
+     0,
+     "Opens the elevator door"},
+
+    {"quiet",
+     'q',
+     0,
+     0,
+     "Closes the elevator door"},
+
+    {"silent",
+     's',
+     0,
+      OPTION_ALIAS},
+
+    {"device",
+     'd',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Use gpu implementation on specifed DEVICE."
+     "\n\tDefault DEVICE is simply GPU0"
+     "\n\tIncompatible with --host."
+     "\n\t --mpi modifies this flag to prescribe numDevices per node."},
+
+    {"host",
+     'h',
+     0,
+     0,
+     "Use HOST cpu implementation. \n\t(incompatible with --device)"},
+
+    {"mpi",
+     'M',
+     0,
+     0,
+     "Use MPI: Ranks taken from MPI_Comm_World. (Must be compiled for MPI!)"},
+
+    {"output",
+     'o',
+     "FILE",
+     0,
+     "Output to FILE"},
+
+    {"atmos",
+     'a',
+     "INPUT.NC",
+     0,
+     "NC file containing model atmosphere."},
+
+    {"minw",
+     'w',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "minimum Wavenumber (lower bound, inclusive), defaults 1",
+     -3},
+
+    {"maxw",
+     'W',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "maximum Wavenumber (upper bound, inclusive), defaults 50000",
+     -3},
+
+    {"mint",
+     't',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "minimum time (lower bound, inclusive), defaults 0",
+     -3},
+
+    {"maxt",
+     'T',
+     "VAL",
+     OPTION_ARG_OPTIONAL, 
+     "maximum time (upper bound, inclusive), defaults 0",
+     -3},
+
+    {"res",
+     'r',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Resolution (wavenumber), defaults 1.0",
+     -3},
+
+    {"wings",
+     'c',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Wings cutoff (+/- integer wavenumber), defaults 25",
+     -3},
+
+    {"h2o",
+     '1',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Water Concentration.  Default reads from INPUT.NC, else supply global"
+     " value (ppmv).  Layer partial pressure = (layer pressure)*"
+     "(water concentration/10^6).",
+     -2},
+
+    {"co2",
+     '2',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Carbon Dioxide Concentration.  Supply global value (ppmv)."
+     "   Layer partial pressure = (layer pressure)*"
+     "(carbon dioxide concentration/10^6).",
+     -2},
+
+    {"o3",
+     '3',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Ozone Concentration.  Default reads from INPUT.NC, else supply global"
+     " value (ppmv).  Layer partial pressure = (layer pressure)*"
+     "(ozone concentration/10^6).",
+     -2},
+
+    {"n2o",
+     '4',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Nitrous Oxide. Supply global value (ppmv)."
+     "  Layer partial pressure = (layer pressure)*"
+     "(nitrous oxide concentration/10^6).",
+     -2},
+
+    {"co",
+     '5',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Carbon Monoxide Concentration.  Supply global value (ppmv)."
+     "  Layer partial pressure = (layer pressure)*"
+     "(carbon monoxide concentration/10^6).",
+     -2},
+
+    {"ch4",
+     '6',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Methane Conentration.  Supply global value (ppmv)."
+     "  Layer partial pressure = (layer pressure)*"
+     "(methane concentration/10^6).",
+     -2},
+
+    {"o2",
+     '7',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Oxygen Concentration.  Supply global value (ppmv)."
+     "  Layer partial pressure = (layer_pressure)*"
+     "(oxygen concentration/10^6).",
+     -2},
+
+    {"ctm",
+     'C',
+     0,
+     0,
+     "Enables the continuum codes for testing",
+     -1},
+
+    {0}
 };
 
-/* our args structure */
-struct arguments {
-  char *atmos;                  /* input atmos fname */
-  char *hitfiles[maxNhitfiles];  /* hit1 hit2...*/
-  int nhitfiles;
-  int nmolConc;
-  int nmolConcOver;
-  int silent;
-  int verbose;
-  int host;
-  int device;
-  int mpi;
-  int t,T,w,W;
-  int ctm;
-  double res;
-  int wingBreadth;
-  double h2o,co2,o3,n2o,co,ch4,o2;  
-  char *output_file;
+struct arguments
+{
+    char *atmos;                  /*Input atmosphere netCDF file.*/
+    char *hitfiles[maxNhitfiles]; /*Input HITRAN .par files.*/
+    int nhitfiles;                /*Total number of inputted HITRAN files.*/
+    int nmolConc;                 /*Number of inputted molecular concentrations.*/
+    int nmolConcOver;             /*Number of molecular concentrations that will be taken from the netCDF file.*/
+    int silent;                   /**/
+    int verbose;                  /**/
+    int host;                     /*Flag for host-only execution.*/
+    int device;                   /*Specific device id to run on.*/
+    int mpi;                      /*Flag for using mpi.*/
+    int t;                        /*Starting time (seconds?), inclusive.*/
+    int T;                        /*Ending time (seconds?), inclusive.*/
+    int w;                        /*Wavenumber lower bound (cm?), inclusive.*/
+    int W;                        /*Wavenumber upper bound (cm?), inclusive.*/
+    int ctm;                      /*Flag for including continuum.*/
+    double res;                   /*Wavenumber resolution (cm?).*/
+    int wingBreadth;              /*Wings cutoff (wavenumber).  Must be an integer.*/
+    double h2o;                   /*Water concentration (atm).*/
+    double co2;                   /*Carbon dioxide concentration (atm).*/
+    double o3;                    /*Ozone concentration (atm).*/
+    double n2o;                   /*Nitrous oxide concentration (atm).*/
+    double co;                    /*Carbon monoxide concentration (atm).*/
+    double ch4;                   /*Methane concentration (atm).*/
+    double o2;                    /*Oxygen concentration (atm).*/
+    char *output_file;            /*Output netCDF file.*/
 };
 
-/* parser */
+/*---------------------------------------------------------------------------*/
+/*Helper parsing function for molecular concentrations.*/
 static double parse_MolecConc(char *arg)
 {
-  double res;
-  if (arg[0] == 'a' )
-  {  /* hook to explicitly yield from "nc" file */
-    res = -1;
-  }
-  else if (isalpha(arg[0]))
-  {
-    fprintf(stderr,"The supplied character (%c) "
-            "for overriding a molecule concentration is not understood. Review args, aborting.\n",
-            arg[0]);
-    exit(EXIT_FAILURE);
-  }            
-  else
-  {
-    /* this should probably be changed to a strtod call with err checks later*/
-    res = atof(arg);
-  }
-  return res;
-}
+    /*Local variables*/
+    double res = 0; /*molecular concentration.*/
 
-static error_t parse_opt( int key, char *arg, struct argp_state *state)
-{
-  /* Get the input argument from argp_parse, which we
-     know is a pointer to our args structure. */
-  struct arguments* arguments = (struct arguments*)state->input;
-  
-  switch(key)
-  {
-    case 'q':case 's':
-      arguments->silent = 1;
-      break;
-    case 'v':
-      arguments->verbose = 1;
-      break;
-    case 'o':
-      arguments->output_file = arg;
-      break;
-    case 'h':
-      arguments->host=1;
-      break;
-    case 'd':
-      arguments->device=atoi(arg);
-      break;
-    case 'M':
-      arguments->mpi=1;
-      break;
-    case 'a':
-      arguments->atmos = arg;
-      break;
-      /* user prescribed bounds */
-    case 'w':
-      arguments->w = atoi(arg);
-      break;
-      /* user prescribed bounds */
-    case 'W':
-      arguments->W = atoi(arg);
-      break;
-    case 't':
-      arguments->t = atoi(arg);
-      break;
-      /* user prescribed bounds */
-    case 'T':
-      arguments->T = atoi(arg);
-      break;
-    case 'r':
-      arguments->res = atof(arg);
-      break;      
-    case 'c':
-      arguments->wingBreadth = atoi(arg);
-      break;
-      /* Molecular Concentrations */
-    case '1':      
-      arguments->h2o = parse_MolecConc(arg);
-      arguments->nmolConc++;
-      break;
-    case '2':
-      arguments->co2 = parse_MolecConc(arg);
-      arguments->nmolConc++;
-      if (arguments->co2 == -1)
-      {
-        fprintf(stderr,"NC read is not currently supported for this molecule (%c), aborting..\n",key);
+    /*Make sure that the inputted pointer is not null.*/
+    if (arg == NULL)
+    {
+        fprintf(stderr,
+                "Error(parse_MolecConc): the inputted pointer is null.\n");
         exit(EXIT_FAILURE);
-      }
-      break;
-    case '3':
-      arguments->o3 = parse_MolecConc(arg);
-      arguments->nmolConc++;
-      break;
-    case '4':
-      arguments->n2o = parse_MolecConc(arg);
-      arguments->nmolConc++;
-      if (arguments->n2o == -1)
-      {
-        fprintf(stderr,"NC read is not currently supported for this molecule (%c), aborting..\n",key);
-        exit(EXIT_FAILURE);
-      }
-      break;
-    case '5':
-      arguments->co = parse_MolecConc(arg);
-      arguments->nmolConc++;
-      if (arguments->co == -1)
-      {
-        fprintf(stderr,"NC read is not currently supported for this molecule (%c), aborting..\n",key);
-        exit(EXIT_FAILURE);
-	}
-      break;
-    case '6':
-      arguments->ch4 = parse_MolecConc(arg);
-      arguments->nmolConc++;
-      if (arguments->ch4 ==-1)
-      {
-        fprintf(stderr,"NC read is not currently supported for this molecule (%c), aborting..\n",key);
-        exit(EXIT_FAILURE);
-      }
-      break;
-    case '7':
-      arguments->o2 = parse_MolecConc(arg);
-      arguments->nmolConc++;
-      if (arguments->o2 == -1)
-      {
-        fprintf(stderr,"NC read is not currently supported for this molecule (%c), aborting..\n",key);
-        exit(EXIT_FAILURE);
-      }
-      break;
-    case 'C':
-      arguments->ctm = 1;
-      break;
-    case ARGP_KEY_ARG:
-      if (state->arg_num >= maxNargs )
-      {
-        fprintf(stderr,"too many arguments can make a parsern go crazy\n");
-	  argp_usage(state);
-	}
-      arguments->hitfiles[state->arg_num] = arg;
-      arguments->nhitfiles++;
-      break;
-    case ARGP_KEY_END:
-      if (state->arg_num < minNargs )
-	{
-	  fprintf(stderr,"too few arguments is just not enough\n");
-	  argp_usage( state );
-	}
-      break;
-    default:
-      return ARGP_ERR_UNKNOWN;
     }
-  return 0;
+
+    /*Get the inputted molecular concentration.*/
+    if (arg[0] == 'a' )
+    {
+        /*A leading 'a' character specifies that the concentration should be
+         taken from the "nc" file */
+        res = -1;
+    }
+    else if (isalpha(arg[0]))
+    {
+        fprintf(stderr,
+                "Error(parse_MolecConc): the supplied character (%c) for"
+                " overriding a molecule concentration is not understood."
+                " Review args.\n",
+                arg[0]);
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        /*This should probably be changed to a strtod call with err checks
+          later*/
+        res = atof(arg);
+    }
+
+    return res;
 }
 
-/* /the/ argp pargser */
-static struct argp argp = {options, parse_opt, args_doc, doc };
+/*---------------------------------------------------------------------------*/
+/*Argp options parser function.*/
+static error_t parse_opt(int key,
+                         char *arg,
+                         struct argp_state *state)
+{
+    /*Local variables.*/
+    struct arguments *arguments = NULL; /*Arguments pointer.*/
 
+    /*Point to the inputted argument from argp_parse.*/
+    arguments = (struct arguments*)(state->input);
+
+    /*Store the inputted arguments.*/
+    switch(key)
+    {
+        case 'q':case 's':
+            arguments->silent = 1;
+            break;
+        case 'v':
+            arguments->verbose = 1;
+            break;
+        case 'o':
+            arguments->output_file = arg;
+            break;
+        case 'h':
+            arguments->host = 1;
+            break;
+        case 'd':
+            arguments->device = atoi(arg);
+            break;
+        case 'M':
+            arguments->mpi = 1;
+            break;
+        case 'a':
+            arguments->atmos = arg;
+            break;
+        case 'w':
+            arguments->w = atoi(arg);
+            break;
+        case 'W':
+            arguments->W = atoi(arg);
+            break;
+        case 't':
+            arguments->t = atoi(arg);
+            break;
+        case 'T':
+            arguments->T = atoi(arg);
+            break;
+        case 'r':
+            arguments->res = atof(arg);
+            break;      
+        case 'c':
+            arguments->wingBreadth = atoi(arg);
+            break;
+        case '1':      
+            arguments->h2o = parse_MolecConc(arg);
+            arguments->nmolConc++;
+            break;
+        case '2':
+            arguments->co2 = parse_MolecConc(arg);
+            arguments->nmolConc++;
+            if (arguments->co2 == -1)
+            {
+                fprintf(stderr,
+                        "Error(parse_opt): Reading the molecular concentration"
+                        " from the inputted netCDF file is not currently"
+                        " supported for this molecule (%c).\n",key);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case '3':
+            arguments->o3 = parse_MolecConc(arg);
+            arguments->nmolConc++;
+            break;
+        case '4':
+            arguments->n2o = parse_MolecConc(arg);
+            arguments->nmolConc++;
+            if (arguments->n2o == -1)
+            {
+                fprintf(stderr,
+                        "Error(parse_opt): Reading the molecular concentration"
+                        " from the inputted netCDF file is not currently"
+                        " supported for this molecule (%c).\n",key);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case '5':
+            arguments->co = parse_MolecConc(arg);
+            arguments->nmolConc++;
+            if (arguments->co == -1)
+            {
+                fprintf(stderr,
+                        "Error(parse_opt): Reading the molecular concentration"
+                        " from the inputted netCDF file is not currently"
+                        " supported for this molecule (%c).\n",key);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case '6':
+            arguments->ch4 = parse_MolecConc(arg);
+            arguments->nmolConc++;
+            if (arguments->ch4 ==-1)
+            {
+                fprintf(stderr,
+                        "Error(parse_opt): Reading the molecular concentration"
+                        " from the inputted netCDF file is not currently"
+                        " supported for this molecule (%c).\n",key);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case '7':
+            arguments->o2 = parse_MolecConc(arg);
+            arguments->nmolConc++;
+            if (arguments->o2 == -1)
+            {
+                fprintf(stderr,
+                        "Error(parse_opt): Reading the molecular concentration"
+                        " from the inputted netCDF file is not currently"
+                        " supported for this molecule (%c).\n",key);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 'C':
+            arguments->ctm = 1;
+            break;
+        case ARGP_KEY_ARG:
+            if (state->arg_num >= maxNargs)
+            {
+                fprintf(stderr,
+                        "Error(parse_opt): there are too many command line"
+                        "arguments.\n");
+                argp_usage(state);
+            }
+            arguments->hitfiles[state->arg_num] = arg;
+            arguments->nhitfiles++;
+            break;
+        case ARGP_KEY_END:
+            if (state->arg_num < minNargs )
+            {
+                fprintf(stderr,
+                        "Error(parse_opt): there are too few command line"
+                        " arguments.\n");
+                argp_usage( state );
+            }
+            break;
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+
+    return 0;
+}
+
+/*---------------------------------------------------------------------------*/
+/*Necessary argp struct.*/
+static struct argp argp = {options,parse_opt,args_doc,doc};
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*---------------------------------------------------------------------------*/
+/*For a given molecule, set the partial pressure (atm) at each time, latitude,
+  longitude, and height.*/
 static void setGlobalPartialPres(double val, 
                                  REAL_t* PS,
+                                 REAL_t const * const P,
                                  unsigned int molId,
                                  size_t ntime,
                                  size_t nlat,
                                  size_t nlon,
                                  size_t nlvl)
 {
-  /* DEPENDS: PS is stored C order PS[time][lats][lons][mols][z]  */
-  unsigned int itr;
-  unsigned int lat;
-  unsigned int lon;
-  unsigned int time;
-  size_t ps_off;
-  const size_t ps_off_mol = (molId-1)*nlvl;
+    /*Local variables*/
+    unsigned int itr;                         /*Loop variable.*/
+    unsigned int lat;                         /*Loop variable.*/
+    unsigned int lon;                         /*Loop variable.*/
+    unsigned int time;                        /*Loop variable.*/
+    size_t ps_off;                            /*Array offset for partial pressure.*/
+    size_t p_off;                             /*Array offset for pressure.*/
+    const size_t ps_off_mol = (molId-1)*nlvl; /*Used to calculate the offset for the given molecule.*/
 
-  for(time=0; time<ntime; ++time)
-  {
-    for(lat=0; lat<nlat; ++lat)
+    /*Set the partial pressure of the molecule. Pressure is stored as
+     (time,lat,lon,z) and partial pressure is store as
+     (time,lat,lon,molecule,z).*/
+    for (time=0;time<ntime;++time)
     {
-      for(lon=0; lon<nlon; ++lon)
-      {
-        /* get an offset for this t,lat,lon,mol */
-        ps_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl + lon*NUM_MOL*nlvl + ps_off_mol;
-        /* itr over levels */
-        for(itr=0; itr<nlvl; ++itr)
+        for (lat=0;lat<nlat;++lat)
         {
-          PS[ps_off + itr] = val;
+            for (lon=0;lon<nlon;++lon)
+            {
+                /* get an offset for this t,lat,lon,mol */
+                ps_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
+                         lon*NUM_MOL*nlvl + ps_off_mol;
+                p_off = time*(nlat*nlon*nlvl) + lat*(nlon*nlvl) + lon*nlvl;
+
+                /* itr over levels */
+                for (itr=0;itr<nlvl;++itr)
+                {
+                    PS[ps_off+itr] = (val/1.e6)*P[p_off+itr];
+                }
+            }
         }
-      }
     }
-  }
+
+    return;
 }
 
+/*---------------------------------------------------------------------------*/
+/*Calculate the number density (1/cm^3) of the molecule from the ideal gas
+  law.  The quantity P_atm is the pressure (atm).  The quantity T_k is the
+  temperature (K).*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t idealGasNumberDensity( const REAL_t P_atm,
-                              const REAL_t V_cm3,
-                              const REAL_t T_k){
-  const REAL_t R = 82.057338; /* (cm^3*atm*K^-1*mol^-1) */  
-  const REAL_t AV = 6.022E23;
-  return P_atm * V_cm3 * AV / (R * T_k );
+REAL_t idealGasNumberDensity(const REAL_t P_atm,
+                             const REAL_t T_k)
+{
+    /*Local variables*/
+    const REAL_t R = 82.057338; /*Gas constant (cm^3*atm*K^-1*mol^-1).*/
+    const REAL_t AV = 6.022E23; /*Avagadro's number (1/mol).*/
+
+    return (P_atm*AV)/(R*T_k);
 }
 
-static void setGlobalNumberDensity(REAL_t* const N,    /* molecules/cm^3 */
-                                   REAL_t const * const PartialPres,  /* atm */
-                                   REAL_t const * const T,  /* kelvin */
+/*---------------------------------------------------------------------------*/
+/*Calculate the number density (1/cm^3) for a molecular species.  The quantity
+  PartialPres is the partial pressure (atm).  The quantity T is the
+  temperature (K).*/
+static void setGlobalNumberDensity(REAL_t* const N,
+                                   REAL_t const * const PartialPres,
+                                   REAL_t const * const T,
                                    const unsigned int hitranMolId,
                                    const size_t ntime,
                                    const size_t nlat,
                                    const size_t nlon,
                                    const size_t nlvl)
 {
-  /* DEPENDS: N is stored C order N[time][lats][lons][mols][z]  */
-  unsigned int itr;
-  unsigned int lat;
-  unsigned int lon;
-  unsigned int time;
-  size_t off;
-  size_t n_off;
-  const size_t n_off_mol = (hitranMolId-1)*nlvl;
-  
-  for(time=0; time<ntime; ++time)
-  {
-    for(lat=0; lat<nlat; ++lat)
+    /*Local variables*/
+    unsigned int itr;                              /*Loop variable.*/
+    unsigned int lat;                              /*Loop variable.*/
+    unsigned int lon;                              /*Loop variable.*/
+    unsigned int time;                             /*Loop variable.*/
+    size_t off;                                    /*Array offset.*/
+    size_t n_off;                                  /*Array offset.*/
+    const size_t n_off_mol = (hitranMolId-1)*nlvl; /*Used to calculate the offset for the inputted molecule.*/
+
+    /*Calculate the number density.  This array is of the form
+      (time,lat,lon,mol,z).*/
+    for(time=0;time<ntime;++time)
     {
-      for(lon=0; lon<nlon; ++lon)
-      {
-        /* get an offset for this t,lat,lon,mol */
-        off = time*nlat*nlon*nlvl + lat*nlon*nlvl + lon*nlvl;
-        n_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl + lon*NUM_MOL*nlvl + n_off_mol;
-        /* itr over levels */
-        for(itr=0; itr<nlvl; ++itr)
+        for(lat=0;lat<nlat;++lat)
         {
-          /* uses ideal gas law, but there is an implied "unit area" so V became 1 */
-          /* DEPENDS units */
-          N[n_off + itr] = idealGasNumberDensity( PartialPres[n_off+itr], 1.,  T[off+itr]);
+            for(lon=0;lon<nlon;++lon)
+            {
+                /*Get the array offsets.*/
+                off = time*nlat*nlon*nlvl + lat*nlon*nlvl + lon*nlvl;
+                n_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
+                        lon*NUM_MOL*nlvl + n_off_mol;
+
+                /*Loop over the pressure layers.*/
+                for (itr=0;itr<nlvl;++itr)
+                {
+                    N[n_off + itr] = idealGasNumberDensity(PartialPres[n_off+itr],
+                                                           T[off+itr]);
+                }
+            }
         }
-      }
     }
-  }
+
+    return;
 }
 
+/*---------------------------------------------------------------------------*/
+/*Calculate the molecular parital pressures (atm) and number densities
+  (1/cm^3).*/
 static void checkMolConfig(struct arguments* args,
                            const unsigned int molid,
                            radiationOutputFields_t* atmosData,
                            const int time)
 {
-  REAL_t* PS = atmosData->PS;
-  const size_t nlat = atmosData->nlat;
-  const size_t nlon = atmosData->nlon;
-  const size_t nlvl = atmosData->npfull;
-  
-  
-  int abort=0;
-  switch(molid)
-  {
-    case 1:
-      if (args->h2o ==0)
-      {
-        abort=1;
-      }
-      else if(args->h2o > 0)
-      {
-        setGlobalPartialPres(args->h2o, PS, molid, time, nlat, nlon, nlvl);
-      }
-      break;
-    case 2:
-      if (args->co2 ==0)
-      {
-        abort=1;
-      }
-      else if(args->co2 > 0)
-      {
-        setGlobalPartialPres(args->co2, PS, molid, time, nlat, nlon, nlvl);
-      }
-      break;
-    case 3:
-      if (args->o3 ==0)
-      {
-        abort=1;
-      }
-      else if(args->o3 > 0)
-      {
-        setGlobalPartialPres(args->o3, PS, molid, time, nlat, nlon, nlvl);
-      }
-      break;
-    case 4:
-      if (args->n2o ==0)
-      {
-        abort=1;
-      }
-      break;
-    case 5:
-      if (args->co ==0)
-      {
-        abort=1;
-      }
-      else if(args->co > 0)
-      {
-        setGlobalPartialPres(args->co, PS, molid, time, nlat, nlon, nlvl);
-      }
-      break;
-    case 6:
-      if (args->ch4 ==0)
-      {
-        abort=1;
-      }
-      else if(args->ch4 > 0)
-      {
-        setGlobalPartialPres(args->ch4, PS, molid, time, nlat, nlon, nlvl);
-      }
-      break;
-    case 7:
-      if (args->o2 ==0)
-      {
-        abort=1;
-      }
-      else if(args->o2 > 0)
-      {
-        setGlobalPartialPres(args->o2, PS, molid, time, nlat, nlon, nlvl);
-      }
-      break;
-    default:
-      abort=-1;
-      break;
-  }
+    /*Local variables*/
+    REAL_t* PS = atmosData->PS;            /*Molecular partial pressure (atm).*/
+    const size_t nlat = atmosData->nlat;   /*Number of latitude grid points.*/
+    const size_t nlon = atmosData->nlon;   /*Number of longitude grid points.*/
+    const size_t nlvl = atmosData->npfull; /*Number of pressure layers.*/
+    int abort = 0;                         /*Abort flag.*/
 
-  if (abort==-1)
-  {
-    fprintf(stderr,"This Hitfiles MolId (%d) does not appear to be supported yet.\n", molid);
-    exit(EXIT_FAILURE);
-  }
+    /*Calculate the partial pressure (atm) for the molecule.  If the molecule
+      is either h2o or o3 and the concentration was not specified on the
+      command line (or the value of 'a' was given), then the partial pressure
+      that was previously calculated from the inputted NetCDF file is used.*/
+    switch(molid)
+    {
+        case 1:
+            if (args->h2o == 0)
+            {
+                abort = 1;
+            }
+            else if (args->h2o > 0)
+            {
+                setGlobalPartialPres(args->h2o,
+                                     PS,
+                                     atmosData->P,
+                                     molid,
+                                     time,
+                                     nlat,
+                                     nlon,
+                                     nlvl);
+            }
+            break;
+        case 2:
+            if (args->co2 == 0)
+            {
+                abort = 1;
+            }
+            else if (args->co2 > 0)
+            {
+                setGlobalPartialPres(args->co2,
+                                     PS,
+                                     atmosData->P,
+                                     molid,
+                                     time,
+                                     nlat,
+                                     nlon,
+                                     nlvl);
+            }
+            break;
+        case 3:
+            if (args->o3 == 0)
+            {
+                abort = 1;
+            }
+            else if (args->o3 > 0)
+            {
+                setGlobalPartialPres(args->o3,
+                                     PS,
+                                     atmosData->P,
+                                     molid,
+                                     time,
+                                     nlat,
+                                     nlon,
+                                     nlvl);
+            }
+            break;
+        case 4:
+            if (args->n2o == 0)
+            {
+                abort = 1;
+            }
+            else if (args->n2o > 0)
+            {
+                setGlobalPartialPres(args->n2o,
+                                     PS,
+                                     atmosData->P,
+                                     molid,
+                                     time,
+                                     nlat,
+                                     nlon,
+                                     nlvl);
+            }
+            break;
+        case 5:
+            if (args->co == 0)
+            {
+                abort = 1;
+            }
+            else if (args->co > 0)
+            {
+                setGlobalPartialPres(args->co,
+                                     PS,
+                                     atmosData->P,
+                                     molid,
+                                     time,
+                                     nlat,
+                                     nlon,
+                                     nlvl);
+            }
+            break;
+        case 6:
+            if (args->ch4 == 0)
+            {
+                abort = 1;
+            }
+            else if (args->ch4 > 0)
+            {
+                setGlobalPartialPres(args->ch4,
+                                     PS,
+                                     atmosData->P,
+                                     molid,
+                                     time,
+                                     nlat,
+                                     nlon,
+                                     nlvl);
+            }
+            break;
+        case 7:
+            if (args->o2 == 0)
+            {
+                abort = 1;
+            }
+            else if (args->o2 > 0)
+            {
+                setGlobalPartialPres(args->o2,
+                                     PS,
+                                     atmosData->P,
+                                     molid,
+                                     time,
+                                     nlat,
+                                     nlon,
+                                     nlvl);
+            }
+            break;
+        default:
+            abort = -1;
+        break;
+    }
 
-  else if (abort!=0)
-  {
-    fprintf(stderr,"This Hitfile MolId (%d) does not appear to match any of the provided Mol Concentrations."
-            " Probably missing a Hitfile, wrong hitfile, or extra Mol Concentration specified.\n", molid);
-    exit(EXIT_FAILURE);
-  }
+    /*Check abort flag and print any necessary errrors.*/
+    if (abort == -1)
+    {
+        /*Throw an error if the inputted molecule id does not match any
+          supported molecule.*/
+        fprintf(stderr,
+                "Error(checkMolConfig): this Hitfiles MolId (%d) does not"
+                " appear to be supported yet.\n",
+                molid);
+        exit(EXIT_FAILURE);
+    }
+    else if (abort != 0)
+    {
+        /*Throw an error if there are any missing molecular concentration
+          values.*/
+        fprintf(stderr,
+                "Error(checkMolConfig): this Hitfile MolId (%d) does not"
+                " appear to match any of the provided molecular"
+                " concentrations. Either a Hitfile is missing, an incorrect"
+                " Hitfile was inputted, or an extra molecular concentration"
+                " was specified.\n",
+                molid);
+        exit(EXIT_FAILURE);
+    }
 
-  /* else for any molecule that makes it this far we will need it's number density */
-  setGlobalNumberDensity(atmosData->N,    /* molecules/cm^3 */
-                         PS,  /* atm */
-                         atmosData->T,  /* kelvin */
-                         molid,
-                         time,
-                         nlat,
-                         nlon,
-                         nlvl);
+    /*Calculate the number densities (1/cm^3) for the molecule.*/
+    setGlobalNumberDensity(atmosData->N,
+                           PS,
+                           atmosData->T,
+                           molid,
+                           time,
+                           nlat,
+                           nlon,
+                           nlvl);
 
-  
-  return;
+    return;
 }
+
+/*---------------------------------------------------------------------------*/
 
 #define MAX_NUM_SPECTRAL_LINES 524288  /* 2^19 */
 const REAL_t TREF = 296.0;
@@ -533,11 +831,11 @@ REAL_t getMolarMass(const int hitranMolId){
       break;
     default:
 /* #if !defined(__CUDA_ARCH__) */
-/*       fprintf(stderr,"Error, the molecular with (0-based) molId=%d is not implimented in getMolarMass," */
+/*       fprintf(stderr,"Error, the molecular with (0-based) molId=%d is not implemented in getMolarMass," */
 /*               " something is probably very very wrong. Aborting\n.", hitranMolId); */
 /*       exit(EXIT_FAILURE); */
 /* #else */
-      assert(0);  /* mol not implimented */
+      assert(0);  /* mol not implemented */
 /* #endif */
       break;
   }
@@ -1900,320 +2198,451 @@ int device_launch(int* nStreams,
   return -1;
 }
 #endif
-  
-  
-int main(int argc, char* argv[]){
-  int world_size=-1;
-  int world_rank=-1;
-#ifdef MPI_ENABLED  
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank); 
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*Main part of the program.*/
+int main(int argc,
+         char* argv[])
+{
+    /*Local variables*/
+    int world_size = -1; /*Number of ranks in MPI_COMM_WORLD.*/
+    int world_rank = -1; /*Process rank id in MPI_COMM_WORLD.*/
+#ifdef MPI_ENABLED
+    int ierr = 0;        /*MPI error code.*/
 #endif
-  
-  int time;
-  unsigned int lat;
-  unsigned int compute_lat_beg;
-  unsigned int compute_lat_end;
-  unsigned int lon;
-  unsigned int compute_lon_beg;
-  unsigned int compute_lon_end;
-  unsigned int mol;
-  size_t idx;
-  REAL_t* out=NULL;
-  
-  /**************** parsing stuff ********************/
 
-  /* where my args at */
-  struct arguments arguments;
-  /* defaults */
-  arguments.silent = 0;
-  arguments.verbose = 0;
-  arguments.device=0;
-  arguments.mpi=0;
-  arguments.host=0;
-  arguments.nhitfiles=0;
-  arguments.nmolConc=0;
-  arguments.nmolConcOver=0;
-  arguments.atmos = NULL;
-  static char default_output_fname[] ="didyouforgettospecifyoutfile.nc";
-  arguments.output_file = default_output_fname;
-  arguments.wingBreadth = 25;
-  arguments.ctm = 0;
-  /* model bounds */\
-  arguments.w = 1;
-  arguments.W = 3000;
-  arguments.t = 0;
-  arguments.T = 0;
-  arguments.res = 1.0;
-  /* molecular concentrations */
-  arguments.h2o = 0;  /* default to nc after parsing */
-  arguments.co2 = 0;
-  arguments.o3 = 0;    /* default to nc after parsing */
-  arguments.n2o = 0;
-  arguments.co = 0;
-  arguments.ch4 = 0;
-  arguments.o2 = 0;  
-  /* go */
-  argp_parse( &argp,argc, argv, 0,0, &arguments);
-  
-  /* default default overrides */
-  if(  arguments.h2o == 0 )
-  {    
-    arguments.h2o = -1;
-    arguments.nmolConcOver++;
-  }
-  if(  arguments.o3 == 0 )
-  {
-    arguments.o3 = -1;
-    arguments.nmolConcOver++;
-  }
+    int time;
+    unsigned int lat;
+    unsigned int compute_lat_beg;
+    unsigned int compute_lat_end;
+    unsigned int lon;
+    unsigned int compute_lon_beg;
+    unsigned int compute_lon_end;
+    unsigned int mol;
+    size_t idx;
+    REAL_t* out = NULL;
 
-  /**************** ends parsing stuff ***********************/
-    
-  /**************** setup inputs and space for output **********************/
+    struct arguments arguments;
+    static char default_output_fname[] ="didyouforgettospecifyoutfile.nc";
 
-  const unsigned int nF = (arguments.W-arguments.w)/arguments.res + 1;
-  
-  if(arguments.device!=0 && arguments.host!=0)
-  {
-    fprintf(stderr, "Failure, Ambiguous launch type!  Specifiy singular flag --host/--device or neither flag to just default to device 0.\n");
-    exit(EXIT_FAILURE);
-  }
-  else if(arguments.mpi!=0 && (arguments.device==0 && arguments.host==0) )
-  {
-    fprintf(stderr, "Failure, when specifying mpi you must specify number of devices per node or --host.\n");
-    exit(EXIT_FAILURE);
-  };
+    /*If necessary, initialize MPI.*/
+#ifdef MPI_ENABLED
+    ierr = MPI_Init(&argc,
+                    &argv);
+    if (ierr != MPI_SUCCESS)
+    {
+        fprintf(stderr,
+                "Error(main): MPI_Init returned error code: %d.\n",
+                ierr);
+        exit(EXIT_FAILURE);
+    }
+    ierr = MPI_Comm_size(MPI_COMM_WORLD,
+                         &world_size);
+    if (ierr != MPI_SUCCESS)
+    {
+        fprintf(stderr,
+                "Error(main): MPI_Comm_size returned error code: %d.\n",
+                ierr);
+        exit(EXIT_FAILURE);
+    }
+    ierr = MPI_Comm_rank(MPI_COMM_WORLD,
+                         &world_rank);
+    if (ierr != MPI_SUCCESS)
+    {
+        fprintf(stderr,
+                "Error(main): MPI_Comm_rank returned error code: %d.\n",
+                ierr);
+        exit(EXIT_FAILURE);
+    }
+#endif
 
-  const int launchType = arguments.host==1 ? 0 : 1 ;  /* launchType host is 0, device is 1, just a helper var */
+    /*Set default argument values.*/
+    arguments.silent = 0;
+    arguments.verbose = 0;
+    arguments.device = 0;
+    arguments.mpi = 0;
+    arguments.host = 0;
+    arguments.nhitfiles = 0;
+    arguments.nmolConc = 0;
+    arguments.nmolConcOver = 0;
+    arguments.atmos = NULL;
+    arguments.output_file = default_output_fname;
+    arguments.wingBreadth = 25;
+    arguments.ctm = 0;
+    arguments.w = 1;
+    arguments.W = 3000;
+    arguments.t = 0;
+    arguments.T = 0;
+    arguments.res = 1.0;
+    arguments.h2o = 0;
+    arguments.co2 = 0;
+    arguments.o3 = 0;
+    arguments.n2o = 0;
+    arguments.co = 0;
+    arguments.ch4 = 0;
+    arguments.o2 = 0;
+
+    /*Parse the program's arguments using arg_parse.*/
+    argp_parse(&argp,
+               argc,
+               argv,
+               0,
+               0,
+               &arguments);
+
+    /*If a water concentration was not specified in the program's arguments,
+      then use the value from the inputted netCDF file.*/
+    if (arguments.h2o == 0)
+    {
+        arguments.h2o = -1;
+        arguments.nmolConcOver++;
+    }
+
+    /*If a ozone concentration was not specified in the program's arguments,
+      then use the value from the inputted netCDF file.*/
+    if (arguments.o3 == 0)
+    {
+        arguments.o3 = -1;
+        arguments.nmolConcOver++;
+    }
+
+    /*Set the wavenumber "grid" size (i.e., the number of different wavenumber
+      points at which the spectra will be calculated).*/
+    const unsigned int nF = (arguments.W-arguments.w)/arguments.res + 1;
+
+    /*Make sure either only host or device has been targeted.*/
+    if (arguments.device != 0 && arguments.host != 0)
+    {
+        fprintf(stderr,
+                "Error(main): more than one target specified.  Please use"
+                " either --host or --device or neither flag to just default"
+                " to device 0.\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (arguments.mpi != 0 && (arguments.device == 0 &&
+             arguments.host == 0))
+    {
+        fprintf(stderr,
+                "Error(main): when specifying mpi you must specify the number"
+                " of devices per node or --host.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /*Set launchType = 0 for host, = 1 for device.*/
+    const int launchType = arguments.host == 1 ? 0 : 1;
 
 #ifdef MPI_ENABLED
-  const int device_number = world_size % arguments.device;
-  assert( device_number>=0 );  /* if this ever trips try (a+n) % n */
-  if( arguments.mpi!=0 && world_size <1)
-  {
-    fprintf(stderr,"You have invoked with --mpi but not used an mpirun style executer.  Confused\n");
-    exit(EXIT_FAILURE);
-  }
-#else
-  if(arguments.mpi!=0)
-  {
-    fprintf(stderr, "You have not built with MPI or set MPI_ENABLED\n");
-    exit(EXIT_SUCCESS);
-  }      
-#endif
-  
-  if (launchType == 1)
-  {
-#ifdef __NVCC__
-    const int device_number = arguments.device;
-    HANDLE_ERROR( cudaSetDevice(device_number) );
-#endif
-  }
-  
-  char *atmosFile = arguments.atmos;
-  
-  radiationOutputFields_t atmosData;
-  getAndSetAtmosFieldsFromFile(atmosFile, &atmosData);
-  
-  const unsigned int numLayers = atmosData.npfull;
+    /*Determine the number of devices.*/
+    const int device_number = world_size % arguments.device;
 
-  if(arguments.nmolConc!=arguments.nhitfiles)
-  {
-    fprintf(stderr,"Warning, Number of hitfiles (%d) does not match number of prescribed concentrations (%d), checking for sane overrides...\n",arguments.nhitfiles, arguments.nmolConc );
-    if(arguments.nmolConc+arguments.nmolConcOver == arguments.nhitfiles)
+    assert(device_number >= 0); /* if this ever trips try (a+n) % n */
+
+    /*Make sure that mpirun is used to execute the program if mpi is turned
+      on.*/
+    if (arguments.mpi != 0 && world_size < 1)
     {
-      fprintf(stderr,"\t...found %d overrides, okay computer.\n", arguments.nmolConcOver);
+        fprintf(stderr,
+                "Error(main): you have invoked with the program with --mpi"
+                " but did not used an mpirun style executer.\n");
+        exit(EXIT_FAILURE);
+    }
+#else
+    /*Make sure that MPI_ENABLED was included if MPI is turned on.*/
+    if (arguments.mpi != 0)
+    {
+        fprintf(stderr,
+                "Error(main): you must build with -DMPI_ENABLED in order to"
+                " use MPI.\n");
+        exit(EXIT_SUCCESS);
+    }
+#endif
+
+    /*Set the GPU device number.*/
+    if (launchType == 1)
+    {
+#ifdef __NVCC__
+        const int device_number = arguments.device;
+        HANDLE_ERROR(cudaSetDevice(device_number));
+#endif
+    }
+
+    /*Read in atmospheric data from the inputted netCDF file.*/
+    char *atmosFile = arguments.atmos;
+    radiationOutputFields_t atmosData;
+    getAndSetAtmosFieldsFromFile(atmosFile,
+                                 &atmosData);
+    const unsigned int numLayers = atmosData.npfull;
+
+    /*Check to make sure that the number of inputted molecular
+      concentrations matches the number of inputted HITRAN files.*/
+    if (arguments.nmolConc != arguments.nhitfiles)
+    {
+        fprintf(stderr,
+                "Warning(main): the number of hitfiles (%d) does not match"
+                " the number of prescribed concentrations (%d). Checking for"
+                " overrides...\n",
+                arguments.nhitfiles,
+                arguments.nmolConc);
+        if (arguments.nmolConc+arguments.nmolConcOver == arguments.nhitfiles)
+        {
+            fprintf(stderr,
+                    "\t...found %d overrides, okay.\n",
+                    arguments.nmolConcOver);
+        }
+        else
+        {
+            fprintf(stderr,
+                    "\t...found %d overrides.\nError(main): the number of"
+                    " inputted hitfiles does not match the number of inputted"
+                    " + overridden molecular concentrations.\n",
+                    arguments.nmolConcOver);
+            exit(EXIT_FAILURE);
+        }
+    }
+    const unsigned int nMols = arguments.nhitfiles;
+    char** hitFnameList = arguments.hitfiles;
+    printf("\nSubmitted %d molecules.\n",nMols);
+
+    /*Initialize the output file.*/
+    int ncid;
+    int varid;
+    char *OUTPUT_FNAME=NULL;
+    compute_lat_beg = 0;
+    compute_lat_end = atmosData.nlat;
+    compute_lon_beg = 0;
+    compute_lon_end = atmosData.nlon;
+
+    /* output file and compute setup is very different for mpi */
+    if (arguments.mpi != 0)
+    {
+        OUTPUT_FNAME = (char*)malloc(strlen(arguments.output_file) + 9);
+        if (OUTPUT_FNAME == NULL)
+        {
+            fprintf(stderr,
+                    "Error(main): malloc failed for %zu bytes of"
+                    " OUTPUTFNAME.\n",
+                    strlen(arguments.output_file) + 9);
+            exit(EXIT_FAILURE);
+        }
+        lat = atmosData.nlat / world_size;
+        if(lat*world_size != atmosData.nlat)
+        {
+            fprintf(stderr, 
+                    "Warning(main): specified %d global lats across ranks=%zu"
+                    " yields between %d and %d lats per rank.  This will"
+                    " result in idle hardware, suggest a different work"
+                    " share.\n",
+                    world_size,
+                    atmosData.nlat,
+                    lat,
+                    lat+1);
+        }
+        compute_lat_beg = world_rank*lat;
+        compute_lat_end = compute_lat_beg+lat;
+        if (compute_lat_end>atmosData.nlat)
+        {
+            compute_lat_end = atmosData.nlat;
+        }
+        compute_lon_beg = 0;
+        compute_lon_end = atmosData.nlon;
+    /* copy existing name
+     * cat .rankN */
+        sprintf(OUTPUT_FNAME,
+                "%s.rank%d",
+                arguments.output_file,
+                world_rank);
     }
     else
     {
-      exit(EXIT_FAILURE);
+        OUTPUT_FNAME = arguments.output_file;
     }
-  }
-  const unsigned int nMols = arguments.nhitfiles;
-  char** hitFnameList = arguments.hitfiles;
-  printf("\nSubmitted %d molecules.\n",nMols);
+    fprintf(stderr,
+            "Opening output file %s.\n",
+            OUTPUT_FNAME);
+    openOpticalDepthOutput(&ncid,
+                           &varid,
+                           OUTPUT_FNAME,
+                           compute_lat_end - compute_lat_beg,
+                           compute_lon_end - compute_lon_beg,
+                           numLayers,
+                           nF);
 
-  /* init output file */
-  int ncid;
-  int varid;
-  char *OUTPUT_FNAME=NULL;
-  compute_lat_beg = 0;
-  compute_lat_end = atmosData.nlat;
-  compute_lon_beg = 0;
-  compute_lon_end = atmosData.nlon;
-
-  /* output file and compute setup is very different for mpi */
-  if(arguments.mpi!=0)
-  {
-    OUTPUT_FNAME = (char*)malloc(strlen(arguments.output_file) + 9);
-    if(OUTPUT_FNAME ==NULL)
-    {
-      fprintf(stderr, "Malloc failed for %zu bytes of OUTPUTFNAME!\n",
-              strlen(arguments.output_file) + 9);
-      exit(EXIT_FAILURE);
-    }
-    
-    lat = atmosData.nlat / world_size;
-    if(lat*world_size != atmosData.nlat)
-    {
-      fprintf(stderr, "Warning:"
-	      "\n\tSpecified %d global lats across ranks=%zu yields between %d and %d lats per rank.  "
-	      "\n\tThis will result in idle hardware, suggest a different work share.\n",
-	      world_size,
-	      atmosData.nlat,
-	      lat,
-	      lat+1);
-    }
-    compute_lat_beg = world_rank*lat;
-    compute_lat_end = compute_lat_beg+lat;
-    if( compute_lat_end>atmosData.nlat)
-    {
-      compute_lat_end = atmosData.nlat;
-    }
-    compute_lon_beg = 0;
-    compute_lon_end = atmosData.nlon;
-    /* copy existing name
-     * cat .rankN */
-    sprintf(OUTPUT_FNAME, "%s.rank%d", arguments.output_file, world_rank);
-  }
-  else
-  {
-    OUTPUT_FNAME = arguments.output_file;
-  }
-  fprintf(stderr,"Opening output file %s.\n",OUTPUT_FNAME);
-  openOpticalDepthOutput(&ncid, &varid, OUTPUT_FNAME,
-                         compute_lat_end - compute_lat_beg,
-                         compute_lon_end - compute_lon_beg,
-                         numLayers,
-                         nF);
+    /*Declare stream parameters.*/
 #ifdef __NVCC__
-  int nstreams=-1;
-  cudaStream_t* streams=NULL;
+    int nstreams=-1;
+    cudaStream_t* streams=NULL;
 #endif
 
-  /* setup hitran lines */
-  RefLinePtrs_t HitLines[nMols];
-  
-  /* get fname and parse in lines */
-  RefLine_flags_t flags= {((unsigned int) -1),1,0}; /* host cuda malloc default, host=True, device=false */
-  time = arguments.T - arguments.t + 1;
-  for(mol=0; mol<nMols; ++mol){
-      HitLines[mol] = parseHITRANfile(hitFnameList[mol],flags,arguments.w,arguments.W);
-      /* checkMolConfig(&arguments, HitLines[mol].mol, atmosData.PS, time ,atmosData.nlat, atmosData.nlon, numLayers ); */
-      checkMolConfig(&arguments, HitLines[mol].mol, &atmosData, time);
-  }
+    /*Setup HITRAN lines.*/
+    RefLinePtrs_t HitLines[nMols];
 
-  for( time=arguments.t ; time<=arguments.T ; ++time)
-  {
-    for(lat=compute_lat_beg; lat<compute_lat_end; ++lat)
+    /*Get filename and parse in lines*/
+    RefLine_flags_t flags= {((unsigned int) -1),1,0}; /* host cuda malloc default, host=True, device=false */
+    time = arguments.T - arguments.t + 1;
+    for(mol=0;mol<nMols;++mol)
     {
-      for( lon=compute_lon_beg; lon<compute_lon_end; ++lon)
-      {
-        if ( launchType == 0){
-          if(out == NULL)  /* malloc if needed, otherwise pass */
-          {
-            out = (REAL_t*)calloc(nF*numLayers,sizeof(REAL_t));
-          }
-          
-          host_launch( nMols ,
-                       /* hitFnameList, */
-                       HitLines,
-                       ((REAL_t)arguments.w),
-                       /* ((REAL_t)arguments.W), */
-                       nF,
-                       arguments.res,
-                       arguments.wingBreadth,
-                       &atmosData,
-                       out,
+        HitLines[mol] = parseHITRANfile(hitFnameList[mol],
+                                        flags,
+                                        arguments.w,
+                                        arguments.W);
+/*
+        checkMolConfig(&arguments,
+                       HitLines[mol].mol,
+                       atmosData.PS,
                        time,
-                       lat,
-                       lon);  
-        }
-        else if (launchType==1){
-          
-#ifdef __NVCC__
-          if(out == NULL)  /* malloc if needed, otherwise pass */
-          {
-            HANDLE_ERROR( cudaHostAlloc(&out , nF*numLayers*sizeof(REAL_t) , cudaHostAllocDefault ) );
-          }
-          
-          device_launch( &nstreams,
-                         &streams,
-                         nMols,
-                         /* hitFnameList, */
-                         HitLines,
-                         ((REAL_t)arguments.w),
-                         /* ((REAL_t)arguments.W), */
-                         nF,
-                         arguments.res,
-                         arguments.wingBreadth,
-                         &atmosData,
-                         out,
-                         time,
-                         lat,
-                         lon);
-#else
-          fprintf(stderr,"\n Requested cuda launch type (%d), but compiled host only... Aborting.\n",launchType);
-          exit(1);
-#endif    
-        }
-        else {
-          fprintf(stderr,"\n Unkown launch type (%d) requested. Aborting.\n",launchType);
-          exit(1);
-        }
+                       atmosData.nlat,
+                       atmosData.nlon,
+                       numLayers);
+*/
 
-        if(arguments.ctm==1)
+        /*Check the molecular configurations.  For all molecules whose
+          partial pressure is not taken from the input NetCDF file, calculate
+          the partial pressure from the concentrations inputted on the
+          command line.*/
+        checkMolConfig(&arguments,
+                       HitLines[mol].mol,
+                       &atmosData,
+                       time);
+    }
+
+    /*Compute the spectra.*/
+    for (time=arguments.t;time<=arguments.T;++time)
+    {
+        for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
         {
-          printf("Computing Continuum\n");
-          assert(arguments.res==1.);  /* presently the continuum code is only safe for widths of one wavenumber */
-          idx = (time*atmosData.nlon*atmosData.nlat + lat*atmosData.nlon + lon) * atmosData.npfull;
-          /* dbg print */
-          printf("%zu: T=%g P=%g DELTAZ=%g PS[%zu]=%g \n",
-                 idx,
-                 atmosData.T[idx],
-                 atmosData.P[idx],
-                 atmosData.DELTAZ[idx],
-                 NUM_MOL*idx + H2O*atmosData.npfull,
-                 atmosData.PS[NUM_MOL*idx + H2O*atmosData.npfull] );
-          /* getchar(); */
-          get_CTM(out,
-                  &(atmosData.T[idx]),
-                  &(atmosData.P[idx]),
-                  &(atmosData.DELTAZ[idx]),
-                  &(atmosData.PS[NUM_MOL*idx + H2O*atmosData.npfull ]),
-                  nF,
-                  atmosData.npfull);
-        }
+            for (lon=compute_lon_beg;lon<compute_lon_end;++lon)
+            {
+                if (launchType == 0)
+                {
+                    if (out == NULL)  /* malloc if needed, otherwise pass */
+                    {
+                        out = (REAL_t*)calloc(nF*numLayers,
+                                              sizeof(REAL_t));
+                    }
+                    host_launch(nMols,
+/*
+                                hitFnameList,
+*/
+                                HitLines,
+                                ((REAL_t)arguments.w),
+/*
+                                ((REAL_t)arguments.W),
+*/
+                                nF,
+                                arguments.res,
+                                arguments.wingBreadth,
+                                &atmosData,
+                                out,
+                                time,
+                                lat,
+                                lon);
+                }
+                else if (launchType == 1)
+                {
+#ifdef __NVCC__
+                    if(out == NULL)  /* malloc if needed, otherwise pass */
+                    {
+                        HANDLE_ERROR(cudaHostAlloc(&out,
+                                                   nF*numLayers*sizeof(REAL_t),
+                                                   cudaHostAllocDefault));
+                    }
+                    device_launch(&nstreams,
+                                  &streams,
+                                  nMols,
+/*
+                                  hitFnameList,
+*/
+                                  HitLines,
+                                  ((REAL_t)arguments.w),
+/*
+                                  ((REAL_t)arguments.W),
+*/
+                                  nF,
+                                  arguments.res,
+                                  arguments.wingBreadth,
+                                  &atmosData,
+                                  out,
+                                  time,
+                                  lat,
+                                  lon);
+#else
+                    fprintf(stderr,
+                            "Error(main): requested cuda launch type (%d),"
+                            " but compiled host only.\n",
+                            launchType);
+                    exit(EXIT_FAILURE);
+#endif
+                }
+                else
+                {
+                    fprintf(stderr,
+                            "Error(main): unkown launch type (%d)"
+                            " requested.\n",
+                            launchType);
+                    exit(EXIT_FAILURE);
+                }
 
-        fprintf(stderr, "Writing hyperslab of %d samples "
-                "@{t=%d, lat=%d, lon=%d, layers=0:%d} to output file %s \n",
-              nF, time, lat, lon, numLayers, OUTPUT_FNAME);
-        writeOpticalDepthOutputByColumn(ncid,
-					varid,
-					time,
-					lat-compute_lat_beg,
-					lon-compute_lon_beg,
-					numLayers,
-					nF,
-					out);
+                /*Calculate the continuum spectra.*/
+                if (arguments.ctm == 1)
+                {
+                    printf("Computing Continuum\n");
+                    assert(arguments.res==1.);  /* presently the continuum code is only safe for widths of one wavenumber */
+                    idx = (time*atmosData.nlon*atmosData.nlat + 
+                           lat*atmosData.nlon + lon)*atmosData.npfull;
+                    /* dbg print */
+                    printf("%zu: T=%g P=%g DELTAZ=%g PS[%zu]=%g \n",
+                           idx,
+                           atmosData.T[idx],
+                           atmosData.P[idx],
+                           atmosData.DELTAZ[idx],
+                           NUM_MOL*idx + H2O*atmosData.npfull,
+                           atmosData.PS[NUM_MOL*idx + H2O*atmosData.npfull]);
+                    /* getchar(); */
+                    get_CTM(out,
+                            &(atmosData.T[idx]),
+                            &(atmosData.P[idx]),
+                            &(atmosData.DELTAZ[idx]),
+                            &(atmosData.PS[NUM_MOL*idx + H2O*atmosData.npfull ]),
+                            nF,
+                            atmosData.npfull);
+                }
 
-        memset(out, 0, nF*numLayers*sizeof(REAL_t));
-        
-      }  /* nlat */
-    }  /* nlon */
-  }  /* time */
-  
-  fprintf(stderr, "Closing output file %s\n", OUTPUT_FNAME);
-  closeOpticalDepthOutput(ncid);
-  
-  /* cleanup all, this is dirty,  into earlier stage later */
-  for(mol=0; mol<nMols; ++mol){
-    freeHost(HitLines[mol],flags);
-  }
-  
-  
+                fprintf(stderr,
+                        "Writing hyperslab of %d samples "
+                        "@{t=%d, lat=%d, lon=%d, layers=0:%d} to output"
+                        " file %s \n",
+                        nF,
+                        time,
+                        lat,
+                        lon,
+                        numLayers,
+                        OUTPUT_FNAME);
+                writeOpticalDepthOutputByColumn(ncid,
+                                                varid,
+                                                time,
+                                                lat-compute_lat_beg,
+                                                lon-compute_lon_beg,
+                                                numLayers,
+                                                nF,
+                                                out);
+
+                memset(out, 0, nF*numLayers*sizeof(REAL_t));
+            }  /* nlat */
+        }  /* nlon */
+    }  /* time */
+
+    /*Close the output file.*/
+    fprintf(stderr,
+            "Closing output file %s\n",
+            OUTPUT_FNAME);
+    closeOpticalDepthOutput(ncid);
+
+    /*Cleanup all, this is dirty,  into earlier stage later */
+    for (mol=0;mol<nMols;++mol)
+    {
+        freeHost(HitLines[mol],flags);
+    }
+
 ///wrap up something like this in a function, then key off of outputfile extension for csv output
 /* #undef WRITEOUT */
 /*   ///#define WRITEOUT */
@@ -2245,20 +2674,22 @@ int main(int argc, char* argv[]){
 /*   } */
 /* #endif */
 
-  /* cleanup */
-  if (launchType==1){
+    /* cleanup */
+    if (launchType==1)
+    {
 #ifdef __NVCC__
-    cudaFreeHost(out);
+        cudaFreeHost(out);
 #endif
-  }
-  else{
-    free(out);
-  }
+    }
+    else
+    {
+        free(out);
+    }
 
 #ifdef MPI_ENABLED
-  MPI_Finalize();
+    MPI_Finalize();
 #endif
-  
+
   return EXIT_SUCCESS;
 }
 
