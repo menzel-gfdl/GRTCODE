@@ -1629,12 +1629,14 @@ __host__ int device_atmos_init(const unsigned int numLayers,
 __host__ int device_atmos_free(REAL_t* T_d,
                                REAL_t* P_d,
                                REAL_t* N_d,
+                               REAL_t* Z_d,
                                REAL_t* Ps_d)
 {
  
   HANDLE_ERROR(cudaFree(T_d));
   HANDLE_ERROR(cudaFree(P_d));
   HANDLE_ERROR(cudaFree(N_d));
+  HANDLE_ERROR(cudaFree(Z_d));
   HANDLE_ERROR(cudaFree(Ps_d));
 
   return EXIT_SUCCESS;
@@ -2157,6 +2159,7 @@ __host__ int device_launch(int* nStreams,
   device_atmos_free(T_d,
                     P_d,
                     N_d,
+                    Z_d,
                     PS_d);
     
   HANDLE_ERROR(cudaFree(out_d));
