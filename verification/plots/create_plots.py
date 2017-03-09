@@ -150,7 +150,7 @@ def makeSpectraGif(f,startHeight,endHeight,gifName,cleanup):
         framesList.append(frameName)
         plotSpectraForHeight(f,i,frameName)
         frameImages = frameName + " " + frameImages
-    tmp = subprocess.Popen("convert -delay 1 -loop 0 " + frameImages + " "
+    tmp = subprocess.Popen("convert -delay 50 -loop 0 " + frameImages + " "
                                + gifName,
                            shell=True,
                            stdout=subprocess.PIPE)

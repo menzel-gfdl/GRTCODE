@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/tcsh -f
 
 #Generate test data files for the Smallsubset input atmosphere.
 
@@ -134,10 +134,23 @@ echo "Calculating the ozone spectra ..."
 echo "Calculating the 5 gas spectra ..."
 ./grtcode.x -aINPUT/$atmos_data_file -o$gas5_output_file -w$min_wavenumber -W$max_wavenumber -r$wavenumber_res -1a HITFILES/$h2o_hitran_file -2$co2_ppmv HITFILES/$co2_hitran_file -3a HITFILES/$o3_hitran_file -4$n2o_ppmv HITFILES/$n2o_hitran_file -6$ch4_ppmv HITFILES/$ch4_hitran_file
 
+#Move output files to the RESULTS directory.
+mv $h2o_output_file ./RESULTS/
+mv $co2_output_file ./RESULTS/
+mv $o3_output_file ./RESULTS/
+#mv $n2o_output_file ./RESULTS/
+#mv $co_output_file ./RESULTS/
+#mv $ch4_output_file ./RESULTS/
+#mv $o2_output_file ./RESULTS/
+mv $gas5_output_file ./RESULTS/
+
 #Write out that the runs have finished.
 echo "Runs for ${test_type} test suite complete ..."
 
 #Test the output from the runs against the reference results.
+
+#Change to the verification directory.
+cd ./verification
 
 #Set the name of the RFM reference results.
 set h2o_rfm_reference_file = h2o/0-0.spc
@@ -153,15 +166,14 @@ set gas5_rfm_reference_file = 5gas/0-0.spc
 set h2o_verification_results = "${h2o_output_file}.verification_results"
 set co2_verification_results = "${co2_output_file}.verification_results"
 set o3_verification_results = "${o3_output_file}.verification_results"
-set n2o_verification_results = 
-set co_verification_results = 
-set ch4_verification_results = 
-set o2_verification_results = 
+#set n2o_verification_results = "${n2o_output_file}.verification_results"
+#set co_verification_results = "${co_output_file}.verification_results"
+#set ch4_verification_results = "${ch4_output_file}.verification_results"
+#set o2_verification_results = "${o2_output_file}.verification_results"
 set gas5_verification_results = "${gas5_output_file}.verification_results"
 
 #Get rid of any old verification binaries and executables.
 echo "Removing old verification binary files and executables ..."
-cd ./verification
 make clean
 
 #Build the verification executable.
@@ -173,53 +185,84 @@ make
 #Water
 if ( -f "RFM_SMALLSUBSET_RESULTS/${h2o_rfm_reference_file}" ) then
     echo "Verifiying h2o results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$h2o_rfm_reference_file -o$h2o_verification_results ../$h2o_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$h2o_rfm_reference_file -o$h2o_verification_results ../RESULTS/$h2o_output_file
 endif
 
 #Carbon dioxide
 if ( -f "RFM_SMALLSUBSET_RESULTS/${co2_rfm_reference_file}" ) then
     echo "Verifiying co2 results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co2_rfm_reference_file -o$co2_verification_results ../$co2_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co2_rfm_reference_file -o$co2_verification_results ../RESULTS/$co2_output_file
 endif
 
 #Ozone
 if ( -f "RFM_SMALLSUBSET_RESULTS/${o3_rfm_reference_file}" ) then
     echo "Verifiying o3 results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o3_rfm_reference_file -o$o3_verification_results ../$o3_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o3_rfm_reference_file -o$o3_verification_results ../RESULTS/$o3_output_file
 endif
 
 #Nitrous oxide.
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${n2o_rfm_reference_file}" ) then
 #    echo "Verifiying n2o results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$n2o_rfm_reference_file -o$n2o_verification_results ../$n2o_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$n2o_rfm_reference_file -o$n2o_verification_results ../RESULTS/$n2o_output_file
 #endif
 
 #Carbon monoxide
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${co_rfm_reference_file}" ) then
 #    echo "Verifiying co results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co_rfm_reference_file -o$co_verification_results ../$co_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co_rfm_reference_file -o$co_verification_results ../RESULTS/$co_output_file
 #endif
 
 #Methane
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${ch4_rfm_reference_file}" ) then
 #    echo "Verifiying ch4 results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$ch4_rfm_reference_file -o$ch4_verification_results ../$ch4_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$ch4_rfm_reference_file -o$ch4_verification_results ../RESULTS/$ch4_output_file
 #endif
 
 #Oxygen
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${o2_rfm_reference_file}" ) then
 #    echo "Verifiying o2 results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o2_rfm_reference_file -o$o2_verification_results ../$o2_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o2_rfm_reference_file -o$o2_verification_results ../RESULTS/$o2_output_file
 #endif
 
 #5 Gases
 if ( -f "RFM_SMALLSUBSET_RESULTS/${gas5_rfm_reference_file}" ) then
     echo "Verifiying 5 gas results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$gas5_rfm_reference_file -o$gas5_verification_results ../$gas5_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$gas5_rfm_reference_file -o$gas5_verification_results ../RESULTS/$gas5_output_file
 endif
+
+#Move output files to the RESULTS directory.
+mv $h2o_verification_results ./RESULTS/
+mv $co2_verification_results ./RESULTS/
+mv $o3_verification_results ./RESULTS/
+#mv $n2o_verification_results ./RESULTS/
+#mv $co_verification_results ./RESULTS/
+#mv $ch4_verification_results ./RESULTS/
+#mv $o2_verification_results ./RESULTS/
+mv $gas5_verification_results ./RESULTS/
+
+#Move the outputted ".gnuplot" files to the plots directory.
+mv "${h2o_verification_results}.gnuplot" ./plots/
+mv "${co2_verification_results}.gnuplot" ./plots/
+mv "${o3_verification_results}.gnuplot" ./plots/
+#mv "${n2o_verification_results}.gnuplot" ./plots/
+#mv "${co_verification_results}.gnuplot" ./plots/
+#mv "${ch4_verification_results}.gnuplot" ./plots/
+#mv "${o2_verification_results}.gnuplot" ./plots/
+mv "${gas5_verification_results}.gnuplot" ./plots/
 
 #Write out that the verifications have finished.
 echo "Verifications for ${test_type} test suite complete ..."
+
+#Create the plots and gifs.
+
+#Change to the plots directory.
+cd ./plots
+
+#Get rid of any old verification binaries and executables.
+echo "Creating plots ..."
+
+#Run the python script to make the plots.
+./create_plots.py -d -g -f
 
 #Print all done.
 echo "All done."

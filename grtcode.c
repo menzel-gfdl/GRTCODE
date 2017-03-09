@@ -1,19 +1,21 @@
-/* GRTCODE is a GPU-able Radiative Transfer Code
- * Copyright (C) 2016  Garrett Wright
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; version 2.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+/*
+    GRTCODE is a GPU-able Radiative Transfer Code
+    Copyright (C) 2016  Garrett Wright
 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
- */
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation; version 2.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
+    USA.
+*/
 
 #ifdef MPI_ENABLED
 #include <mpi.h>
@@ -33,7 +35,6 @@
 #include "outputNetcdfSpec.h"
 #include "voigt.h"
 #include "continuum.h"
-
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 /*Helper data structures.*/
@@ -60,14 +61,15 @@ typedef enum MoleculeNumber_t
 const char *argp_program_version = "lbl-dev 0.1";
 const char *argp_program_bug_address = "<garrett.wright@noaa.gov>";
 static char doc[] = "GFDL style documentation goes >/\n\n\\"
-                    "<^here.\n\v"
-                    "Other Documentation goes here.";
+                        "<^here.\n\v"
+                        "Other Documentation goes here.";
 #define minNhitfiles 1
 #define maxNhitfiles NUM_MOL
 static const unsigned int minNargs=minNhitfiles;
 static const unsigned int maxNargs=maxNhitfiles;
 static char args_doc[] = "-aINPUT.nc -oOUT.nc"
-                         " [molecule concentration specifications] HITFILES";
+                             " [molecule concentration specifications]"
+                             " HITFILES";
 
 /*Command line options.*/
 static struct argp_option options[] =
@@ -94,9 +96,9 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Use gpu implementation on specifed DEVICE."
-     "\n\tDefault DEVICE is simply GPU0"
-     "\n\tIncompatible with --host."
-     "\n\t --mpi modifies this flag to prescribe numDevices per node."},
+         "\n\tDefault DEVICE is simply GPU0"
+         "\n\tIncompatible with --host."
+         "\n\t --mpi modifies this flag to prescribe numDevices per node."},
 
     {"host",
      'h',
@@ -169,8 +171,8 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Water Concentration.  Default reads from INPUT.NC, else supply global"
-     " value (ppmv).  Layer partial pressure = (layer pressure)*"
-     "(water concentration/10^6).",
+         " value (ppmv).  Layer partial pressure = (layer pressure)*"
+         "(water concentration/10^6).",
      -2},
 
     {"co2",
@@ -178,8 +180,8 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Carbon Dioxide Concentration.  Supply global value (ppmv)."
-     "   Layer partial pressure = (layer pressure)*"
-     "(carbon dioxide concentration/10^6).",
+         "  Layer partial pressure = (layer pressure)*"
+         "(carbon dioxide concentration/10^6).",
      -2},
 
     {"o3",
@@ -187,8 +189,8 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Ozone Concentration.  Default reads from INPUT.NC, else supply global"
-     " value (ppmv).  Layer partial pressure = (layer pressure)*"
-     "(ozone concentration/10^6).",
+         " value (ppmv).  Layer partial pressure = (layer pressure)*"
+         "(ozone concentration/10^6).",
      -2},
 
     {"n2o",
@@ -196,8 +198,8 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Nitrous Oxide. Supply global value (ppmv)."
-     "  Layer partial pressure = (layer pressure)*"
-     "(nitrous oxide concentration/10^6).",
+         "  Layer partial pressure = (layer pressure)*"
+         "(nitrous oxide concentration/10^6).",
      -2},
 
     {"co",
@@ -205,8 +207,8 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Carbon Monoxide Concentration.  Supply global value (ppmv)."
-     "  Layer partial pressure = (layer pressure)*"
-     "(carbon monoxide concentration/10^6).",
+         "  Layer partial pressure = (layer pressure)*"
+         "(carbon monoxide concentration/10^6).",
      -2},
 
     {"ch4",
@@ -214,8 +216,8 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Methane Conentration.  Supply global value (ppmv)."
-     "  Layer partial pressure = (layer pressure)*"
-     "(methane concentration/10^6).",
+         "  Layer partial pressure = (layer pressure)*"
+         "(methane concentration/10^6).",
      -2},
 
     {"o2",
@@ -223,8 +225,8 @@ static struct argp_option options[] =
      "VAL",
      OPTION_ARG_OPTIONAL,
      "Oxygen Concentration.  Supply global value (ppmv)."
-     "  Layer partial pressure = (layer_pressure)*"
-     "(oxygen concentration/10^6).",
+         "  Layer partial pressure = (layer_pressure)*"
+         "(oxygen concentration/10^6).",
      -2},
 
     {"ctm",
@@ -237,6 +239,7 @@ static struct argp_option options[] =
     {0}
 };
 
+/*Command line arguments structure.*/
 struct arguments
 {
     char *atmos;                  /*Input atmosphere netCDF file.*/
@@ -244,8 +247,8 @@ struct arguments
     int nhitfiles;                /*Total number of inputted HITRAN files.*/
     int nmolConc;                 /*Number of inputted molecular concentrations.*/
     int nmolConcOver;             /*Number of molecular concentrations that will be taken from the netCDF file.*/
-    int silent;                   /**/
-    int verbose;                  /**/
+    int silent;                   /*Use silent mode.*/
+    int verbose;                  /*Use verbose mode.*/
     int host;                     /*Flag for host-only execution.*/
     int device;                   /*Specific device id to run on.*/
     int mpi;                      /*Flag for using mpi.*/
@@ -285,22 +288,22 @@ static double parse_MolecConc(char *arg)
     if (arg[0] == 'a' )
     {
         /*A leading 'a' character specifies that the concentration should be
-         taken from the "nc" file */
+         taken from the "nc" file.*/
         res = -1;
     }
     else if (isalpha(arg[0]))
     {
         fprintf(stderr,
                 "Error(parse_MolecConc): the supplied character (%c) for"
-                " overriding a molecule concentration is not understood."
-                " Review args.\n",
+                    " overriding a molecule concentration is not understood."
+                    "  Review args.\n",
                 arg[0]);
         exit(EXIT_FAILURE);
     }
     else
     {
         /*This should probably be changed to a strtod call with err checks
-          later*/
+          later.*/
         res = atof(arg);
     }
 
@@ -372,8 +375,9 @@ static error_t parse_opt(int key,
             {
                 fprintf(stderr,
                         "Error(parse_opt): Reading the molecular concentration"
-                        " from the inputted netCDF file is not currently"
-                        " supported for this molecule (%c).\n",key);
+                            " from the inputted netCDF file is not currently"
+                            " supported for this molecule (%c).\n",
+                        key);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -388,8 +392,9 @@ static error_t parse_opt(int key,
             {
                 fprintf(stderr,
                         "Error(parse_opt): Reading the molecular concentration"
-                        " from the inputted netCDF file is not currently"
-                        " supported for this molecule (%c).\n",key);
+                            " from the inputted netCDF file is not currently"
+                            " supported for this molecule (%c).\n",
+                        key);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -400,8 +405,9 @@ static error_t parse_opt(int key,
             {
                 fprintf(stderr,
                         "Error(parse_opt): Reading the molecular concentration"
-                        " from the inputted netCDF file is not currently"
-                        " supported for this molecule (%c).\n",key);
+                            " from the inputted netCDF file is not currently"
+                            " supported for this molecule (%c).\n",
+                        key);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -412,8 +418,9 @@ static error_t parse_opt(int key,
             {
                 fprintf(stderr,
                         "Error(parse_opt): Reading the molecular concentration"
-                        " from the inputted netCDF file is not currently"
-                        " supported for this molecule (%c).\n",key);
+                            " from the inputted netCDF file is not currently"
+                            " supported for this molecule (%c).\n",
+                        key);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -424,8 +431,9 @@ static error_t parse_opt(int key,
             {
                 fprintf(stderr,
                         "Error(parse_opt): Reading the molecular concentration"
-                        " from the inputted netCDF file is not currently"
-                        " supported for this molecule (%c).\n",key);
+                            " from the inputted netCDF file is not currently"
+                            " supported for this molecule (%c).\n",
+                        key);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -437,7 +445,7 @@ static error_t parse_opt(int key,
             {
                 fprintf(stderr,
                         "Error(parse_opt): there are too many command line"
-                        "arguments.\n");
+                            " arguments.\n");
                 argp_usage(state);
             }
             arguments->hitfiles[state->arg_num] = arg;
@@ -448,7 +456,7 @@ static error_t parse_opt(int key,
             {
                 fprintf(stderr,
                         "Error(parse_opt): there are too few command line"
-                        " arguments.\n");
+                            " arguments.\n");
                 argp_usage( state );
             }
             break;
@@ -466,41 +474,57 @@ static struct argp argp = {options,parse_opt,args_doc,doc};
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*---------------------------------------------------------------------------*/
-/*For a given molecule, set the partial pressure (atm) at each time, latitude,
-  longitude, and height.*/
-static void setGlobalPartialPres(double val, 
-                                 REAL_t* PS,
+/*For a given molecule, set the partial pressure at each time, latitude,
+  longitude, and height.
+
+  Arguments:
+      val   [in]      Molecular concentration in pressure units (ppmv).
+      PS    [in,out]  Array of partial pressures (atm).  This array is stored
+                          as [time][lat][lon][molecule][height].
+      P     [in]      Array of atmospheric pressures (atm).  This array is
+                          stored as [time][lat][lon][height].
+      molId [in]      Id of the molecule whose partial pressure is being
+                          calculated.
+      ntime [in]      Size of the time dimension for the pressure arrays.
+      nlat  [in]      Size of the latitude dimension for the pressure
+                          arrays.
+      nlon  [in]      Size of the longitude dimension for the pressure
+                          arrays.
+      nlvl  [in]      Size of the height dimension for the pressure arrays.
+*/
+static void setGlobalPartialPres(double const val,
+                                 REAL_t *PS,
                                  REAL_t const * const P,
-                                 unsigned int molId,
-                                 size_t ntime,
-                                 size_t nlat,
-                                 size_t nlon,
-                                 size_t nlvl)
+                                 unsigned int const molId,
+                                 size_t const ntime,
+                                 size_t const nlat,
+                                 size_t const nlon,
+                                 size_t const nlvl)
 {
     /*Local variables*/
     unsigned int itr;                         /*Loop variable.*/
     unsigned int lat;                         /*Loop variable.*/
     unsigned int lon;                         /*Loop variable.*/
     unsigned int time;                        /*Loop variable.*/
-    size_t ps_off;                            /*Array offset for partial pressure.*/
+    size_t ps_off;                            /*Array offset for partial
+                                                  pressure.*/
     size_t p_off;                             /*Array offset for pressure.*/
-    const size_t ps_off_mol = (molId-1)*nlvl; /*Used to calculate the offset for the given molecule.*/
+    const size_t ps_off_mol = (molId-1)*nlvl; /*Used to calculate the offset
+                                                  for the given molecule.*/
 
-    /*Set the partial pressure of the molecule. Pressure is stored as
-     (time,lat,lon,z) and partial pressure is store as
-     (time,lat,lon,molecule,z).*/
+    /*Loop through the arrays.*/
     for (time=0;time<ntime;++time)
     {
         for (lat=0;lat<nlat;++lat)
         {
             for (lon=0;lon<nlon;++lon)
             {
-                /* get an offset for this t,lat,lon,mol */
+                /*Calculate the offsets.*/
                 ps_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
                          lon*NUM_MOL*nlvl + ps_off_mol;
                 p_off = time*(nlat*nlon*nlvl) + lat*(nlon*nlvl) + lon*nlvl;
 
-                /* itr over levels */
+                /*Calculate the partial pressures.*/
                 for (itr=0;itr<nlvl;++itr)
                 {
                     PS[ps_off+itr] = (val/1.e6)*P[p_off+itr];
@@ -513,14 +537,20 @@ static void setGlobalPartialPres(double val,
 }
 
 /*---------------------------------------------------------------------------*/
-/*Calculate the number density (1/cm^3) of the molecule from the ideal gas
-  law.  The quantity P_atm is the pressure (atm).  The quantity T_k is the
-  temperature (K).*/
+/*Calculate the number density of the air from the ideal gas law.
+
+  Arguments:
+      P_atm [in]  Pressure (atm).
+      T_k   [in]  Temperature (K).
+
+  Return:
+      (P_atm*6.022E23)/(T_k*82.057338)  Number density (cm^-3).
+*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t idealGasNumberDensity(const REAL_t P_atm,
-                             const REAL_t T_k)
+REAL_t idealGasNumberDensity(REAL_t const P_atm,
+                             REAL_t const T_k)
 {
     /*Local variables*/
     const REAL_t R = 82.057338; /*Gas constant (cm^3*atm*K^-1*mol^-1).*/
@@ -530,17 +560,37 @@ REAL_t idealGasNumberDensity(const REAL_t P_atm,
 }
 
 /*---------------------------------------------------------------------------*/
-/*Calculate the number density (1/cm^3) for a molecular species.  The quantity
-  PartialPres is the partial pressure (atm).  The quantity T is the
-  temperature (K).*/
-static void setGlobalNumberDensity(REAL_t* const N,
+/*Calculate the number density for a molecular species.
+
+  Arguments:
+      N           [in,out]  Number density (cm^-3).  This array is stored as
+                                [time][lat][lon][molecule][height].
+      PartialPres [in]      Partial pressure (atm).  This array is stored as
+                                [time][lat][lon][molecule][height].
+      T           [in]      Temperature (K).  This array is stored as
+                                [time][lat][lon][height].
+      hitranMolId [in]      Molecule id from the hitran database.
+      ntime       [in]      Size of the time dimension for the partial
+                                pressure, temperature, and number density
+                                arrays.
+      nlat        [in]      Size of the latitude dimension for the partial
+                                pressure, temperature, and number density
+                                arrays.
+      nlon        [in]      Size of the longitude dimension for the partial
+                                pressure, temperature, and number density
+                                arrays.
+      nlvl        [in]      Size of the height dimension for the partial
+                                pressure, temperature, and number density
+                                arrays.
+*/
+static void setGlobalNumberDensity(REAL_t * const N,
                                    REAL_t const * const PartialPres,
                                    REAL_t const * const T,
-                                   const unsigned int hitranMolId,
-                                   const size_t ntime,
-                                   const size_t nlat,
-                                   const size_t nlon,
-                                   const size_t nlvl)
+                                   unsigned int const hitranMolId,
+                                   size_t const ntime,
+                                   size_t const nlat,
+                                   size_t const nlon,
+                                   size_t const nlvl)
 {
     /*Local variables*/
     unsigned int itr;                              /*Loop variable.*/
@@ -549,26 +599,27 @@ static void setGlobalNumberDensity(REAL_t* const N,
     unsigned int time;                             /*Loop variable.*/
     size_t off;                                    /*Array offset.*/
     size_t n_off;                                  /*Array offset.*/
-    const size_t n_off_mol = (hitranMolId-1)*nlvl; /*Used to calculate the offset for the inputted molecule.*/
+    const size_t n_off_mol = (hitranMolId-1)*nlvl; /*Used to calculate the
+                                                       offset for the inputted
+                                                       molecule.*/
 
-    /*Calculate the number density.  This array is of the form
-      (time,lat,lon,mol,z).*/
+    /*Loop through the arrays.*/
     for(time=0;time<ntime;++time)
     {
         for(lat=0;lat<nlat;++lat)
         {
             for(lon=0;lon<nlon;++lon)
             {
-                /*Get the array offsets.*/
+                /*Calculate the array offsets.*/
                 off = time*nlat*nlon*nlvl + lat*nlon*nlvl + lon*nlvl;
                 n_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
                         lon*NUM_MOL*nlvl + n_off_mol;
 
-                /*Loop over the pressure layers.*/
+                /*Calculate the number densities using the ideal gas law.*/
                 for (itr=0;itr<nlvl;++itr)
                 {
-                    N[n_off + itr] = idealGasNumberDensity(PartialPres[n_off+itr],
-                                                           T[off+itr]);
+                    N[n_off+itr] = idealGasNumberDensity(PartialPres[n_off+itr],
+                                                         T[off+itr]);
                 }
             }
         }
@@ -578,24 +629,34 @@ static void setGlobalNumberDensity(REAL_t* const N,
 }
 
 /*---------------------------------------------------------------------------*/
-/*Calculate the molecular parital pressures (atm) and number densities
-  (1/cm^3).*/
-static void checkMolConfig(struct arguments* args,
-                           const unsigned int molid,
-                           radiationOutputFields_t* atmosData,
-                           const int time)
+/*Calculate parital pressures and number densities for the molecule designated
+  by the inputted molid.
+
+  Arguments:
+      args      [in]      Pointer to the command line argument structure.
+      molid     [in]      Id of the molecule whose partial pressures and number
+                              densities will be calculated.
+      atmosData [in,out]  Pointer to a structured containing molecule
+                              specific atmospheric data.
+      time      [in]      Size of the time dimension for the atmospheric
+                              data arrays.
+*/
+static void checkMolConfig(struct arguments *args,
+                           unsigned int const molid,
+                           radiationOutputFields_t *atmosData,
+                           int const time)
 {
     /*Local variables*/
-    REAL_t* PS = atmosData->PS;            /*Molecular partial pressure (atm).*/
+    REAL_t *PS = atmosData->PS;            /*Molecular partial pressure (atm).*/
     const size_t nlat = atmosData->nlat;   /*Number of latitude grid points.*/
     const size_t nlon = atmosData->nlon;   /*Number of longitude grid points.*/
     const size_t nlvl = atmosData->npfull; /*Number of pressure layers.*/
     int abort = 0;                         /*Abort flag.*/
 
-    /*Calculate the partial pressure (atm) for the molecule.  If the molecule
-      is either h2o or o3 and the concentration was not specified on the
-      command line (or the value of 'a' was given), then the partial pressure
-      that was previously calculated from the inputted NetCDF file is used.*/
+    /*If the member of the arguments structure named after the molecule is
+      -1 (i.e., args->h2o = -1), then it is assumed that this molecule's
+      partial pressure is taken from the inputted atmosphere file.  Otherwise
+      calculate the parital pressure values for the molecule.*/
     switch(molid)
     {
         case 1:
@@ -729,7 +790,7 @@ static void checkMolConfig(struct arguments* args,
           supported molecule.*/
         fprintf(stderr,
                 "Error(checkMolConfig): this Hitfiles MolId (%d) does not"
-                " appear to be supported yet.\n",
+                    " appear to be supported yet.\n",
                 molid);
         exit(EXIT_FAILURE);
     }
@@ -739,15 +800,15 @@ static void checkMolConfig(struct arguments* args,
           values.*/
         fprintf(stderr,
                 "Error(checkMolConfig): this Hitfile MolId (%d) does not"
-                " appear to match any of the provided molecular"
-                " concentrations. Either a Hitfile is missing, an incorrect"
-                " Hitfile was inputted, or an extra molecular concentration"
-                " was specified.\n",
+                    " appear to match any of the provided molecular"
+                    " concentrations. Either a Hitfile is missing, an"
+                    " incorrect Hitfile was inputted, or an extra molecular"
+                    " concentration was specified.\n",
                 molid);
         exit(EXIT_FAILURE);
     }
 
-    /*Calculate the number densities (1/cm^3) for the molecule.*/
+    /*Calculate the number densities for the molecule.*/
     setGlobalNumberDensity(atmosData->N,
                            PS,
                            atmosData->T,
@@ -761,30 +822,46 @@ static void checkMolConfig(struct arguments* args,
 }
 
 /*---------------------------------------------------------------------------*/
+/*Set some constants.*/
 
-#define MAX_NUM_SPECTRAL_LINES 524288  /* 2^19 */
+/*Set the maximum number of spectra lines to a number divisible by 32 to
+  keep global device memory accesses aligned.  Here we choose 2^19.*/
+#define MAX_NUM_SPECTRAL_LINES 524288
+
+/*Set the reference temperature (K) for the HITRAN database.  See:
+
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+*/
 const REAL_t TREF = 296.0;
+
+/*Set the second radiation constant (cm*K).  This should be equal to (hc/k).*/
+const REAL_t c2 = 1.4387686;
+
+/*Set the value of pi and 1/pi.*/
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#ifndef M_1_PI
+#define M_1_PI 0.31830988618379067154
+#endif
+
+/*Set the maximum number of CUDA streams.*/
+#ifndef MAXNSTREAMS
+#define MAXNSTREAMS 2
+#endif
+
 /* const REAL_t c1 = 1.191042869E-8; /\* W/m2*sr*cm-4 noaa units*\/ /\* used in rad solver *\/ */
-const REAL_t c2 = 1.4387686;  /* to match RFM4.3, and Rothman Paper, hc/k in cm K , h:ergs s , c: cm/s , k [ergs/K]*/
 /* const REAL_t corK =1.66;      /\* used in rad solver *\/ */
 /* for quick reference */
 /* const REAL_t c1 = 1.191042869E-16;  /\* first radiation constant W*m2*sr^1*cm^-1 , SI*\/ */
 /* const REAL_t c2 = 1.4387770E-2;  /\* second radiation constant meters Kelvin from SI *\/ */
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846  /* pi */
-#endif
 
-#ifndef M_1_PI
-#define M_1_PI 0.31830988618379067154/* 1/pi */
-#endif
-
-#ifndef MAXNSTREAMS
-#define MAXNSTREAMS 2
-#endif
+/*---------------------------------------------------------------------------*/
+/*Include some GPU helper functions.*/
 
 #ifdef __NVCC__
-/* begin gpu helpers */
 
 #undef FORCE_KERNEL_CHECK
 /* #define FORCE_KERNEL_CHECK */
@@ -795,1385 +872,2417 @@ const REAL_t c2 = 1.4387686;  /* to match RFM4.3, and Rothman Paper, hc/k in cm 
 #include "cudaHelpers.cuh"
 
 #endif
-/* end gpu helpers */
 
+/*---------------------------------------------------------------------------*/
+/*Return the molar mass of the molecule specified by the inputted molecule
+  id.
 
+  Arguments:
+      hitranMolId [in]  Molecule id from the HITRAN database.
 
-/******************** begin absorption calcs *****************************/  
-
+  Return:
+      Mass of the molecule (g/mol).
+*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t getMolarMass(const int hitranMolId){
-  REAL_t res;
-  switch(hitranMolId)
-  {
-    case 1:     /* h2o */
-      res = 18.01528;  /* g/mol */;
-      break;
-    case 2:     /* co2 */
-      res = 44.01;
-      break;
-    case 3:  /* o3 */
-      res = 48.;
-      break;
-    case 4:  /* n2o */
-      res = 44.013;
-      break;
-    case 5:  /* co */
-      res = 28.01;
-      break;
-    case 6:  /* ch4 */
-      res = 16.04;
-      break;
-    case 7:  /* o2 */
-      res = 32.;
-      break;
-    default:
-/* #if !defined(__CUDA_ARCH__) */
-/*       fprintf(stderr,"Error, the molecular with (0-based) molId=%d is not implemented in getMolarMass," */
-/*               " something is probably very very wrong. Aborting\n.", hitranMolId); */
-/*       exit(EXIT_FAILURE); */
-/* #else */
-      assert(0);  /* mol not implemented */
-/* #endif */
-      break;
-  }
-         
-  return res;
-}
-
-/* Q found as QT by method of TIPS_2011(.cu) */
-
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t Q(const uint8_t molId,
-         const REAL_t T,
-         const uint8_t iso)
+REAL_t getMolarMass(int const hitranMolId)
 {
-  float gsi;
-  REAL_t Qt;
-  QT(molId,
-     T, /* input temp */
-     iso, /* an isotopeIndex */
-     &gsi, /* state independent nuclear degeneracyfactor */
-     &Qt);       /*  Total Internal Partition Function */
-  /* /\* dbg *\/ printf("Q(molId=%d, T=%f, isoIdx=%d) = %f \n", molId,T,iso,Qt); */
-  return Qt;
+    /*Local variables*/
+    REAL_t res; /*Molar mass of the molecule.*/
+
+    /*Get the molar mass of the inputted molecule.*/
+    switch(hitranMolId)
+    {
+        case 1:
+            /*h2o*/
+            res = 18.01528;
+            break;
+        case 2:
+            /*co2*/
+            res = 44.01;
+            break;
+        case 3:
+            /*o3*/
+            res = 48.;
+            break;
+        case 4:
+            /*n2o*/
+            res = 44.013;
+            break;
+        case 5:
+            /*co*/
+            res = 28.01;
+            break;
+        case 6:
+            /*ch4*/
+            res = 16.04;
+            break;
+        case 7:
+            /*o2*/
+            res = 32.;
+            break;
+        default:
+            /*Molecule not implemented.*/
+/*
+#if !defined(__CUDA_ARCH__)
+            fprintf(stderr,
+                    "Error, the molecular with (0-based) molId=%d is not"
+                        " implemented in getMolarMass, something is probably"
+                        " very very wrong. Aborting\n.",
+                    hitranMolId);
+            exit(EXIT_FAILURE);
+#else
+*/
+            assert(0);
+/*
+#endif
+*/
+            break;
+    }
+
+    return res;
 }
 
+/*---------------------------------------------------------------------------*/
+/*Calculate the total internal partition function for the inputted molecule
+  using the method located in TIPS_2011.cu.
 
+  Arguments:
+      moldId [in]  A molecule id.
+      T      [in]  Temperature (K).
+      iso    [in]  Isotope index.
 
+  Return:
+      The total internal partition function.
+*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t compute_gamma(const REAL_t P,
-                     const REAL_t T,
-                     const float Yself,
-                     const  float Yair,
-                     const  float n,
-                     const  REAL_t Ps)
+REAL_t Q(uint8_t const molId,
+         REAL_t const T,
+         uint8_t const iso)
 {
-  const REAL_t gam = pow( (TREF/T), (REAL_t)n ) * ( ((REAL_t)Yair) *(P-Ps)+((REAL_t)Yself)*Ps);
-  /* /\* dbg *\/ printf("compute_gamma(P=%f, T=%f, Yself=%f, Yair=%f, n=%f, Ps=%f) = %f\n", P, T, Yself, Yair, n, Ps, gam); */
-  return gam;
+    /*Local variables*/
+    float gsi; /*State independent nuclear degeneracy factor.*/
+    REAL_t Qt; /*Total internal partition function.*/
+
+    /*Calculate the total internal parition function.*/
+    QT(molId,
+       T,
+       iso,
+       &gsi,
+       &Qt);
+/*
+    printf("Q(molId=%d,T=%f,isoIdx=%d) = %f \n",
+           molId,
+           T,
+           iso,
+           Qt);
+*/
+
+    return Qt;
 }
 
+/*---------------------------------------------------------------------------*/
+/*Calculate the pressure broadened line halfwidth.  See equation A12 from:
 
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      P     [in]  Pressure (atm).
+      T     [in]  Temperature (K).
+      Yself [in]  Self-broadened halfwidth at half maximum (cm^-1*atm^-1).
+      Yair  [in]  Air-broadened halfwidth at half maximum (cm^-1*atm^-1).
+      n     [in]  Coefficient of temperature dependence of the air-broadened
+                      halfwidth at half maximum.
+      Ps    [in]  Partial pressure (atm).
+
+  Return:
+      Pressure broadened line halfwidth (cm^-1).
+*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t pressureShiftCorrection(const REAL_t Vnn,
-                               const float d,
-                               const REAL_t P)
+REAL_t compute_gamma(REAL_t const P,
+                     REAL_t const T,
+                     float const Yself,
+                     float const Yair,
+                     float const n,
+                     REAL_t const Ps)
 {
-  return (Vnn + ((REAL_t)d) * P );
+    /*Calculate the pressure broadened line halfwidth.*/
+    const REAL_t gam = pow((TREF/T),(REAL_t)n)*
+                       ((((REAL_t)Yair)*(P-Ps)) + (((REAL_t)Yself)*Ps));
+/*
+    printf("compute_gamma(P=%f, T=%f, Yself=%f, Yair=%f, n=%f, Ps=%f) = %f\n",
+           P,
+           T,
+           Yself,
+           Yair,
+           n,
+           Ps,
+           gam);
+*/
+
+    return gam;
 }
 
+/*---------------------------------------------------------------------------*/
+/*Calculate the pressure-shift correction of the line position.  See
+  equation A13 from:
 
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      Vnn [in]  Spectral line transition frequency (cm^-1).
+      d   [in]  Air-broadened pressure shift at (T=296K,p=1atm) of the line
+                    transition frequency (cm^-1*atm^-1).
+      P   [in]  Pressure (atm).
+
+  Return:
+      Pressure-shift correction of the line position (cm^-1).
+*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t lorentzianKernel( const REAL_t F,
-                         const REAL_t gam,
-                         const REAL_t gam2,
-                         const REAL_t PshiftCorrection)
+REAL_t pressureShiftCorrection(REAL_t const Vnn,
+                               float const d,
+                               REAL_t const P)
 {
-  const REAL_t del = (F - PshiftCorrection);
-
-  return ( ((REAL_t)M_1_PI) * gam / ( gam2 + del*del) );
+    return (Vnn + ((REAL_t)d)*P);
 }
 
+/*---------------------------------------------------------------------------*/
+/*Calculate the normalized line shape function assuming a Lorentz profile.
+  See equation A14 from:
 
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      F                [in]  Frequency (cm^-1).
+      gam              [in]  Pressure boardened line halfwidth (cm^-1).
+      gam2             [in]  Square of the pressure broadened line
+                                 halfwidth (cm^-2).
+      PshiftCorrection [in]  Pressure-shift correction of the line
+                                 position (cm^-1).
+
+  Return:
+      Value of the normalized line shape function assuming a Lorentz
+          profile (cm).
+*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t Snn_partialCorrection(const uint8_t molId,
-                             uint8_t iso,
-                             REAL_t Vnn,
-                             float En,
-                             REAL_t Snn_ref)
+REAL_t lorentzianKernel(REAL_t const F,
+                        REAL_t const gam,
+                        REAL_t const gam2,
+                        REAL_t const PshiftCorrection)
 {
-  return Snn_ref * Q(molId,TREF,iso) /
-      ( exp(-c2*En/TREF)  * ( 1 - exp(-c2*(Vnn/TREF) ) ) ) ;
+    /*Local variables*/
+    const REAL_t del = (F-PshiftCorrection); /*Frequency difference (cm^-1).*/
+
+    return (((REAL_t)M_1_PI)*(gam/(gam2+(del*del))));
 }
 
+/*---------------------------------------------------------------------------*/
+/*Part of the temperature correction of the line intensity.  Includes all
+  terms dependent on the reference temperature.  See equation A11 from:
+
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      molId   [in]  Molecule id.
+      iso     [in]  Isotope index.
+      Vnn     [in]  Spectral line transition frequency (cm^-1).
+      En      [in]  Lower state energy of the transition (cm^-1).
+      Snn_ref [in]  Spectral line intensity at reference
+                        temperature 296K (cm).
+
+  Return:
+      A partial correction to the line intensity (cm).
+*/
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t Snn_Tcorrection(const uint8_t molId,
-                       REAL_t T,
-                       uint8_t iso,
-                       REAL_t Vnn,
-                       float En,
-                       REAL_t Snn_partial)
+REAL_t Snn_partialCorrection(uint8_t const molId,
+                             uint8_t const iso,
+                             REAL_t const Vnn,
+                             float const En,
+                             REAL_t const Snn_ref)
 {
-  return ( Snn_partial / Q(molId,T,iso) ) * ( ((REAL_t)1) - exp(-c2*Vnn/T) ) * exp(-c2*En/T) ;
+    return (Snn_ref*Q(molId,TREF,iso))/
+           (exp(-c2*En/TREF)*(1-exp(-c2*(Vnn/TREF))));
 }
 
+/*---------------------------------------------------------------------------*/
+/*Part of the temperature correction of the line intensity due to the current
+  temperature.  See equation A11 from:
+
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      molId       [in]  Molecule id.
+      T           [in]  Temperature (K).
+      iso         [in]  Isotope index.
+      Vnn         [in]  Spectral line transition frequency (cm^-1).
+      En          [in]  Lower state energy of the transition (cm^-1).
+      Snn_partial [in]  Partial correction to the line intensity (cm).
+  Return:
+      Temperature correction of the line intensity (cm).
+*/
+#ifdef __NVCC__
+__host__ __device__
+#endif
+REAL_t Snn_Tcorrection(uint8_t const molId,
+                       REAL_t const T,
+                       uint8_t const iso,
+                       REAL_t const Vnn,
+                       float const En,
+                       REAL_t const Snn_partial)
+{
+    return (Snn_partial/Q(molId,T,iso))*(((REAL_t)1)-exp(-c2*Vnn/T))*
+           exp(-c2*En/T);
+}
+
+/*---------------------------------------------------------------------------*/
+/*Calculate the monochromatic absorption coefficient at the inputted
+  frequency, assuming a Lorentz line profile.  See equation A15 from:
+
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      snn              [in]  Temperature-corrected line intensity (cm).
+      F                [in]  Frequency (cm^-1).
+      gam              [in]  Pressure broadened line halfwidth (cm^-1).
+      gam2             [in]  Square of the pressure broadened line
+                                 halfwidth (cm^-2).
+      PshiftCorrection [in]  Pressure-shift correction of the line
+                                 position (cm^-1).
+
+  Return:
+      Monochromatic absorption coefficient (cm^2).
+*/
+#ifdef __NVCC__
+__inline__ __host__ __device__
+#endif
+REAL_t Knn_Lor(REAL_t const snn,
+               REAL_t const F,
+               REAL_t const gam,
+               REAL_t const gam2,
+               REAL_t const PshiftCorrection)
+{
+    return (snn*lorentzianKernel(F,gam,gam2,PshiftCorrection));
+}
+
+/*---------------------------------------------------------------------------*/
+/*Calculate the dimensionless optical depth, assuming a Lorentz line shape
+  function.  See equation A16 from:
+
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      Snn              [in]  Temperature-corrected line intensity (cm).
+      F                [in]  Frequency (cm^-1).
+      gam              [in]  Pressure broadened line halfwidth (cm^-1).
+      gam2             [in]  Square of the pressure broadened line
+                                 halfwidth (cm^-2).
+      PshiftCorrection [in]  Pressure-shift correction of the line
+                                 position (cm^-1).
+      u                [in]  Number density (cm^-3).
+      pathlength       [in]  Path length (cm).
+
+  Return:
+      The dimensionless optical depth.
+*/
+#ifdef __NVCC__
+__inline__ __host__ __device__
+#endif
+REAL_t tau_Lor(REAL_t const Snn,
+               REAL_t const F,
+               REAL_t const gam,
+               REAL_t const gam2,
+               REAL_t const PshiftCorrection,
+               REAL_t const u,
+               REAL_t const pathlength)
+{
+    return ((pathlength*u)*Knn_Lor(Snn,F,gam,gam2,PshiftCorrection));
+}
+
+/*---------------------------------------------------------------------------*/
+/*Calculate the monochromatic absorption coefficient at the inputted
+  frequency, assuming a pseudovoigt line profile.  See equation A15 from:
+
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      snn              [in]  Temperature-corrected line intensity (cm).
+      vnn              [in]  Spectral line transition frequency (cm^-1).
+      F                [in]  Frequency (cm^-1).
+      gam              [in]  Pressure broadened line halfwidth (cm^-1).
+      gam2             [in]  Square of the pressure broadened line
+                                 halfwidth (cm^-2).
+      PshiftCorrection [in]  Pressure-shift correction of the line
+                                 position (cm^-1).
+      eta              [in]  Mixing parameter for the pseudovoigt line shape
+                                 function.
+      alphad           [in]  alphad parameter for the gaussian line shape
+                                 function (cm^-1).
+
+  Return:
+      Monochromatic absorption coefficient (cm^2).
+*/
+#ifdef __NVCC__
+__inline__ __host__ __device__
+#endif
+REAL_t Knn_Voigt(REAL_t const snn,
+                 REAL_t const vnn,
+                 REAL_t const F,
+                 REAL_t const gam,
+                 REAL_t const gam2,
+                 REAL_t const PshiftCorrection,
+                 REAL_t const eta,
+                 REAL_t const alphad)
+{
+    /*Calculate the Lorentz line profile.*/
+    const float ly = lorentzianKernel(F,
+                                      gam,
+                                      gam2,
+                                      PshiftCorrection);
+
+    /*Calculate the Gaussian line profile.*/
+    const float gy = gauKernel(F,
+                               vnn,
+                               alphad);
+/*
+    printf("Lor Kernel: %f \t Gau Kernel(v=%f, vnn=%f, alphad= %f)= %f \n",
+           ly,
+           F,
+           vnn,
+           alphad,
+           gy);
+*/
+
+    return (snn*pseudoVoigt(eta,ly,gy));
+}
+
+/*---------------------------------------------------------------------------*/
+/*Calculate the dimensionless optical depth, assuming a pseudovoigt line shape
+  function.  See equation A16 from:
+
+  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
+      665-710.
+
+  Arguments:
+      Snn              [in]  Temperature-corrected line intensity (cm).
+      Vnn              [in]  Spectral line transition frequency (cm^-1).
+      F                [in]  Frequency (cm^-1).
+      gam              [in]  Pressure broadened line halfwidth (cm^-1).
+      gam2             [in]  Square of the pressure broadened line
+                                 halfwidth (cm^-2).
+      PshiftCorrection [in]  Pressure-shift correction of the line
+                                 position (cm^-1).
+      eta              [in]  Mixing parameter for the pseudovoigt line shape
+                                 function.
+      alphad           [in]  alphad parameter for the gaussian line shape
+                                 function (cm^-1).
+      u                [in]  Number density (cm^-3).
+      pathlength       [in]  Path length (cm).
+
+  Return:
+      The dimensionless optical depth.
+*/
 
 #ifdef __NVCC__
 __inline__ __host__ __device__
 #endif
-REAL_t Knn_Lor(const REAL_t snn,
-             const REAL_t F,
-             const REAL_t gam,
-             const REAL_t gam2,
-             const REAL_t PshiftCorrection)
+REAL_t tau_Voigt(REAL_t const Snn,
+                 REAL_t const Vnn,
+                 REAL_t const F,
+                 REAL_t const gam,
+                 REAL_t const gam2,
+                 REAL_t const PshiftCorrection,
+                 REAL_t const eta,
+                 REAL_t const alphad,
+                 REAL_t const u,
+                 REAL_t const pathlength)
 {
-  return ( snn * lorentzianKernel(F,gam,gam2,PshiftCorrection) );
+    return ((pathlength*u)*
+            Knn_Voigt(Snn,Vnn,F,gam,gam2,PshiftCorrection,eta,alphad));
 }
 
+/*---------------------------------------------------------------------------*/
 
 #ifdef __NVCC__
-__inline__ __host__ __device__
-#endif
-REAL_t tau_Lor(const REAL_t Snn,
-           const REAL_t F,
-           const REAL_t gam,
-           const REAL_t gam2,
-           const REAL_t PshiftCorrection,
-           const REAL_t u,          /* mol cm-2 */
-           const REAL_t pathlength)  /* should match units of u, cm */
-{
-  return ( (pathlength*u) * Knn_Lor( Snn,F,gam,gam2,PshiftCorrection) ) ;
-}
+/*---------------------------------------------------------------------------*/
+/*Compute the pressure broadened line halfwidth for each transition.
 
-#ifdef __NVCC__
-__inline__ __host__ __device__
-#endif
-REAL_t Knn_Voigt(const REAL_t snn,
-                 const REAL_t vnn,
-                 const REAL_t F,
-                 const REAL_t gam,
-                 const REAL_t gam2,
-                 const REAL_t PshiftCorrection,
-                 const REAL_t eta,
-                 const REAL_t alphad)
-{
-  const float ly = lorentzianKernel(F, gam, gam2, PshiftCorrection);
-  const float gy = gauKernel(F, vnn, alphad);
-  /* /\* dbg *\/ printf("Lor Kernel: %f \t Gau Kernel(v=%f, vnn=%f, alphad= %f)= %f \n",ly,F,vnn,alphad, gy); */
-      
-  return ( snn * pseudoVoigt(eta, ly, gy) );
-}
-
-
-#ifdef __NVCC__
-__inline__ __host__ __device__
-#endif
-REAL_t tau_Voigt(const REAL_t Snn,
-                  const REAL_t Vnn,
-                  const REAL_t F,
-                  const REAL_t gam,
-                  const REAL_t gam2,
-                  const REAL_t PshiftCorrection,
-                  const REAL_t eta,
-                  const REAL_t alphad,
-                  const REAL_t u,          /* mol cm-2 */
-                  const REAL_t pathlength)  /* should match units of u, cm */
-{  
-  return ( (pathlength*u) * Knn_Voigt( Snn,Vnn, F, gam, gam2, PshiftCorrection, eta, alphad) ) ;
-}
-
-#ifdef __NVCC__
+  Arguments:
+      numLayers [in]      Size of the height dimension for the inputted
+                              arrays.
+      nL        [in]      Size of the line dimension for the inputted arrays.
+      P         [in]      Array of pressures (atm).  This array is stored as
+                              [height].
+      T         [in]      Array of temperatures (K).  This array is stored as
+                              [height].
+      Ps        [in]      Array of partial pressures (atm).  This array is
+                              stored as [height].
+      Yself     [in]      Array of self-broadened halfwidth at half
+                              maximum (cm^-1*atm^-1).  This array is stored as
+                              [line].
+      Yair      [in]      Array of air-broadened halfwidth at half
+                              maximum (cm^-1*atm^-1).  This array is stored as
+                              [line].
+      n         [in]      Array of coefficients of temperature dependence of
+                              the air-broadened halfwidth at half maximum.
+                              This array is stored as [line].
+      Gam       [in,out]  Array of pressure broadened line halfwidths (cm^-1).
+                              This array is stored as [height][line].
+*/
 __global__
-void eval_gamma( const unsigned int numLayers,
-                 const unsigned int nL,
-                 const REAL_t* const P,
-                 const REAL_t* const T,
-                 const REAL_t* const Ps,
-                 const float* const Yself,
-                 const float* const Yair,
-                 const float* const n,
-                 REAL_t* Gam)
+void eval_gamma(unsigned int const numLayers,
+                unsigned int const nL,
+                REAL_t const * const P,
+                REAL_t const * const T,
+                REAL_t const * const Ps,
+                float const * const Yself,
+                float const * const Yair,
+                float const * const n,
+                REAL_t *Gam)
 {
-  unsigned int lyr;
-  unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (ltid < nL)
-  {
-#pragma unroll
-    for( lyr = 0 ; lyr < numLayers; ++lyr )
-    {
-      Gam[lyr*nL + ltid] = compute_gamma(P[lyr],
-                                         T[lyr],
-                                         Yself[ltid],
-                                         Yair[ltid],
-                                         n[ltid],
-                                         Ps[lyr]);
-    }
-  }
-  return;
-}
-
-__global__
-void eval_pShift(const unsigned int numLayers,
-                 const unsigned int nL,
-                 const REAL_t* const P,
-                 const REAL_t* const Vnn,
-                 const float* const d,
-                 REAL_t* const PShift)
-{
-  unsigned int lyr;
-  unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (ltid < nL)
-  {
-#pragma unroll
-    for( lyr = 0 ; lyr < numLayers; ++lyr )
-    {
-      PShift[lyr*nL + ltid] = pressureShiftCorrection(Vnn[ltid],
-                                                      d[ltid],
-                                                      P[lyr]);
-    }
-  }
-  return;
-}
-
-__global__ void pre_eval_Snn(const unsigned int nL,
-                             const uint8_t molId,
-                             const uint8_t* const iso,
-                             const REAL_t* const Vnn,
-                             const float* const En,
-                             REAL_t* Snn_ref)
-{
-  int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (ltid < nL)
-  {
-    Snn_ref[ltid] = Snn_partialCorrection(molId,
-                                          iso[ltid],
-                                          Vnn[ltid],
-                                          En[ltid],
-                                          Snn_ref[ltid]);
-  }
-  return;
-}
-
-__global__ void eval_Snn_correction(const unsigned int numLayers,
-                                    const unsigned int nL,
-                                    const uint8_t molId,
-                                    const REAL_t* const T,
-                                    const uint8_t* const iso,
-                                    const REAL_t* const Vnn,
-                                    const float* const En,
-                                    const REAL_t* const Snn_partial,
-                                    REAL_t* const S)
-{
-  unsigned int lyr;
-  unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-  if (ltid < nL)
-  {
-#pragma unroll
-    for( lyr = 0 ; lyr < numLayers; ++lyr )
-    {
-      S[lyr*nL + ltid] = Snn_Tcorrection(molId,
-                                         T[lyr],
-                                         iso[ltid],
-                                         Vnn[ltid],
-                                         En[ltid],
-                                         Snn_partial[ltid]);
-    }
-  }
-  return;
-}
-
-
-__global__ void eval_profile(const unsigned int molId,  /* hitran, 1 based */
-                             const unsigned int nL,
-                             const int nF,
-                             const REAL_t loWn,
-                             const REAL_t resolution,
-                             const unsigned int numLayers,
-                             const unsigned int breadth,
-
-                             const REAL_t* const T,
-                             REAL_t* Vnn,
-                             
-                             REAL_t* Gam,
-                             REAL_t* PShift,
-                             REAL_t* S,
-                             REAL_t* tauU_d,
-                             REAL_t* pathlength_d,
-                             REAL_t* out)
-{
-  unsigned int ltid = blockIdx.x * blockDim.x + threadIdx.x;
-  if ( ltid<nL )
-  {
-    int ftid;
-    int fcenterid;
-    REAL_t f;
+    /*Local variables*/
     unsigned int lyr;
-    unsigned int loffset;
-    
-    REAL_t gam;
-    REAL_t gam2;
-    REAL_t pShift;
-    REAL_t snn;
-    REAL_t tauu;
-    REAL_t len;
+    unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
 
-    const REAL_t molarMass = getMolarMass(molId);  /* g/mol */
-    REAL_t temp;
-    REAL_t etav;
-    REAL_t alphad;
-    REAL_t gaufwhm;
-
-
-    const int fsteps = ceil((REAL_t)breadth/resolution);
-    
-    /* Find index of nearest frequency to line */
-    const REAL_t thisLine = Vnn[ltid] ;
-    fcenterid = ( (2*(thisLine-loWn)/resolution) + 1 )/2;
-    if (fcenterid<nF){
-      
+    if (ltid < nL)
+    {
 #pragma unroll
-      for( lyr=0; lyr< numLayers ; ++lyr ) /*  spatial points */
-      {
-        loffset = lyr*nL + ltid;
-        /* lookup Gamma, pressureShift, Snn at this spatial point for this line*/
-        gam = Gam[loffset];
-        gam2 = gam*gam;
-        pShift = PShift[loffset];
-        snn = S[loffset];
-        tauu = tauU_d[lyr];  /* zero base the molId */
-        len = pathlength_d[lyr];
-
-        temp = T[lyr];
-        gaufwhm = gauFWHM(temp,molarMass,thisLine);
-        /* /\* dbg *\/ printf("lorfwhm = %f \t gaufwhm = %f \n",gam, gaufwhm); */
-        etav = eta(gam, gaufwhm );
-        alphad = gauAlphad(temp,molarMass,thisLine);
-
-        
-#pragma unroll
-        for( ftid= fcenterid - ((int)fsteps); ftid <= fcenterid ; ++ftid)
+        for (lyr=0;lyr<numLayers;++lyr)
         {
-          if (ftid>=0){
-            f = ((REAL_t)ftid)*resolution + loWn;
-            /* must use atomics for now, incorrect (race on load-alter-write out[ftid] ) without presorting lines (which we can do later) :) */
-            atomicAdd( &(out[lyr*nF + ftid]) , tau_Voigt(snn, thisLine, f, gam, gam2, pShift, etav, alphad, tauu, len) );
-          }
+            Gam[lyr*nL+ltid] = compute_gamma(P[lyr],
+                                             T[lyr],
+                                             Yself[ltid],
+                                             Yair[ltid],
+                                             n[ltid],
+                                             Ps[lyr]);
         }
-#pragma unroll
-        for( ftid = fcenterid + ((int)fsteps) ; ftid > fcenterid; --ftid)
-        {
-          if( ftid<nF){
-            f = ((REAL_t)ftid)*resolution + loWn;
-            /* must use atomics for now, incorrect (race on load-alter-write out[ftid] ) without presorting lines (which we can do later) :) */
-            atomicAdd( &(out[lyr*nF + ftid]) , tau_Voigt(snn, thisLine, f, gam, gam2, pShift, etav, alphad, tauu, len) );
-          }
-        }
-
-      }
     }
-  }
-  return;
+
+    return;
 }
+
+/*---------------------------------------------------------------------------*/
+/*Compute the pressure-shift correction of the line position for each
+  transition.
+
+  Arguments:
+      numLayers [in]      Size of the height dimension for the inputted
+                              arrays.
+      nL        [in]      Size of the line dimension for the inputted arrays.
+      P         [in]      Array of pressures (atm).  This array is stored as
+                              [height].
+      Vnn       [in]      Array of spectral line transition frequencies
+                              (cm^-1).  This array is stored as [line].
+      d         [in]      Array of air-broadened pressure shifts at
+                              (T=296K,p=1atm) of the line transition
+                              frequencies (cm^-1*atm^-1).  This array is
+                              stored as [line].
+      PShift    [in,out]  Array of pressure-shift corrections of the line
+                              positions (cm^-1).  This array is stored as
+                              [height][line].
+*/
+__global__
+void eval_pShift(unsigned int const numLayers,
+                 unsigned int const nL,
+                 REAL_t const * const P,
+                 REAL_t const * const Vnn,
+                 float const * const d,
+                 REAL_t * const PShift)
+{
+    /*Local variables*/
+    unsigned int lyr;
+    unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if (ltid < nL)
+    {
+#pragma unroll
+        for (lyr=0;lyr<numLayers;++lyr)
+        {
+            PShift[lyr*nL+ltid] = pressureShiftCorrection(Vnn[ltid],
+                                                          d[ltid],
+                                                          P[lyr]);
+        }
+    }
+
+    return;
+}
+
+/*---------------------------------------------------------------------------*/
+/*Compute the first part of the temperature correction of the line intensities
+  for each transition.  These include all terms dependent on the HITRAN
+  reference temperature.
+
+  Arguments:
+      nL        [in]    Size of the line dimension for the inputted arrays.
+      molId     [in]    Molecule id.
+      iso       [in]    Array of isotope indexes.  This array is stored as
+                            [line].
+      Vnn       [in]    Array of spectral line transition frequencies
+                            (cm^-1).  This array is stored as [line].
+      En        [in]    Array of lower state energies of the transitions
+                            (cm^-1).  This array is stored as [line].
+      Snn_ref [in,out]  Array of spectral line intensities (cm).  This
+                            array is stored as [line].
+*/
+__global__
+void pre_eval_Snn(unsigned int const nL,
+                  uint8_t const molId,
+                  uint8_t const * const iso,
+                  REAL_t const * const Vnn,
+                  float const * const En,
+                  REAL_t *Snn_ref)
+{
+    /*Local variables*/
+    int ltid = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if (ltid < nL)
+    {
+        Snn_ref[ltid] = Snn_partialCorrection(molId,
+                                              iso[ltid],
+                                              Vnn[ltid],
+                                              En[ltid],
+                                              Snn_ref[ltid]);
+    }
+
+    return;
+}
+
+/*---------------------------------------------------------------------------*/
+/*Compute the temperature correction of the line intensities for each
+  transition.
+
+  Arguments:
+      numLayers   [in]      Size of the height dimension for the inputted
+                                arrays.
+      nL          [in]      Size of the line dimension for the inputted
+                                arrays.
+      molId       [in]      Molecule id.
+      T           [in]      Array of temperatures (K).  This array is stored
+                                as [height].
+      iso         [in]      Array of isotope indexes.  This array is stored
+                                as [line].
+      Vnn         [in]      Array of spectral line transition frequencies
+                                (cm^-1).  This array is stored as [line].
+      En          [in]      Array of lower state energies of the transitions
+                                (cm^-1).  This array is stored as [line].
+      Snn_partial [in]      Array of partially corrected spectral line
+                                intensities (cm).  This array is stored
+                                as [line].
+      S           [in,out]  Array of corrected spectral line intensities (cm).
+                                This array is stored as [height][line].
+*/
+__global__
+void eval_Snn_correction(unsigned int const numLayers,
+                         unsigned int const nL,
+                         uint8_t const molId,
+                         REAL_t const * const T,
+                         uint8_t const * const iso,
+                         REAL_t const * const Vnn,
+                         float const * const En,
+                         REAL_t const * const Snn_partial,
+                         REAL_t * const S)
+{
+    /*Local variables*/
+    unsigned int lyr;
+    unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if (ltid < nL)
+    {
+#pragma unroll
+        for (lyr=0;lyr<numLayers;++lyr)
+        {
+            S[lyr*nL+ltid] = Snn_Tcorrection(molId,
+                                             T[lyr],
+                                             iso[ltid],
+                                             Vnn[ltid],
+                                             En[ltid],
+                                             Snn_partial[ltid]);
+        }
+    }
+
+    return;
+}
+
+/*---------------------------------------------------------------------------*/
+/*Compute the dimensionless optical depth values at each desired frequency.
+
+  Arguments:
+      molId        [in]      Molecule id.
+      nL           [in]      Size of the line dimension for the inputted
+                                 arrays.
+      nF           [in]      Size of the frequency dimension for the outputted
+                                 array.
+      loWn         [in]      Lowest frequency where the optical depth is
+                                 calculated (cm^-1).
+      resolution   [in]      Frequency resolution for the optical depth
+                                 values (cm^-1).
+      numLayers    [in]      Size of the height dimension for the inputted
+                                 arrays.
+      breadth      [in]      Integer number of frequencies that each molecular
+                                 line spans.
+      T            [in]      Array of temperatures (K).  This array is stored
+                                 as [height].
+      Vnn          [in]      Array of spectral line transition frequencies
+                                 (cm^-1).  This array is stored as [line].
+      Gam          [in]      Array of pressure broadened line halfwidths
+                                 (cm^-1).  This array is stored as
+                                 [height][line].
+      PShift       [in]      Array of pressure-shift corrections of the line
+                                 positions (cm^-1).  This array is stored as
+                                 [height][line].
+      S            [in]      Array of corrected spectral line intensities (cm).
+                                 This array is stored as [height][line].
+      tauU_d       [in]      Array of number densities (cm^-3).  This array
+                                 is stored as [height].
+      pathlength_d [in]      Array of path lengths (cm).  This array is stored
+                                 as [height].
+      out          [in,out]  Array of dimensionless optical depths.  This
+                                 array is stored as [height][frequency].
+*/
+__global__
+void eval_profile(unsigned int const molId,
+                  unsigned int const nL,
+                  int const nF,
+                  REAL_t const loWn,
+                  REAL_t const resolution,
+                  unsigned int const numLayers,
+                  unsigned int const breadth,
+                  REAL_t const * const T,
+                  REAL_t const * const Vnn,
+                  REAL_t const * const Gam,
+                  REAL_t const * const PShift,
+                  REAL_t const * const S,
+                  REAL_t const * const tauU_d,
+                  REAL_t const * const pathlength_d,
+                  REAL_t * const out)
+{
+    /*Local variables*/
+    unsigned int ltid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (ltid < nL)
+    {
+        int ftid;
+        int fcenterid;
+        REAL_t f;
+        unsigned int lyr;
+        unsigned int loffset;
+
+        REAL_t gam;
+        REAL_t gam2;
+        REAL_t pShift;
+        REAL_t snn;
+        REAL_t tauu;
+        REAL_t len;
+
+        const REAL_t molarMass = getMolarMass(molId);
+        REAL_t temp;
+        REAL_t etav;
+        REAL_t alphad;
+        REAL_t gaufwhm;
+
+        const int fsteps = ceil((REAL_t)breadth/resolution);
+
+        /*Find index of nearest frequency bin to line.*/
+        const REAL_t thisLine = Vnn[ltid];
+        fcenterid = (2*((thisLine-loWn)/resolution)+1)/2;
+        if (fcenterid < nF)
+        {
+#pragma unroll
+            for (lyr=0;lyr<numLayers;++lyr)
+            {
+                loffset = lyr*nL + ltid;
+                gam = Gam[loffset];
+                gam2 = gam*gam;
+                pShift = PShift[loffset];
+                snn = S[loffset];
+                tauu = tauU_d[lyr];
+                len = pathlength_d[lyr];
+
+                temp = T[lyr];
+                gaufwhm = gauFWHM(temp,
+                                  molarMass,
+                                  thisLine);
+                etav = eta(2.*gam,
+                           gaufwhm);
+                alphad = gauAlphad(temp,
+                                   molarMass,
+                                   thisLine);
+
+                /*Calculate the optical depth values from the left edge of
+                  the line to the line center.*/
+#pragma unroll
+                for (ftid=fcenterid-((int)fsteps);ftid<=fcenterid;++ftid)
+                {
+                    if (ftid >= 0)
+                    {
+                        f = ((REAL_t)ftid)*resolution + loWn;
+
+                        /*Atomics must be used for now because of a race on
+                          load-alter-write out[ftid].*/
+                        atomicAdd(&(out[lyr*nF+ftid]),
+                                  tau_Voigt(snn,thisLine,f,gam,gam2,pShift,
+                                            etav,alphad,tauu,len));
+                    }
+                }
+
+                /*Calculate the optical depth values from the right edge of
+                  the line to the line center.*/
+#pragma unroll
+                for (ftid=fcenterid+((int)fsteps);ftid>fcenterid;--ftid)
+                {
+                    if (ftid < nF)
+                    {
+                        f = ((REAL_t)ftid)*resolution + loWn;
+
+                        /*Atomics must be used for now because of a race on
+                          load-alter-write out[ftid].*/
+                        atomicAdd(&(out[lyr*nF+ftid]),
+                                  tau_Voigt(snn,thisLine,f,gam,gam2,pShift,
+                                            etav,alphad,tauu,len));
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
+/*---------------------------------------------------------------------------*/
 #endif
 
-/* HOST */
+/*---------------------------------------------------------------------------*/
+/*Compute the pressure broadened line halfwidth for each transition.
 
-void eval_gamma_h(const unsigned int numLayers,
-                  const unsigned int nL,
-                  const REAL_t* const P,
-                  const REAL_t* const T,
-                  const REAL_t* const Ps,
-                  const float* const Yself,
-                  const float* const Yair,
-                  const float* const n,
-                  REAL_t* Gam)
+  Arguments:
+      numLayers [in]      Size of the height dimension for the inputted
+                              arrays.
+      nL        [in]      Size of the line dimension for the inputted arrays.
+      P         [in]      Array of pressures (atm).  This array is stored as
+                              [height].
+      T         [in]      Array of temperatures (K).  This array is stored as
+                              [height].
+      Ps        [in]      Array of partial pressures (atm).  This array is
+                              stored as [height].
+      Yself     [in]      Array of self-broadened halfwidth at half
+                              maximum (cm^-1*atm^-1).  This array is stored as
+                              [line].
+      Yair      [in]      Array of air-broadened halfwidth at half
+                              maximum (cm^-1*atm^-1).  This array is stored as
+                              [line].
+      n         [in]      Array of coefficients of temperature dependence of
+                              the air-broadened halfwidth at half maximum.
+                              This array is stored as [line].
+      Gam       [in,out]  Array of pressure broadened line halfwidths (cm^-1).
+                              This array is stored as [height][line].
+*/
+void eval_gamma_h(unsigned int const numLayers,
+                  unsigned int const nL,
+                  REAL_t const * const P,
+                  REAL_t const * const T,
+                  REAL_t const * const Ps,
+                  float const * const Yself,
+                  float const * const Yair,
+                  float const * const n,
+                  REAL_t * const Gam)
 {
-  unsigned int lyr;
-  unsigned int ltid;
-  for(ltid=0; ltid < nL; ++ltid)
-  {
-    for( lyr = 0 ; lyr < numLayers; ++lyr )
+    /*Local variables*/
+    unsigned int lyr;
+    unsigned int ltid;
+
+    for(ltid=0;ltid<nL;++ltid)
     {
-      /* /\* dbg *\/ printf("eval_gamma_h( lyr= %d, ltid=%d) \n",lyr,ltid); */
-      Gam[lyr*nL + ltid] = compute_gamma(P[lyr],
-                                         T[lyr],
-                                         Yself[ltid],
-                                         Yair[ltid],
-                                         n[ltid],
-                                         Ps[lyr]);
+        for(lyr=0;lyr<numLayers;++lyr)
+        {
+            Gam[lyr*nL+ltid] = compute_gamma(P[lyr],
+                                             T[lyr],
+                                             Yself[ltid],
+                                             Yair[ltid],
+                                             n[ltid],
+                                             Ps[lyr]);
+        }
     }
-  }
-  return;
+
+    return;
 }
 
-void eval_pShift_h(const unsigned int numLayers,
-                  const unsigned int nL,
-                  const REAL_t* const P,
-                  const REAL_t* const Vnn,
-                  const float* const d,
-                  REAL_t* const PShift)
+/*---------------------------------------------------------------------------*/
+/*Compute the pressure-shift correction of the line position for each
+  transition.
+
+  Arguments:
+      numLayers [in]      Size of the height dimension for the inputted
+                              arrays.
+      nL        [in]      Size of the line dimension for the inputted arrays.
+      P         [in]      Array of pressures (atm).  This array is stored as
+                              [height].
+      Vnn       [in]      Array of spectral line transition frequencies
+                              (cm^-1).  This array is stored as [line].
+      d         [in]      Array of air-broadened pressure shifts at
+                              (T=296K,p=1atm) of the line transition
+                              frequencies (cm^-1*atm^-1).  This array is
+                              stored as [line].
+      PShift    [in,out]  Array of pressure-shift corrections of the line
+                              positions (cm^-1).  This array is stored as
+                              [height][line].
+*/
+void eval_pShift_h(unsigned int const numLayers,
+                   unsigned int const nL,
+                   REAL_t const * const P,
+                   REAL_t const * const Vnn,
+                   float const * const d,
+                   REAL_t * const PShift)
 {
-  unsigned int lyr;
-  unsigned int ltid;
-  for(ltid=0; ltid < nL ; ++ltid)
-  {
-    for( lyr = 0 ; lyr < numLayers; ++lyr )
+    /*Local variables*/
+    unsigned int lyr;
+    unsigned int ltid;
+
+    for (ltid=0;ltid<nL;++ltid)
     {
-      PShift[lyr*nL + ltid] = pressureShiftCorrection(Vnn[ltid],
-                                                      d[ltid],
-                                                      P[lyr]);
+        for (lyr=0;lyr<numLayers;++lyr)
+        {
+            PShift[lyr*nL+ltid] = pressureShiftCorrection(Vnn[ltid],
+                                                          d[ltid],
+                                                          P[lyr]);
+        }
     }
-  }
-  return;
+
+    return;
 }
 
-void pre_eval_Snn_h(const unsigned int nL,
-                    const uint8_t molId,
-                    const uint8_t* const iso,
-                    const REAL_t* const Vnn,
-                    const float* const En,
-                    REAL_t* Snn_ref)
+/*---------------------------------------------------------------------------*/
+/*Compute the first part of the temperature correction of the line intensities
+  for each transition.  These include all terms dependent on the HITRAN
+  reference temperature.
+
+  Arguments:
+      nL        [in]    Size of the line dimension for the inputted arrays.
+      molId     [in]    Molecule id.
+      iso       [in]    Array of isotope indexes.  This array is stored as
+                            [line].
+      Vnn       [in]    Array of spectral line transition frequencies
+                            (cm^-1).  This array is stored as [line].
+      En        [in]    Array of lower state energies of the transitions
+                            (cm^-1).  This array is stored as [line].
+      Snn_ref [in,out]  Array of spectral line intensities (cm).  This
+                            array is stored as [line].
+*/
+void pre_eval_Snn_h(unsigned int const nL,
+                    uint8_t const molId,
+                    uint8_t const * const iso,
+                    REAL_t const * const Vnn,
+                    float const * const En,
+                    REAL_t * const Snn_ref)
 {
-  unsigned int ltid;
-  for(ltid=0; ltid < nL ; ++ltid)
-  {
-    Snn_ref[ltid] = Snn_partialCorrection(molId,
-                                          iso[ltid],
-                                          Vnn[ltid],
-                                          En[ltid],
-                                          Snn_ref[ltid]);
-  }
-  return;
+    /*Local variables*/
+    unsigned int ltid;
+
+    for (ltid=0;ltid<nL;++ltid)
+    {
+        Snn_ref[ltid] = Snn_partialCorrection(molId,
+                                              iso[ltid],
+                                              Vnn[ltid],
+                                              En[ltid],
+                                              Snn_ref[ltid]);
+    }
+
+    return;
 }
 
-void eval_Snn_correction_h(const unsigned int numLayers,
-                           const unsigned int nL,
-                           const uint8_t molId,
-                           const REAL_t* const T,
-                           const uint8_t* const iso,
-                           const REAL_t* const Vnn,
-                           const float* const En,
-                           const REAL_t* const Snn_partial,
+/*---------------------------------------------------------------------------*/
+/*Compute the temperature correction of the line intensities for each
+  transition.
+
+  Arguments:
+      numLayers   [in]      Size of the height dimension for the inputted
+                                arrays.
+      nL          [in]      Size of the line dimension for the inputted
+                                arrays.
+      molId       [in]      Molecule id.
+      T           [in]      Array of temperatures (K).  This array is stored
+                                as [height].
+      iso         [in]      Array of isotope indexes.  This array is stored
+                                as [line].
+      Vnn         [in]      Array of spectral line transition frequencies
+                                (cm^-1).  This array is stored as [line].
+      En          [in]      Array of lower state energies of the transitions
+                                (cm^-1).  This array is stored as [line].
+      Snn_partial [in]      Array of partially corrected spectral line
+                                intensities (cm).  This array is stored
+                                as [line].
+      S           [in,out]  Array of corrected spectral line intensities (cm).
+                                This array is stored as [height][line].
+*/
+void eval_Snn_correction_h(unsigned int const numLayers,
+                           unsigned int const nL,
+                           uint8_t const molId,
+                           REAL_t const * const T,
+                           uint8_t const * const iso,
+                           REAL_t const * const Vnn,
+                           float const * const En,
+                           REAL_t const * const Snn_partial,
                            REAL_t* const S)
 {
-  unsigned int lyr;
-  unsigned int ltid;
-  for(ltid=0; ltid < nL ; ++ltid )
-  {
-    for( lyr = 0 ; lyr < numLayers; ++lyr )
-    {
-      S[lyr*nL + ltid] = Snn_Tcorrection(molId,
-                                         T[lyr],
-                                         iso[ltid],
-                                         Vnn[ltid],
-                                         En[ltid],
-                                         Snn_partial[ltid]);
-    }
-  }
-  return;
-}
-
-
-void eval_profile_h(const unsigned int molId,
-                    const unsigned int nL,
-                    const int nF,
-                    const REAL_t loWn,
-                    const REAL_t resolution,
-                    const unsigned int numLayers,
-                    const unsigned int breadth,
-
-                    const REAL_t* const T,
-                    REAL_t* Vnn,
-
-                    REAL_t* Gam,
-                    REAL_t* PShift,
-                    REAL_t* S,
-                    REAL_t* tauU,
-                    REAL_t* pathlength,
-                    REAL_t* out)
-{
-  unsigned int ltid;
-  for(ltid=0; ltid<nL ; ++ltid)
-  {
-    int ftid;
-    int fcenterid;
-    REAL_t f;
+    /*Local variables*/
     unsigned int lyr;
-    unsigned int loffset;
-    
-    REAL_t gam;
-    REAL_t gam2;
-    REAL_t pShift;
-    REAL_t snn;
-    REAL_t tauu;
-    REAL_t len;
+    unsigned int ltid;
 
-    const REAL_t molarMass = getMolarMass(molId);
-    REAL_t temp;
-    REAL_t etav;
-    REAL_t alphad;
-    REAL_t gaufwhm;
-    
-    const int fsteps = ceil((REAL_t)breadth/resolution);
-    
-    /* Find index of nearest frequency to line */
-    const REAL_t thisLine = Vnn[ltid] ;
-    fcenterid = ( (2*(thisLine-loWn)/resolution) + 1 )/2;
-    if (fcenterid<nF)
-    {      
-      for( lyr=0; lyr< numLayers ; ++lyr ) /*  spatial points */
-      {
-        loffset = lyr*nL + ltid;
-        /* lookup Gamma, pressureShift, Snn at this spatial point for this line*/
-        gam = Gam[loffset];
-        gam2 = gam*gam;
-        pShift = PShift[loffset];
-        snn = S[loffset];
-        tauu = tauU[lyr];
-        len = pathlength[lyr];
-
-        temp = T[lyr];
-        gaufwhm = gauFWHM(temp,molarMass,thisLine);
-        
-        /* /\* dbg *\/ printf("lorfwhm = %f \t gaufwhm(temp=%f, molarMass=%f, v0=%f) = %f \n",gam, temp, molarMass, thisLine, gaufwhm); */
-        etav = eta(gam, gaufwhm );
-        alphad = gauAlphad(temp,molarMass,thisLine);
-        
-        for( ftid= fcenterid - ((int)fsteps); ftid <= fcenterid ; ++ftid)
+    for (ltid=0;ltid<nL;++ltid)
+    {
+        for (lyr=0;lyr<numLayers;++lyr)
         {
-          if (ftid>=0){
-            f = ((REAL_t)ftid)*resolution + loWn;
-            out[lyr*nF + ftid] += tau_Voigt(snn, thisLine, f, gam, gam2, pShift, etav, alphad, tauu, len);
-          }
+            S[lyr*nL+ltid] = Snn_Tcorrection(molId,
+                                             T[lyr],
+                                             iso[ltid],
+                                             Vnn[ltid],
+                                             En[ltid],
+                                             Snn_partial[ltid]);
         }
-
-        for( ftid = fcenterid + ((int)fsteps) ; ftid > fcenterid; --ftid)
-        {
-          if( ftid<nF){
-            f = ((REAL_t)ftid)*resolution + loWn;
-            out[lyr*nF + ftid] += tau_Voigt(snn, thisLine, f, gam, gam2, pShift, etav, alphad, tauu, len);
-          }
-        }
-        
-        /* /\* dbg *\/ printf("eval_profile(lyr=%d, ltid= %d, gam=%f, S=%e, tauu=%f ): centerF=%f centerV = %f \n", lyr, ltid, gam, snn, tauu, f, out[lyr*nF + fcenterid]); */
-        
-      }
     }
-  }
-  return;
+
+    return;
 }
 
-int host_optics_perMol(const uint8_t molId,
-                       const unsigned int nL,
-                       const REAL_t loWn,
-                       /* const REAL_t hiWn, */
-                       const unsigned int nF,
-                       const REAL_t resolution,
-                       const int breadth,
-                       const unsigned int numLayers,
-                       REAL_t* out_h,
-                       const REAL_t* const T_h,
-                       const REAL_t* const P_h,
-                       const uint8_t* const iso,
-                       const REAL_t* const Vnn,
-                       const REAL_t* const Snn_ref,
-                       const float* const Yair,
-                       const float* const Yself,
-                       const float* const En,
-                       const float* const n,
-                       const float* const d,
-                       REAL_t* const TauU_h,   /* number density precomputed in atmosData */
-                       REAL_t* const pathLength_h,  /* pathlength precomputed in atmosData */
-                       const REAL_t* const PS_h,   /* partial pres precomputed in atmosData */
+/*---------------------------------------------------------------------------*/
+/*Compute the dimensionless optical depth values at each desired frequency.
+
+  Arguments:
+      molId      [in]      Molecule id.
+      nL         [in]      Size of the line dimension for the inputted
+                               arrays.
+      nF         [in]      Size of the frequency dimension for the outputted
+                               array.
+      loWn       [in]      Lowest frequency where the optical depth is
+                               calculated (cm^-1).
+      resolution [in]      Frequency resolution for the optical depth
+                               values (cm^-1).
+      numLayers  [in]      Size of the height dimension for the inputted
+                               arrays.
+      breadth    [in]      Integer number of frequencies that each molecular
+                               line spans.
+      T          [in]      Array of temperatures (K).  This array is stored
+                               as [height].
+      Vnn        [in]      Array of spectral line transition frequencies
+                               (cm^-1).  This array is stored as [line].
+      Gam        [in]      Array of pressure broadened line halfwidths
+                               (cm^-1).  This array is stored as
+                               [height][line].
+      PShift     [in]      Array of pressure-shift corrections of the line
+                               positions (cm^-1).  This array is stored as
+                               [height][line].
+      S          [in]      Array of corrected spectral line intensities (cm).
+                               This array is stored as [height][line].
+      tauU       [in]      Array of number densities (cm^-3).  This array
+                               is stored as [height].
+      pathlength [in]      Array of path lengths (cm).  This array is stored
+                               as [height].
+      out        [in,out]  Array of dimensionless optical depths.  This
+                               array is stored as [height][frequency].
+*/
+void eval_profile_h(unsigned int const molId,
+                    unsigned int const nL,
+                    int const nF,
+                    REAL_t const loWn,
+                    REAL_t const resolution,
+                    unsigned int const numLayers,
+                    unsigned int const breadth,
+                    REAL_t const * const T,
+                    REAL_t const * const Vnn,
+                    REAL_t const * const Gam,
+                    REAL_t const * const PShift,
+                    REAL_t const * const S,
+                    REAL_t const * const tauU,
+                    REAL_t const * const pathlength,
+                    REAL_t * const out)
+{
+    /*Local variables*/
+    unsigned int ltid;
+
+    for (ltid=0;ltid<nL;++ltid)
+    {
+        int ftid;
+        int fcenterid;
+        REAL_t f;
+        unsigned int lyr;
+        unsigned int loffset;
+
+        REAL_t gam;
+        REAL_t gam2;
+        REAL_t pShift;
+        REAL_t snn;
+        REAL_t tauu;
+        REAL_t len;
+
+        const REAL_t molarMass = getMolarMass(molId);
+        REAL_t temp;
+        REAL_t etav;
+        REAL_t alphad;
+        REAL_t gaufwhm;
+
+        const int fsteps = ceil((REAL_t)breadth/resolution);
+
+        /*Find index of nearest frequency bin to line.*/
+        const REAL_t thisLine = Vnn[ltid] ;
+        fcenterid = (2*((thisLine-loWn)/resolution) + 1)/2;
+        if (fcenterid < nF)
+        {
+            for (lyr=0;lyr<numLayers;++lyr)
+            {
+                loffset = lyr*nL + ltid;
+                gam = Gam[loffset];
+                gam2 = gam*gam;
+                pShift = PShift[loffset];
+                snn = S[loffset];
+                tauu = tauU[lyr];
+                len = pathlength[lyr];
+
+                temp = T[lyr];
+                gaufwhm = gauFWHM(temp,
+                                  molarMass,
+                                  thisLine);
+                etav = eta(2.*gam,
+                           gaufwhm);
+                alphad = gauAlphad(temp,
+                                   molarMass,
+                                   thisLine);
+
+                /*Calculate the optical depth values from the left edge of
+                  the line to the line center.*/
+                for (ftid=fcenterid-((int)fsteps);ftid<=fcenterid;++ftid)
+                {
+                    if (ftid >= 0)
+                    {
+                        f = ((REAL_t)ftid)*resolution + loWn;
+                        out[lyr*nF+ftid] += tau_Voigt(snn,
+                                                      thisLine,
+                                                      f,
+                                                      gam,
+                                                      gam2,
+                                                      pShift,
+                                                      etav,
+                                                      alphad,
+                                                      tauu,
+                                                      len);
+                    }
+                }
+
+                /*Calculate the optical depth values from the right edge of
+                  the line to the line center.*/
+                for (ftid=fcenterid+((int)fsteps);ftid>fcenterid;--ftid)
+                {
+                    if (ftid < nF)
+                    {
+                        f = ((REAL_t)ftid)*resolution + loWn;
+                        out[lyr*nF+ftid] += tau_Voigt(snn,
+                                                      thisLine,
+                                                      f,
+                                                      gam,
+                                                      gam2,
+                                                      pShift,
+                                                      etav,
+                                                      alphad,
+                                                      tauu,
+                                                      len);
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
+/*---------------------------------------------------------------------------*/
+/*Calculate the dimensionless optical depth values at all appropriate heights
+  and frequencies for the molecule associated with the inputted molId.
+
+  Arguments:
+      molId        [in]
+      nL           [in]
+      loWn         [in]
+      nF           [in]
+      resolution   [in]
+      breadth      [in]
+      numLayers    [in]
+      out_h        [in,out]
+      T_h          [in]
+      P_h          [in]
+      iso          [in]
+      Vnn          [in]
+      Snn_ref      [in]
+      Yair         [in]
+      Yself        [in]
+      En           [in]
+      n            [in]
+      d            [in]
+      TauU_h       [in]
+      pathLength_h [in]
+      PS_h         [in]
+      Lines_h      [in,out]
+      OptBuf_h     [in,out]
+
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+int host_optics_perMol(uint8_t const molId,
+                       unsigned int const nL,
+                       REAL_t const loWn,
+                       unsigned int const nF,
+                       REAL_t const resolution,
+                       int const breadth,
+                       unsigned int const numLayers,
+                       REAL_t *out_h,
+                       REAL_t const * const T_h,
+                       REAL_t const * const P_h,
+                       uint8_t const * const iso,
+                       REAL_t const * const Vnn,
+                       REAL_t const * const Snn_ref,
+                       float const * const Yair,
+                       float const * const Yself,
+                       float const * const En,
+                       float const * const n,
+                       float const * const d,
+                       REAL_t const * const TauU_h,
+                       REAL_t const * const pathLength_h,
+                       REAL_t const * const PS_h,
                        RefLinePtrs_t* const Lines_h,
                        OpticsBufPtrs_t* const OptBuf_h)
 {
-  
-  /* Initilization */
-  initTIPS();
 
-  /* declares */
-  printf( "HITRAN molId:=%d\n", molId);
-  
-  /* const unsigned int nL=Lines_h->nLines; */
-      
-  uint8_t* iso_h=Lines_h->iso;
-  REAL_t* Vnn_h=Lines_h->Vnn;
-  REAL_t* Snn_ref_h=Lines_h->Snn_ref;
-  float* Yair_h=Lines_h->Yair;
-  float* Yself_h=Lines_h->Yself;
-  float* En_h=Lines_h->En;
-  float* n_h=Lines_h->n;
-  float* d_h=Lines_h->d;
+    /*Initilize TIPS.*/
+    initTIPS();
 
-  /* per mol */
-  memcpy(iso_h, iso, nL*sizeof(uint8_t) );
-  memcpy(Vnn_h, Vnn, nL*sizeof(REAL_t) );
-  memcpy(Snn_ref_h, Snn_ref, nL*sizeof(REAL_t) );
-  memcpy(Yair_h, Yair, nL*sizeof(float) );
-  memcpy(Yself_h, Yself, nL*sizeof(float) );
-  memcpy(En_h, En, nL*sizeof(float) );
-  memcpy(n_h, n, nL*sizeof(float) );
-  memcpy(d_h, d, nL*sizeof(float) );
+    /*Print out the current molecules HITRAN molecule id.*/
+    printf("HITRAN molId:=%d\n",
+           molId);
 
-  
-  /* precompute/staging */
-  REAL_t* Gam_h=OptBuf_h->Gam;
-  REAL_t* PShift_h=OptBuf_h->PShift;
-  REAL_t* S_h=OptBuf_h->S;
+    /*Point at the arrays located in the inputted Lines_h structure.*/
+    uint8_t *iso_h = Lines_h->iso;
+    REAL_t *Vnn_h = Lines_h->Vnn;
+    REAL_t *Snn_ref_h = Lines_h->Snn_ref;
+    float *Yair_h = Lines_h->Yair;
+    float *Yself_h = Lines_h->Yself;
+    float *En_h = Lines_h->En;
+    float *n_h = Lines_h->n;
+    float *d_h = Lines_h->d;
 
-  /*  execute the pre_eval_Snn kernel */
-  printf("%s Kernel Launch.. %d lines ... ","pre_eval_Snn_h", nL);
-  pre_eval_Snn_h( nL, molId, iso_h, Vnn_h, En_h, Snn_ref_h); /* replaces Snn_ref_h! */
-  printf("..done!\n");
+    /*Copy the inputted arrays into the arrays located in the inputted
+      Lines_h structure.*/
+    memcpy(iso_h,
+           iso,
+           nL*sizeof(uint8_t));
+    memcpy(Vnn_h,
+           Vnn,
+           nL*sizeof(REAL_t));
+    memcpy(Snn_ref_h,
+           Snn_ref,
+           nL*sizeof(REAL_t));
+    memcpy(Yair_h,
+           Yair,
+           nL*sizeof(float));
+    memcpy(Yself_h,
+           Yself,
+           nL*sizeof(float));
+    memcpy(En_h,
+           En,
+           nL*sizeof(float));
+    memcpy(n_h,
+           n,
+           nL*sizeof(float));
+    memcpy(d_h,
+           d,
+           nL*sizeof(float));
 
-  /*  execute the gamma kernel */
-  printf("%s Kernel Launch.. %d lines, %d spatial points ... ","eval_gamma_h", nL, numLayers);
-  eval_gamma_h( numLayers, nL, P_h, T_h, PS_h, Yself_h, Yair_h, n_h, Gam_h);
-  printf("..done!\n");
+    /*Point at arrays located in the inputted OptBuf_h structure.*/
+    REAL_t *Gam_h = OptBuf_h->Gam;
+    REAL_t *PShift_h = OptBuf_h->PShift;
+    REAL_t *S_h = OptBuf_h->S;
 
-  /*  execute the pshift kernel */
-  printf("%s Kernel Launch.. %d lines, %d spatial points ... ","eval_pShift_h", nL, numLayers);
-  eval_pShift_h( numLayers, nL, P_h, Vnn_h, d_h, PShift_h );
-  printf("..done!\n");
+    /*Execute the pre_eval_Snn kernel.*/
+    printf("%s Kernel Launch.. %d lines ... ",
+           "pre_eval_Snn_h",
+           nL);
+    pre_eval_Snn_h(nL,
+                   molId,
+                   iso_h,
+                   Vnn_h,
+                   En_h,
+                   Snn_ref_h);
+    printf("..done!\n");
 
-  /*  execute the Snn kernel */
-  printf("%s Kernel Launch.. %d lines, %d spatial points ... ","eval_Snn_correction_h", nL,numLayers);
-  eval_Snn_correction_h( numLayers, nL, molId, T_h, iso_h, Vnn_h, En_h, Snn_ref_h, S_h);
-  printf("..done!\n");
+    /*Execute the gamma kernel.*/
+    printf("%s Kernel Launch.. %d lines, %d spatial points ... ",
+           "eval_gamma_h",
+           nL,
+           numLayers);
+    eval_gamma_h(numLayers,
+                 nL,
+                 P_h,
+                 T_h,
+                 PS_h,
+                 Yself_h,
+                 Yair_h,
+                 n_h,
+                 Gam_h);
+    printf("..done!\n");
 
-  /* /\* dbg *\/ eval_Snn_h(numLayers, nL, molId, T_h, iso_h, Vnn_h, En_h, Snn_ref_h, S_h); */
-  
-  /*  execute the profile kernel */
-  printf("%s Kernel Launch.. %d lines, %d fsamples ... ","eval_profile_h", nL, nF);
-  eval_profile_h( molId, nL, nF, loWn, resolution, numLayers, breadth, T_h, Vnn_h, Gam_h, PShift_h, S_h, pathLength_h, TauU_h, out_h);
-  printf("..done!\n");
-  
-  /* end per Mol computations*/
-  return EXIT_SUCCESS;
+    /*Execute the pshift kernel.*/
+    printf("%s Kernel Launch.. %d lines, %d spatial points ... ",
+           "eval_pShift_h",
+           nL,
+           numLayers);
+    eval_pShift_h(numLayers,
+                  nL,
+                  P_h,
+                  Vnn_h,
+                  d_h,
+                  PShift_h);
+    printf("..done!\n");
 
+    /*Execute the Snn kernel.*/
+    printf("%s Kernel Launch.. %d lines, %d spatial points ... ",
+           "eval_Snn_correction_h",
+           nL,
+           numLayers);
+    eval_Snn_correction_h(numLayers,
+                          nL,
+                          molId,
+                          T_h,
+                          iso_h,
+                          Vnn_h,
+                          En_h,
+                          Snn_ref_h,
+                          S_h);
+    printf("..done!\n");
+
+    /*Execute the profile kernel.*/
+    printf("%s Kernel Launch.. %d lines, %d fsamples ... ",
+           "eval_profile_h",
+           nL,
+           nF);
+    eval_profile_h(molId,
+                   nL,
+                   nF,
+                   loWn,
+                   resolution,
+                   numLayers,
+                   breadth,
+                   T_h,
+                   Vnn_h,
+                   Gam_h,
+                   PShift_h,
+                   S_h,
+                   pathLength_h,
+                   TauU_h,
+                   out_h);
+    printf("..done!\n");
+
+    return EXIT_SUCCESS;
 }
 
-int host_optics_init(unsigned int numLayers,
-                     unsigned int numBufLines,
-                     RefLinePtrs_t* L_h,
-                     OpticsBufPtrs_t* OpticBuf_h,
-                     RefLine_flags_t flags)
+/*---------------------------------------------------------------------------*/
+/*Allocate space for the arrays contained in the RefLinePtrs_t and
+  OpticsBufPtrs_t structures.
+
+  Arguments:
+      numLayers   [in]
+      numBufLines [in]
+      L_h         [in,out]
+      OpticBuf_h  [in,out]
+      flags       [in]
+
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+int host_optics_init(unsigned int const numLayers,
+                     unsigned int const numBufLines,
+                     RefLinePtrs_t * L_h,
+                     OpticsBufPtrs_t * OpticBuf_h,
+                     RefLine_flags_t const flags)
 {
-  /* lines scratch */
-  *L_h = allocHost(numBufLines,flags);
+    /*Allocate arrays in the RefLinePtrs_t structure.*/
+    *L_h = allocHost(numBufLines,
+                     flags);
 
-  /* Optics Buf  */
-  OpticBuf_h->Gam = (REAL_t*)malloc( numLayers*numBufLines*sizeof(REAL_t) );
-  OpticBuf_h->PShift = (REAL_t*)malloc( numLayers*numBufLines*sizeof(REAL_t) );
-  OpticBuf_h->S = (REAL_t*)malloc( numLayers*numBufLines*sizeof(REAL_t) );
+    /*Allocate arrays in the OpticsBufPtrs_t structure.*/
+    OpticBuf_h->Gam = (REAL_t *)malloc(numLayers*numBufLines*sizeof(REAL_t));
+    OpticBuf_h->PShift = (REAL_t *)malloc(numLayers*numBufLines*sizeof(REAL_t));
+    OpticBuf_h->S = (REAL_t *)malloc(numLayers*numBufLines*sizeof(REAL_t));
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
-int host_optics_free(RefLinePtrs_t* L_h,
-                     OpticsBufPtrs_t* OpticBuf_h,
-                     RefLine_flags_t flags)
+/*---------------------------------------------------------------------------*/
+/*Free arrays contained in the RefLinePtrs_t and OpticsBufPtrs_t structures.
+
+  Arguments:
+      L_h        [in,out]
+      OpticBuf_h [in,out]
+      flags      [in]
+
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+int host_optics_free(RefLinePtrs_t *L_h,
+                     OpticsBufPtrs_t *OpticBuf_h,
+                     RefLine_flags_t const flags)
 {
+    /*Free arrays in the RefLinePtrs_t structure.*/
+    freeHost(*L_h,
+             flags);
 
-  /* Lines */
-  freeHost(*L_h, flags);
-  
-  /* precompute/staging */
-  free(  OpticBuf_h->Gam ) ;
-  free(  OpticBuf_h->PShift ) ;
-  free(  OpticBuf_h->S ) ;
+    /*Free arrays in the OpticsBufPtrs_t structure*/
+    free(OpticBuf_h->Gam);
+    free(OpticBuf_h->PShift);
+    free(OpticBuf_h->S);
 
-  return EXIT_SUCCESS;
-
+    return EXIT_SUCCESS;
 }
 
+/*---------------------------------------------------------------------------*/
+/*Loop through each molecule, and calculate the optical depth values at
+  each height and frequency.
 
-int host_launch(const unsigned int numMols,
-                /* char**  molFnames, */
-                RefLinePtrs_t L[],
-                const REAL_t loWn,
-                /* const REAL_t hiWn, */
-                const unsigned int nF,
-                const REAL_t resolution,
-                const unsigned int wingBreadth,
-                radiationOutputFields_t* atmosData,
-                REAL_t* const out,
-                int time,
-                int lat,
-                int lon){
+  Arguments:
+      numMols     [in]
+      L           [in]
+      loWn        [in]
+      nF          [in]
+      resolution  [in]
+      wingBreadth [in]
+      atmosData   [in]
+      out         [in,out]
+      time        [in]
+      lat         [in]
+      lon         [in]
 
-  unsigned int mol;
-  unsigned int numLayers=atmosData->npfull;
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+int host_launch(unsigned int const numMols,
+                RefLinePtrs_t const * const L,
+                REAL_t const loWn,
+                unsigned int const nF,
+                REAL_t const resolution,
+                unsigned int const wingBreadth,
+                radiationOutputFields_t *atmosData,
+                REAL_t * const out,
+                int const time,
+                int const lat,
+                int const lon)
+{
+    /*Local variables*/
+    unsigned int mol;
+    unsigned int numLayers=atmosData->npfull;
+    OpticsBufPtrs_t OpticsBuf_h;
+    RefLinePtrs_t LinesBuf_h;
 
-  /* sanity check */
-  assert(numMols<=NUM_MOL);
+    /*Sanity check.*/
+    assert(numMols<=NUM_MOL);
 
-  /* shift all the atmos data over by time, lat,lon,layers */
-  const size_t idx = (time*atmosData->nlon*atmosData->nlat + lat*atmosData->nlon + lon) * atmosData->npfull ;
-  REAL_t* T = &(atmosData->T[idx]);
-  REAL_t* P = &(atmosData->P[idx]);
-  REAL_t* DELTAZ = &(atmosData->DELTAZ[idx]);
-  REAL_t* N = &(atmosData->N[ idx*NUM_MOL ]);
-  REAL_t* PS = &(atmosData->PS[ idx*NUM_MOL ]);
+    /*Point the beginning of the appropriate "column" of data.*/
+    const size_t idx = (time*atmosData->nlon*atmosData->nlat +
+                        lat*atmosData->nlon + lon)*atmosData->npfull;
+    REAL_t *T = &(atmosData->T[idx]);
+    REAL_t *P = &(atmosData->P[idx]);
+    REAL_t *DELTAZ = &(atmosData->DELTAZ[idx]);
+    REAL_t *N = &(atmosData->N[idx*NUM_MOL]);
+    REAL_t *PS = &(atmosData->PS[idx*NUM_MOL]);
 
-  OpticsBufPtrs_t OpticsBuf_h;
-  RefLinePtrs_t LinesBuf_h;
-  
-  RefLine_flags_t flags= {((unsigned int) -1),1,0}; /* host cuda malloc default, host=True, device=false */
-  
-  host_optics_init(numLayers, MAX_NUM_SPECTRAL_LINES, &LinesBuf_h, &OpticsBuf_h,flags);
+    /*Set the flags used to malloc/free arrays in a RefLinePtr_t structure.
+      {(unsigned int)-1,1,0} = host cuda malloc default, host=True, device=false.*/
+    RefLine_flags_t flags= {((unsigned int) -1),1,0};
 
-  for(mol=0; mol < numMols; ++mol ){
-    
-    host_optics_perMol(L[mol].mol,
-                       L[mol].nLines,
-                       loWn,
-                       nF,
-                       resolution,
-                       wingBreadth,
-                       numLayers,
-                       out,
-                       T,
-                       P,
-                       L[mol].iso,
-                       L[mol].Vnn,
-                       L[mol].Snn_ref,
-                       L[mol].Yair,
-                       L[mol].Yself,
-                       L[mol].En,
-                       L[mol].n,
-                       L[mol].d,
-                       &(N[ (L[mol].mol-1) * atmosData->npfull ]),
-                       DELTAZ,
-                       /* PS, */
-                       &(PS[ (L[mol].mol-1) * atmosData->npfull ]), /* offest [mol] into idx
-                                                                     * so PS should be t,lat,lon,mol,z*/
-                       &(LinesBuf_h),
-                       &(OpticsBuf_h) ); 
-  }
-  
-  /* cleanup all, this is dirty,  */
-  host_optics_free(&LinesBuf_h, &OpticsBuf_h, flags);
+    /*Allocate arrays.*/
+    host_optics_init(numLayers,
+                     MAX_NUM_SPECTRAL_LINES,
+                     &LinesBuf_h,
+                     &OpticsBuf_h,
+                     flags);
 
-  return EXIT_SUCCESS;
+    /*Loop over the molecules.*/
+    for (mol=0;mol<numMols;++mol)
+    {
+        /*Calcuate the optical depth values.*/
+        host_optics_perMol(L[mol].mol,
+                           L[mol].nLines,
+                           loWn,
+                           nF,
+                           resolution,
+                           wingBreadth,
+                           numLayers,
+                           out,
+                           T,
+                           P,
+                           L[mol].iso,
+                           L[mol].Vnn,
+                           L[mol].Snn_ref,
+                           L[mol].Yair,
+                           L[mol].Yself,
+                           L[mol].En,
+                           L[mol].n,
+                           L[mol].d,
+                           &(N[(L[mol].mol-1)*atmosData->npfull]),
+                           DELTAZ,
+                           &(PS[(L[mol].mol-1)*atmosData->npfull]),
+                           &(LinesBuf_h),
+                           &(OpticsBuf_h)); 
+    }
+
+    /*Free arrays.*/
+    host_optics_free(&LinesBuf_h,
+                     &OpticsBuf_h,
+                     flags);
+
+    return EXIT_SUCCESS;
 }
 
-/* END HOST */
+/*---------------------------------------------------------------------------*/
 
 #ifdef __NVCC__
+/*---------------------------------------------------------------------------*/
+/*Malloc device arrays and copy in data from the host.
 
-__host__ int device_atmos_init(const unsigned int numLayers,
-                               const unsigned int numMols,
-                               const REAL_t* const T_h,
-                               const REAL_t* const P_h,
-                               const REAL_t* const N_h,
-                               const REAL_t* const Z_h,
-                               const REAL_t* const Ps_h,                               
-                               REAL_t** T_d,
-                               REAL_t** P_d,
-                               REAL_t** N_d,
-                               REAL_t** Z_d,
-                               REAL_t** Ps_d)
+  Arguments:
+      numLayers [in]      Size of the height dimension of the arrays.
+      numMols   [in]      Size of the molecule dimension of the arrays.
+      T_h       [in]      Array of temperatures (K).  This array is stored as
+                              [height].
+      P_h       [in]      Array of pressures (atm).  This array is stored as
+                              [height].
+      N_h       [in]      Array of number densities (cm^-3).  This array is
+                              stored as [molecule][height].
+      Z_h       [in]      Array of layer thicknesses (cm).  This array is
+                              stored as [height].
+      Ps_h      [in]      Array of partial pressures (atm).  This array is
+                              stored as [molecule][height].
+      T_d       [in,out]  Array of temperatures (K).  This array is stored as
+                              [height].
+      P_d       [in,out]  Array of pressures (atm).  This array is stored as
+                              [height].
+      N_d       [in,out]  Array of number densities (cm^-3).  This array is
+                              stored as [molecule][height].
+      Z_d       [in,out]  Array of layer thicknesses (cm).  This array is
+                              stored as [height].
+      Ps_d      [in,out]  Array of partial pressures (atm).  This array is
+                              stored as [molecule][height].
+
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+__host__
+int device_atmos_init(unsigned int const numLayers,
+                      unsigned int const numMols,
+                      REAL_t const * const T_h,
+                      REAL_t const * const P_h,
+                      REAL_t const * const N_h,
+                      REAL_t const * const Z_h,
+                      REAL_t const * const Ps_h,
+                      REAL_t **T_d,
+                      REAL_t **P_d,
+                      REAL_t **N_d,
+                      REAL_t **Z_d,
+                      REAL_t **Ps_d)
 {
+    printf("\nInitializing atmosphere on device:\n");
 
-  printf("\nInitializing atmosphere on device:\n");
+    /*Malloc device arrays.*/
+    printf("\tMallocing atmospheric data on device..");
+    HANDLE_ERROR(cudaMalloc(T_d,
+                            (numLayers)*sizeof(REAL_t)));
+    HANDLE_ERROR(cudaMalloc(P_d,
+                            numLayers*sizeof(REAL_t)));
+    HANDLE_ERROR(cudaMalloc(N_d,
+                            numMols*numLayers*sizeof(REAL_t)));
+    HANDLE_ERROR(cudaMalloc(Z_d,
+                            numLayers*sizeof(REAL_t)));
+/*
+    HANDLE_ERROR(cudaMalloc(Ps_d,
+                            (numLayers+1)*numMols*sizeof(REAL_t)));
+*/
+    HANDLE_ERROR(cudaMalloc(Ps_d,
+                            (numLayers)*numMols*sizeof(REAL_t)));
+    printf(".done!\n");
 
-  /* mallocs */
-  printf("\tMallocing atmospheric data on device..");
-  HANDLE_ERROR( cudaMalloc(T_d, (numLayers)*sizeof(REAL_t) ) );
-  HANDLE_ERROR( cudaMalloc(P_d, numLayers*sizeof(REAL_t) ) );
-  HANDLE_ERROR( cudaMalloc(N_d, numMols*numLayers*sizeof(REAL_t) ) );
-  HANDLE_ERROR( cudaMalloc(Z_d, numLayers*sizeof(REAL_t) ) );
-  HANDLE_ERROR( cudaMalloc(Ps_d, (numLayers+1)*numMols*sizeof(REAL_t) ) );
-  printf(".done!\n");
+    /*Copy data from the host to the device.*/
+    printf("\tCopying atmospheric data to device..\n");
+    printf("\tMemcpy..T_h -> T_d");
+    HANDLE_ERROR(cudaMemcpy(*T_d,
+                            T_h,
+                            numLayers*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
+    printf("\tMemcpy..P_h -> P_d");
+    HANDLE_ERROR(cudaMemcpy(*P_d,
+                            P_h,
+                            numLayers*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
+    printf("\tMemcpy.. N_h -> N_d");
+    HANDLE_ERROR(cudaMemcpy(*N_d,
+                            N_h,
+                            numMols*numLayers*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
+    printf("\tMemcpy.. Z_h -> Z_d");
+    HANDLE_ERROR(cudaMemcpy(*Z_d,
+                            Z_h,
+                            numLayers*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
+    printf("\tMemcpy.. Ps_h -> Ps_d");
+    HANDLE_ERROR(cudaMemcpy(*Ps_d,
+                            Ps_h,
+                            numLayers*NUM_MOL*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
 
-  /* memcpy 2 dev */
-  printf("\tCopying atmospheric data to device..\n");
-  printf("\tMemcpy..T_h -> T_d");
-  HANDLE_ERROR( cudaMemcpy(*T_d, T_h, numLayers*sizeof(REAL_t), cudaMemcpyHostToDevice ) ); /* +=1 stores surface T at last place in array */
-  printf(".done!\n");
-  printf("\tMemcpy..P_h -> P_d");
-  HANDLE_ERROR( cudaMemcpy(*P_d, P_h, numLayers*sizeof(REAL_t), cudaMemcpyHostToDevice ) );
-  printf(".done!\n");
-  printf("\tMemcpy.. N_h -> N_d");
-  HANDLE_ERROR( cudaMemcpy(*N_d, N_h, numMols*numLayers*sizeof(REAL_t), cudaMemcpyHostToDevice ) );
-  printf(".done!\n");
-  printf("\tMemcpy.. Z_h -> Z_d");
-  HANDLE_ERROR( cudaMemcpy(*Z_d, Z_h, numLayers*sizeof(REAL_t), cudaMemcpyHostToDevice ) );
-  printf(".done!\n");
-  printf("\tMemcpy.. Ps_h -> Ps_d");
-  HANDLE_ERROR( cudaMemcpy(*Ps_d, Ps_h, numLayers*NUM_MOL*sizeof(REAL_t), cudaMemcpyHostToDevice ) );
-  printf(".done!\n");
+    printf("Initializing atmosphere on device successful.\n\n");
 
-  printf("Initializing atmosphere on device successful.\n\n");
- 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
-__host__ int device_atmos_free(REAL_t* T_d,
-                               REAL_t* P_d,
-                               REAL_t* N_d,
-                               REAL_t* Z_d,
-                               REAL_t* Ps_d)
-{
- 
-  HANDLE_ERROR(cudaFree(T_d));
-  HANDLE_ERROR(cudaFree(P_d));
-  HANDLE_ERROR(cudaFree(N_d));
-  HANDLE_ERROR(cudaFree(Z_d));
-  HANDLE_ERROR(cudaFree(Ps_d));
+/*---------------------------------------------------------------------------*/
+/*Free device arrays.
 
-  return EXIT_SUCCESS;
+  Arguments:
+      T_d  [in,out]  Array of temperatures (K).  This array is stored as
+                         [height].
+      P_d  [in,out]  Array of pressures (atm).  This array is stored as
+                         [height].
+      N_d  [in,out]  Array of number densities (cm^-3).  This array is
+                         stored as [molecule][height].
+      Z_d  [in,out]  Array of layer thicknesses (cm).  This array is stored
+                         as [height].
+      Ps_d [in,out]  Array of partial pressures (atm).  This array is stored
+                         as [molecule][height].
+
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+__host__
+int device_atmos_free(REAL_t *T_d,
+                      REAL_t *P_d,
+                      REAL_t *N_d,
+                      REAL_t *Z_d,
+                      REAL_t *Ps_d)
+{
+    /*Free arrays.*/
+    HANDLE_ERROR(cudaFree(T_d));
+    HANDLE_ERROR(cudaFree(P_d));
+    HANDLE_ERROR(cudaFree(N_d));
+    HANDLE_ERROR(cudaFree(Z_d));
+    HANDLE_ERROR(cudaFree(Ps_d));
+
+    return EXIT_SUCCESS;
 }
 
+/*---------------------------------------------------------------------------*/
+/*Malloc space for the device arrays contained in the RefLinePtrs_t and
+  OpticsBufPtrs_t structures.
 
-__host__ int device_optics_init(unsigned int numLayers,
-                                unsigned int numBufLines,
-                                RefLinePtrs_t* L_d,
-                                OpticsBufPtrs_t* OpticBuf_d)
+  Arguments:
+      numLayers   [in]      Size of the height dimension of the arrays.
+      numBufLines [in]      Size of the line dimension of the arrays.
+      L_d         [in,out]  Pointer to a structure containing device
+                                arrays stored as [line].
+      OpticBuf_d  [in,out]  Pointer to a structure containing device
+                                arrays stored as [height][line].
+
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+__host__
+int device_optics_init(unsigned int const numLayers,
+                       unsigned int const numBufLines,
+                       RefLinePtrs_t *L_d,
+                       OpticsBufPtrs_t *OpticBuf_d)
 {
 #ifdef EVENTS
-  cudaEvent_t start;
-  cudaEvent_t stop;
-  float elapsed;
-  HANDLE_ERROR( cudaEventCreate(&start) );
-  HANDLE_ERROR( cudaEventCreate(&stop) );
-  HANDLE_ERROR( cudaEventRecord(start) ); 
+    /*Record the start time for a cuda event.*/
+    cudaEvent_t start;
+    cudaEvent_t stop;
+    float elapsed;
+    HANDLE_ERROR(cudaEventCreate(&start));
+    HANDLE_ERROR(cudaEventCreate(&stop));
+    HANDLE_ERROR(cudaEventRecord(start)); 
 #endif
 
-  /* dev lines */
-  *L_d = allocDevice(numBufLines);
-  
-  /* Optics Buf  */
-  HANDLE_ERROR( cudaMalloc(&(OpticBuf_d->Gam), numLayers*numBufLines*sizeof(REAL_t) ) );
-  HANDLE_ERROR( cudaMalloc(&(OpticBuf_d->PShift), numLayers*numBufLines*sizeof(REAL_t) ) );
-  HANDLE_ERROR( cudaMalloc(&(OpticBuf_d->S), numLayers*numBufLines*sizeof(REAL_t) ) );
+    /*Malloc device arrays contained in the RefLinesPtrs_t structure.*/
+    *L_d = allocDevice(numBufLines);
 
-#ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time to device_optics_init: %3.1f ms\n", elapsed);
-#endif
+    /*Malloc device arrays contained in the OpticsBufPtrs_t structure.*/
+    HANDLE_ERROR(cudaMalloc(&(OpticBuf_d->Gam),
+                            numLayers*numBufLines*sizeof(REAL_t)));
+    HANDLE_ERROR(cudaMalloc(&(OpticBuf_d->PShift),
+                            numLayers*numBufLines*sizeof(REAL_t)));
+    HANDLE_ERROR(cudaMalloc(&(OpticBuf_d->S),
+                            numLayers*numBufLines*sizeof(REAL_t)));
 
 #ifdef EVENTS
-  /* cleanup event objects */
-  HANDLE_ERROR( cudaEventDestroy(start) );
-  HANDLE_ERROR( cudaEventDestroy(stop) );
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time to device_optics_init: %3.1f ms\n",
+           elapsed);
 #endif
-  
-  return EXIT_SUCCESS;
+
+#ifdef EVENTS
+    /*Clean up cuda event objects.*/
+    HANDLE_ERROR(cudaEventDestroy(start));
+    HANDLE_ERROR(cudaEventDestroy(stop));
+#endif
+
+    return EXIT_SUCCESS;
 }
 
-__host__ int device_optics_free(RefLinePtrs_t* L_d,
-                                OpticsBufPtrs_t* OpticBuf_d)
+/*---------------------------------------------------------------------------*/
+/*Free device arrays contained in the RefLinePtrs_t and
+  OpticsBufPtrs_t structures.
+
+  Arguments:
+      L_d         [in,out]  Pointer to a structure containing device
+                                arrays stored as [line].
+      OpticBuf_d  [in,out]  Pointer to a structure containing device
+                                arrays stored as [height][line].
+
+  Return:
+      EXIT_SUCCESS if the function completes normally.
+*/
+__host__
+int device_optics_free(RefLinePtrs_t* L_d,
+                       OpticsBufPtrs_t* OpticBuf_d)
 {
-
 #ifdef EVENTS
-  cudaEvent_t start;
-  cudaEvent_t stop;
-  float elapsed;
-  HANDLE_ERROR( cudaEventCreate(&start) );
-  HANDLE_ERROR( cudaEventCreate(&stop) );
-  HANDLE_ERROR( cudaEventRecord(start) ); 
-#endif
-  
-  /* cleanup */
-
-  /* Lines */
-  HANDLE_ERROR( cudaFree( L_d->iso ));
-  HANDLE_ERROR( cudaFree( L_d->Vnn ));
-  HANDLE_ERROR( cudaFree( L_d->Snn_ref ));
-  HANDLE_ERROR( cudaFree( L_d->Yair ));
-  HANDLE_ERROR( cudaFree( L_d->Yself ));
-  HANDLE_ERROR( cudaFree( L_d->En ));
-  HANDLE_ERROR( cudaFree( L_d->n ));
-  HANDLE_ERROR( cudaFree( L_d->d ));
-
-  /* precompute/staging */
-  HANDLE_ERROR( cudaFree( OpticBuf_d->Gam ));
-  HANDLE_ERROR( cudaFree( OpticBuf_d->PShift ));
-  HANDLE_ERROR( cudaFree( OpticBuf_d->S ));
-  
-#ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time to device_optics_free: %3.1f ms\n", elapsed);
+    /*Record the start time for a cuda event.*/
+    cudaEvent_t start;
+    cudaEvent_t stop;
+    float elapsed;
+    HANDLE_ERROR(cudaEventCreate(&start));
+    HANDLE_ERROR(cudaEventCreate(&stop));
+    HANDLE_ERROR(cudaEventRecord(start)); 
 #endif
 
+    /*Free device arrays contained in the RefLinesPtrs_t structure.*/
+    HANDLE_ERROR(cudaFree(L_d->iso));
+    HANDLE_ERROR(cudaFree(L_d->Vnn));
+    HANDLE_ERROR(cudaFree(L_d->Snn_ref));
+    HANDLE_ERROR(cudaFree(L_d->Yair));
+    HANDLE_ERROR(cudaFree(L_d->Yself));
+    HANDLE_ERROR(cudaFree(L_d->En));
+    HANDLE_ERROR(cudaFree(L_d->n));
+    HANDLE_ERROR(cudaFree(L_d->d));
+
+    /*Free device arrays contained in the OpticsBufPtrs_t structure.*/
+    HANDLE_ERROR(cudaFree(OpticBuf_d->Gam));
+    HANDLE_ERROR(cudaFree(OpticBuf_d->PShift));
+    HANDLE_ERROR(cudaFree(OpticBuf_d->S));
+
 #ifdef EVENTS
-  /* cleanup event objects */
-  HANDLE_ERROR( cudaEventDestroy(start) );
-  HANDLE_ERROR( cudaEventDestroy(stop) );
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time to device_optics_free: %3.1f ms\n",
+           elapsed);
 #endif
 
-  return EXIT_SUCCESS;
+#ifdef EVENTS
+    /*Clean up cuda event objects.*/
+    HANDLE_ERROR(cudaEventDestroy(start));
+    HANDLE_ERROR(cudaEventDestroy(stop));
+#endif
 
+    return EXIT_SUCCESS;
 }
 
-
-__host__ int device_optics_perMol(cudaStream_t stream,
-                                  const uint8_t molId,
-                                  const unsigned int nL,
-                                  const REAL_t loWn,
-                                  /* const REAL_t hiWn, */
-                                  const unsigned int nF,
-                                  const REAL_t resolution,
-                                  const int breadth,
-                                  const unsigned int numLayers,
-                                  REAL_t* out_d,
-                                  const REAL_t* const T_d,
-                                  const REAL_t* const P_d,
-                                  const uint8_t* const iso,
-                                  const REAL_t* const Vnn,
-                                  const REAL_t* const Snn_ref,
-                                  const float* const Yair,
-                                  const float* const Yself,
-                                  const float* const En,
-                                  const float* const n,
-                                  const float* const d,
-                                  REAL_t* const TauU_d,
-                                  REAL_t* const pathLength_d,
-                                  const REAL_t* const PS_d,
-                                  RefLinePtrs_t* const Lines_d,
-                                  OpticsBufPtrs_t* const OptBuf_d)
+/*---------------------------------------------------------------------------*/
+__host__
+int device_optics_perMol(cudaStream_t stream,
+                         uint8_t const molId,
+                         unsigned int const nL,
+                         REAL_t const loWn,
+                         unsigned int const nF,
+                         REAL_t const resolution,
+                         int const breadth,
+                         unsigned int const numLayers,
+                         REAL_t* out_d,
+                         const REAL_t* const T_d,
+                         const REAL_t* const P_d,
+                         const uint8_t* const iso,
+                         const REAL_t* const Vnn,
+                         const REAL_t* const Snn_ref,
+                         const float* const Yair,
+                         const float* const Yself,
+                         const float* const En,
+                         const float* const n,
+                         const float* const d,
+                         REAL_t* const TauU_d,
+                         REAL_t* const pathLength_d,
+                         const REAL_t* const PS_d,
+                         RefLinePtrs_t* const Lines_d,
+                         OpticsBufPtrs_t* const OptBuf_d)
 {
-  
-  /* device mem 
-   * declare */
+    /*Point at the device arrays located in the inputted Lines_d structure.*/
+    uint8_t *iso_d = Lines_d->iso;
+    REAL_t *Vnn_d = Lines_d->Vnn;
+    REAL_t *Snn_ref_d = Lines_d->Snn_ref;
+    float *Yair_d = Lines_d->Yair;
+    float *Yself_d = Lines_d->Yself;
+    float *En_d = Lines_d->En;
+    float *n_d = Lines_d->n;
+    float *d_d = Lines_d->d;
 
-  uint8_t* iso_d=Lines_d->iso;
-  REAL_t* Vnn_d=Lines_d->Vnn;
-  REAL_t* Snn_ref_d=Lines_d->Snn_ref;
-  float* Yair_d=Lines_d->Yair;
-  float* Yself_d=Lines_d->Yself;
-  float* En_d=Lines_d->En;
-  float* n_d=Lines_d->n;
-  float* d_d=Lines_d->d;
+    /*Point at the device arrays located in the inputted OptBuf_d structure.*/
+    REAL_t *Gam_d = OptBuf_d->Gam;
+    REAL_t *PShift_d = OptBuf_d->PShift;
+    REAL_t *S_d = OptBuf_d->S;
 
-  /* precompute/staging */
-  REAL_t* Gam_d=OptBuf_d->Gam;
-  REAL_t* PShift_d=OptBuf_d->PShift;
-  REAL_t* S_d=OptBuf_d->S;
+    /*Print out the inputted molecule id.*/
+    printf("Hitran molId:=%d\n",
+           molId);
 
-  /*dbg*/ printf( "Hitran molId:=%d\n", molId);
-
-  /* api setup (easier across different gpus), taken from documentation */
-  int dimBlock=0;   /*  The launch configurator returned block size */
-  int minGridSize=0; /*  The minimum grid size needed to achieve the maximum occupancy for a full device launch */
-  int dimGrid=0;    /*  The actual grid size needed, based on input size */
+    /*Initialize the launch configurator returned block size (dimBlock),
+      the minimum grid size needed to achieve the maximum occupancy for a full
+      device launch (minGridSize), and the actual grid size needed, based on
+      the input data size (dimGrid).*/
+    int dimBlock = 0;
+    int minGridSize = 0;
+    int dimGrid = 0;
 
 #ifdef EVENTS
-  cudaEvent_t start;
-  cudaEvent_t stop;
-  float elapsed;
-  HANDLE_ERROR( cudaEventCreate(&start) );
-  HANDLE_ERROR( cudaEventCreate(&stop) );
-  HANDLE_ERROR( cudaEventRecord(start,stream) ); 
+    /*Record the start time for a cuda event.*/
+    cudaEvent_t start;
+    cudaEvent_t stop;
+    float elapsed;
+    HANDLE_ERROR(cudaEventCreate(&start));
+    HANDLE_ERROR(cudaEventCreate(&stop));
+    HANDLE_ERROR(cudaEventRecord(start,
+                                 stream));
 #endif
 
-  /* per mol */
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(iso_d, iso, nL*sizeof(uint8_t), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(Vnn_d, Vnn, nL*sizeof(REAL_t), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(Snn_ref_d, Snn_ref, nL*sizeof(REAL_t), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(Yair_d, Yair, nL*sizeof(float), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(Yself_d, Yself, nL*sizeof(float), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(En_d, En, nL*sizeof(float), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(n_d, n, nL*sizeof(float), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
-  printf("Memcpy..");
-  HANDLE_ERROR( cudaMemcpyAsync(d_d, d, nL*sizeof(float), cudaMemcpyHostToDevice, stream ) );
-  printf(".done!\n");
+    /*Copy the inputted arrays associated with the Lines_d structure to the
+      device.*/
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(iso_d,
+                                 iso,
+                                 nL*sizeof(uint8_t),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(Vnn_d,
+                                 Vnn,
+                                 nL*sizeof(REAL_t),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(Snn_ref_d,
+                                 Snn_ref,
+                                 nL*sizeof(REAL_t),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(Yair_d,
+                                 Yair,
+                                 nL*sizeof(float),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(Yself_d,
+                                 Yself,
+                                 nL*sizeof(float),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(En_d,
+                                 En,
+                                 nL*sizeof(float),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(n_d,
+                                 n,
+                                 nL*sizeof(float),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
+    printf("Memcpy..");
+    HANDLE_ERROR(cudaMemcpyAsync(d_d,
+                                 d,
+                                 nL*sizeof(float),
+                                 cudaMemcpyHostToDevice,
+                                 stream));
+    printf(".done!\n");
 
 #ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop,stream) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time to cudaMemcpy: %3.1f ms\n", elapsed);
-  /* kernel */
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop,
+                                 stream));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time to cudaMemcpy: %3.1f ms\n",
+           elapsed);
+
+    /*Record the start time for a cuda event.*/
+/*
+    HANDLE_ERROR(cudaEventRecord(start,
+                                 stream));
+*/
+#endif
+
+    /*Calculate the thread blocksize and number of thread blocks that maximize
+      the occupancy on the device.  Round up to make sure that all input data
+      is used.  The CUDA API may produce awarning that can be safely ignored
+      depending on the sdk version and -W flags.*/
+    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
+                                                    &dimBlock,
+                                                    pre_eval_Snn,
+                                                    0,
+                                                    ((int)nL)));
+    dimGrid = (((int)nL) + dimBlock - 1)/dimBlock;
+
+#ifdef EVENTS
+    /*Record the start time for a cuda event.*/
+    HANDLE_ERROR(cudaEventRecord(start,
+                                 stream));
+#endif
+
+    /*Execute the pre_Snn kernel.*/
+    printf("%s Kernel Launch.. %d lines ... ",
+           "pre_eval_Snn",
+           nL);
+    printf("using dimBlock = %d and dimGrid = %d  ... ",
+           dimBlock,
+           dimGrid);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    pre_eval_Snn<<<((unsigned int)dimGrid),((unsigned int)dimBlock),0,stream>>>(nL,
+                                                                                molId,
+                                                                                iso_d,
+                                                                                Vnn_d,
+                                                                                En_d,
+                                                                                Snn_ref_d);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaPeekAtLastError());
+    printf("..peek-OK..");
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    printf("..done!\n");
+
+#ifdef EVENTS
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop,
+                                 stream));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time in Kernel: %3.1f ms\n",
+           elapsed);
+#endif
+
+    /*Calculate the thread blocksize and number of thread blocks that maximize
+      the occupancy on the device.  Round up to make sure that all input data
+      is used.*/
+    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
+                                                    &dimBlock,
+                                                    eval_gamma,
+                                                    0,
+                                                    ((int)nL)));
+    dimGrid = (((int)nL) + dimBlock - 1)/dimBlock;
+
+#ifdef EVENTS
+    /*Record the start time for a cuda event.*/
+    HANDLE_ERROR(cudaEventRecord(start,
+                                 stream));
+#endif
+
+    /*Execute the gamma kernel */
+    printf("%s Kernel Launch.. %d lines, %d spatial points ... ",
+           "eval_gamma",
+           nL,
+           numLayers);
+    printf("using dimBlock = %d and dimGrid = %d  ... ",
+           dimBlock,
+           dimGrid);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    eval_gamma<<<((unsigned int)dimGrid),((unsigned int)dimBlock),0,stream>>>(numLayers,
+                                                                              nL,
+                                                                              P_d,
+                                                                              T_d,
+                                                                              PS_d,
+                                                                              Yself_d,
+                                                                              Yair_d,
+                                                                              n_d,
+                                                                              Gam_d);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaPeekAtLastError());
+    printf("..peek-OK..");
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    printf("..done!\n");
+
+#ifdef EVENTS
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop,stream));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time in Kernel: %3.1f ms\n",
+           elapsed);
+#endif
+
+    /*Calculate the thread blocksize and number of thread blocks that maximize
+      the occupancy on the device.  Round up to make sure that all input data
+      is used.*/
+    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
+                                                    &dimBlock,
+                                                    eval_pShift,
+                                                    0,
+                                                    0));
+    dimGrid = (((int)nL) + dimBlock - 1)/dimBlock;
+
+#ifdef EVENTS
+    /*Record the start time for a cuda event.*/
+    HANDLE_ERROR(cudaEventRecord(start,
+                                 stream));
+#endif
+
+    /*Execute the pshift kernel.*/
+    printf("%s Kernel Launch.. %d lines, %d spatial points ... ",
+           "eval_pShift",
+           nL,
+           numLayers);
+    printf("using dimBlock = %d and dimGrid = %d  ... ",
+           dimBlock,
+           dimGrid);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    eval_pShift<<<((unsigned int)dimGrid),((unsigned int)dimBlock),0,stream>>>(numLayers,
+                                                                               nL,
+                                                                               P_d,
+                                                                               Vnn_d,
+                                                                               d_d,
+                                                                               PShift_d);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaPeekAtLastError());
+    printf("..peek-OK..");
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    printf("..done!\n");
+
+#ifdef EVENTS
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop,
+                                 stream));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time in Kernel: %3.1f ms\n",
+           elapsed);
+#endif
+
+    /*Calculate the thread blocksize and number of thread blocks that maximize
+      the occupancy on the device.  Round up to make sure that all input data
+      is used.*/
+    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
+                                                    &dimBlock,
+                                                    eval_Snn_correction,
+                                                    0,
+                                                    0));
+    dimGrid = (((int)nL) + dimBlock - 1)/dimBlock;
+
+#ifdef EVENTS
+    /*Record the start time for a cuda event.*/
+    HANDLE_ERROR(cudaEventRecord(start,
+                                 stream));
+#endif
+    /*Execute the Snn kernel.*/
+    printf("%s Kernel Launch.. %d lines, %d spatial points ... ",
+           "eval_Snn_correction",
+           nL,
+           numLayers);
+    printf("using dimBlock = %d and dimGrid = %d  ... ",
+           dimBlock,
+           dimGrid);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    eval_Snn_correction<<<((unsigned int)dimGrid),((unsigned int)dimBlock),0,stream>>>(numLayers,
+                                                                                       nL,
+                                                                                       molId,
+                                                                                       T_d,
+                                                                                       iso_d,
+                                                                                       Vnn_d,
+                                                                                       En_d,
+                                                                                       Snn_ref_d,
+                                                                                       S_d);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaPeekAtLastError());
+    printf("..peek-OK..");
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    printf("..done!\n");
+
+#ifdef EVENTS
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop,
+                                 stream));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time in Kernel: %3.1f ms\n",
+           elapsed);
+#endif
+
+    /*Calculate the thread blocksize and number of thread blocks that maximize
+      the occupancy on the device.  Round up to make sure that all input data
+      is used.*/
+    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
+                                                    &dimBlock,
+                                                    eval_profile,
+                                                    0,
+                                                    0));
+    dimGrid = (((int)nL) + dimBlock - 1)/dimBlock;
+
+#ifdef EVENTS
+    /*Record the start time for a cuda event.*/
+    HANDLE_ERROR(cudaEventRecord(start,
+                                 stream));
+#endif
+    /*Execute the profile kernel.*/
+    printf("%s Kernel Launch.. %d lines, %d fsamples ... ",
+           "eval_profile",
+           nL,
+           nF);
+    printf("using dimBlock = %d and dimGrid = %d  ... ",
+           dimBlock,
+           dimGrid);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    eval_profile<<<((unsigned int)dimGrid),((unsigned int)dimBlock),0,stream>>>(molId,
+                                                                                nL,
+                                                                                nF,
+                                                                                loWn,
+                                                                                resolution,
+                                                                                numLayers,
+                                                                                breadth,
+                                                                                T_d,
+                                                                                Vnn_d,
+                                                                                Gam_d,
+                                                                                PShift_d,
+                                                                                S_d,
+                                                                                pathLength_d,
+                                                                                TauU_d,
+                                                                                out_d);
+#ifdef FORCE_KERNEL_CHECK
+    HANDLE_ERROR(cudaPeekAtLastError());
+    printf("..peek-OK..");
+    HANDLE_ERROR(cudaDeviceSynchronize());
+#endif
+    printf("..done!\n");
+
+#ifdef EVENTS
+    /*Record the stop time for the cuda event and calculate and print the
+      elapsed time.*/
+    HANDLE_ERROR(cudaEventRecord(stop,
+                                 stream));
+    HANDLE_ERROR(cudaEventSynchronize(stop));
+    HANDLE_ERROR(cudaEventElapsedTime(&elapsed,
+                                      start,
+                                      stop));
+    printf("Time in Kernel: %3.1f ms\n",
+           elapsed);
+
+/*
   HANDLE_ERROR( cudaEventRecord(start,stream) );
+*/
 #endif
-
-
-  /* cuda API may produce warning that can be safely ignored depending on sdk version and -W flags*/
-  HANDLE_ERROR( cudaOccupancyMaxPotentialBlockSize( &minGridSize, &dimBlock, pre_eval_Snn, 0, ((int)nL) ) );
-  /*  Round up according to array size */
-  dimGrid = (((int)nL) + dimBlock - 1) / dimBlock;
 
 #ifdef EVENTS
-  /* kernel */
-  HANDLE_ERROR( cudaEventRecord(start,stream) );
-#endif
-  /*  execute the gamma kernel */
-  printf("%s Kernel Launch.. %d lines ... ","pre_eval_Snn", nL);
-  printf("using dimBlock = %d and dimGrid = %d  ... ",dimBlock,dimGrid);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  pre_eval_Snn<<< ((unsigned int)dimGrid) , ((unsigned int)dimBlock) , 0 , stream >>>( nL, molId, iso_d, Vnn_d, En_d, Snn_ref_d); /* replaces Snn_ref_d! */
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaPeekAtLastError() );
-  printf("..peek-OK..");
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  printf("..done!\n");
-
-#ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop,stream) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time in Kernel: %3.1f ms\n", elapsed);
+    /*Clean up cuda event objects.*/
+    HANDLE_ERROR(cudaEventDestroy(start));
+    HANDLE_ERROR(cudaEventDestroy(stop));
 #endif
 
-  /* cuda API will produce warning that can be safely ignored */
-  HANDLE_ERROR( cudaOccupancyMaxPotentialBlockSize( &minGridSize, &dimBlock, eval_gamma, 0, ((int)nL) ) );
-  /*  Round up according to array size */
-  dimGrid = (((int)nL) + dimBlock - 1) / dimBlock;
-  
-#ifdef EVENTS
-  /* kernel */
-  HANDLE_ERROR( cudaEventRecord(start,stream) );
-#endif
-  /*  execute the gamma kernel */
-  printf("%s Kernel Launch.. %d lines, %d spatial points ... ","eval_gamma", nL, numLayers);
-  printf("using dimBlock = %d and dimGrid = %d  ... ",dimBlock,dimGrid);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  eval_gamma<<< ((unsigned int)dimGrid), ((unsigned int)dimBlock) , 0 , stream >>>( numLayers, nL, P_d, T_d, PS_d, Yself_d, Yair_d, n_d, Gam_d);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaPeekAtLastError() );
-  printf("..peek-OK..");
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  printf("..done!\n");
-  
-#ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop,stream) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time in Kernel: %3.1f ms\n", elapsed);
-#endif
-
-  /* api setup declares (easier across different gpus), taken from documentation */
-  HANDLE_ERROR( cudaOccupancyMaxPotentialBlockSize( &minGridSize, &dimBlock, eval_pShift, 0, 0) );
-  /*  Round up according to array size */
-  dimGrid = (((int)nL) + dimBlock - 1) / dimBlock;
-
-#ifdef EVENTS
-  /* kernel */
-  HANDLE_ERROR( cudaEventRecord(start,stream) );
-#endif
-
-  /*  execute the pshift kernel */
-  printf("%s Kernel Launch.. %d lines, %d spatial points ... ","eval_pShift", nL, numLayers);
-  printf("using dimBlock = %d and dimGrid = %d  ... ",dimBlock,dimGrid);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  eval_pShift<<< ((unsigned int)dimGrid) , ((unsigned int)dimBlock),0,stream >>>( numLayers, nL, P_d, Vnn_d, d_d, PShift_d );
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaPeekAtLastError() );
-  printf("..peek-OK..");
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  printf("..done!\n");
-
-#ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop,stream) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time in Kernel: %3.1f ms\n", elapsed);
-#endif
-
-  /* api setup declares (easier across different gpus), taken from documentation */
-  HANDLE_ERROR( cudaOccupancyMaxPotentialBlockSize( &minGridSize, &dimBlock, eval_Snn_correction, 0, 0) );
-  /*  Round up according to array size */
-  dimGrid = (((int)nL) + dimBlock - 1) / dimBlock;
-
-#ifdef EVENTS
-  /* kernel */
-  HANDLE_ERROR( cudaEventRecord(start,stream) );
-#endif
-  /*  execute the Snn kernel */
-  printf("%s Kernel Launch.. %d lines, %d spatial points ... ","eval_Snn_correction", nL,numLayers);
-  printf("using dimBlock = %d and dimGrid = %d  ... ",dimBlock,dimGrid);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  eval_Snn_correction<<< ((unsigned int)dimGrid), ((unsigned int)dimBlock),0,stream >>>( numLayers, nL, molId, T_d, iso_d, Vnn_d, En_d, Snn_ref_d, S_d);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaPeekAtLastError() );
-  printf("..peek-OK..");
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  printf("..done!\n");
-
-#ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop,stream) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time in Kernel: %3.1f ms\n", elapsed);
-#endif
-
-  /* api setup declares (easier across different gpus), taken from documentation */
-  HANDLE_ERROR( cudaOccupancyMaxPotentialBlockSize( &minGridSize, &dimBlock, eval_profile, 0, 0) );
-  /*  Round up according to array size */
-  dimGrid = ( ((int)nL) + dimBlock - 1) / dimBlock;
-
-#ifdef EVENTS
-  /* kernel */
-  HANDLE_ERROR( cudaEventRecord(start,stream) );
-#endif
-  /*  execute the profile kernel */
-  printf("%s Kernel Launch.. %d lines, %d fsamples ... ","eval_profile", nL, nF);
-  printf("using dimBlock = %d and dimGrid = %d  ... ",dimBlock,dimGrid);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  eval_profile<<< ((unsigned int)dimGrid) , ((unsigned int)dimBlock),0,stream >>>( molId, nL, nF, loWn, resolution, numLayers, breadth, T_d, Vnn_d, Gam_d, PShift_d, S_d, pathLength_d, TauU_d, out_d);
-#ifdef FORCE_KERNEL_CHECK
-  HANDLE_ERROR( cudaPeekAtLastError() );
-  printf("..peek-OK..");
-  HANDLE_ERROR( cudaDeviceSynchronize() );
-#endif
-  printf("..done!\n");
-  
-#ifdef EVENTS
-  HANDLE_ERROR( cudaEventRecord(stop,stream) );
-  HANDLE_ERROR( cudaEventSynchronize(stop));
-  HANDLE_ERROR( cudaEventElapsedTime(&elapsed,start,stop) );
-  printf( "Time in Kernel: %3.1f ms\n", elapsed);
-  /*  */
-  HANDLE_ERROR( cudaEventRecord(start,stream) );
-#endif
-  
-  /* end per Mol computations*/
-
-#ifdef EVENTS
-  /* cleanup event objects */
-  HANDLE_ERROR( cudaEventDestroy(start) );
-  HANDLE_ERROR( cudaEventDestroy(stop) );
-#endif
-
-  return EXIT_SUCCESS;
-
+    return EXIT_SUCCESS;
 }
 
-__host__ static void initStreams(const unsigned int numMols, cudaStream_t** streams, int* nStreams){
-  /* CUDA streams */
-  int s;
+/*---------------------------------------------------------------------------*/
+__host__
+static void initStreams(unsigned int const numMols,
+                        cudaStream_t **streams,
+                        int *nStreams)
+{
+    /*Local variables*/
+    int s;
 
-  if (*nStreams ==-1)
-  {
-    if (*streams==NULL){
-      cudaDeviceProp p = checkDeviceProps();
-      if (p.concurrentKernels){
-        *nStreams = ( numMols <= MAXNSTREAMS ? numMols : MAXNSTREAMS );
-      }
-      else{
-        *nStreams=1;
-      }
-      fprintf(stderr,"\nUsing %d streams with %d molecules.\n", *nStreams, numMols);
-      
-      (*streams) =(cudaStream_t*)malloc(sizeof(cudaStream_t)*(*nStreams));
-      
-      if (*nStreams>1)
-      {
-        /* create non default streams */
-        for(s=0 ; s<(*nStreams) ; ++s){
-          HANDLE_ERROR( cudaStreamCreate( &( (*streams)[s]) ) );
+    if (*nStreams == -1)
+    {
+        if (*streams == NULL)
+        {
+            cudaDeviceProp p = checkDeviceProps();
+            if (p.concurrentKernels)
+            {
+                *nStreams = (numMols <= MAXNSTREAMS ? numMols : MAXNSTREAMS);
+            }
+            else
+            {
+                *nStreams=1;
+            }
+            fprintf(stderr,
+                    "\nUsing %d streams with %d molecules.\n",
+                    *nStreams,
+                    numMols);
+            (*streams) = (cudaStream_t*)malloc(sizeof(cudaStream_t)*(*nStreams));
+            if (*nStreams > 1)
+            {
+                for (s=0;s<(*nStreams);++s)
+                {
+                    HANDLE_ERROR(cudaStreamCreate(&((*streams)[s])));
+                }
+            }
+            else
+            {
+                (*streams)[0] = NULL;
+            }
         }
-      }
-      else
-      {  /* default */
-        (*streams)[0]=NULL;
-      }
     }
-  }
-  /* else pass */
+
+    return;
 }
-  
 
+/*---------------------------------------------------------------------------*/
+__host__
+int device_launch(int *nStreams,
+                  cudaStream_t **streams,
+                  unsigned int const numMols,
+                  RefLinePtrs_t L[],
+                  REAL_t const loWn,
+                  unsigned int const nF,
+                  REAL_t const resolution,
+                  unsigned int const wingBreadth,
+                  radiationOutputFields_t *atmosData,
+                  REAL_t * const out,
+                  int const time,
+                  int const lat,
+                  int const lon)
+{
+    /*Local variables*/
+    unsigned int m;
+    unsigned int mol;
+    unsigned int numLayers=atmosData->npfull;
+    int s;
+    REAL_t *T_d;
+    REAL_t *P_d;
+    REAL_t *N_d;
+    REAL_t *Z_d;
+    REAL_t *PS_d;
+    REAL_t *out_d;
 
-__host__ int device_launch(int* nStreams,
-                           cudaStream_t** streams,
-                           const unsigned int numMols,
-                           RefLinePtrs_t L[],
-                           const REAL_t loWn,
-                           /* const REAL_t hiWn, */
-                           const unsigned int nF,
-                           const REAL_t resolution,
-                           const unsigned int wingBreadth,
-                           radiationOutputFields_t* atmosData,
-                           REAL_t* const out,
-                           int time,
-                           int lat,
-                           int lon){
+    /*Initialize TIPS.*/
+    initTIPS_d();
+    initStreams(numMols,
+                streams,
+                nStreams);
 
-  unsigned int m;
-  unsigned int mol;
-  unsigned int numLayers=atmosData->npfull;
+    /*Sanity check.*/
+    assert(numMols<=NUM_MOL);
 
-  /* Initilization */
-  initTIPS_d();
-  initStreams(numMols, streams, nStreams);
-  
-  /* per stream vars */
-  int s;
-  /* char* hitFname[nStreams]; */
-  
-  /* sanity check */
-  assert(numMols<=NUM_MOL);
-  
-  /* resolve host pointers */
-  /* shift all the atmosData to lat,lon,layer */
-  const size_t idx = (time*atmosData->nlon*atmosData->nlat + lat*atmosData->nlon + lon) * atmosData->npfull ;
-  REAL_t* T = &(atmosData->T[idx]);
-  REAL_t* P = &(atmosData->P[idx]);
-  REAL_t* DELTAZ = &(atmosData->DELTAZ[idx]);
-  REAL_t* N = &(atmosData->N[idx*NUM_MOL]);
-  REAL_t* PS = &(atmosData->PS[idx*NUM_MOL]);
-  /* declare device pointers */
-  REAL_t* T_d;
-  REAL_t* P_d;
-  REAL_t* N_d;
-  REAL_t* Z_d;
-  REAL_t* PS_d;
-  REAL_t* out_d;
+    /*Point the beginning of the appropriate "column" of data.*/
+    const size_t idx = (time*atmosData->nlon*atmosData->nlat +
+                        lat*atmosData->nlon + lon)*atmosData->npfull;
+    REAL_t *T = &(atmosData->T[idx]);
+    REAL_t *P = &(atmosData->P[idx]);
+    REAL_t *DELTAZ = &(atmosData->DELTAZ[idx]);
+    REAL_t *N = &(atmosData->N[idx*NUM_MOL]);
+    REAL_t *PS = &(atmosData->PS[idx*NUM_MOL]);
 
-  /* RefLinePtrs_t L[numMols]; */
-  /* init atmos on device */  
-  device_atmos_init(numLayers,
-                    NUM_MOL,  /* should be the hardcoded(7) */
-                    T,
-                    P,
-                    N,
-                    DELTAZ,
-                    PS,
-                    &T_d,
-                    &P_d,
-                    &N_d,
-                    &Z_d,
-                    &PS_d);
-                    
-  /* out_h should be Zeros or you're gonna have a bad time! */
-  HANDLE_ERROR( cudaMalloc(&out_d, (numLayers+1)*nF*sizeof(REAL_t) ) ); /* re-used */
-  printf("Memcpy.. out_h -> out_d");
-  HANDLE_ERROR( cudaMemcpy(out_d, out, numLayers*nF*sizeof(REAL_t), cudaMemcpyHostToDevice ) );
-  printf(".done!\n");
+    /*Print out values for debugging.  Delete this later.*/
+/*
+    if (time == 0 && lat == 0 && lon == 0)
+    {
+        printf("time = %d, lat = %d, lon = %d, mol = %d\n",
+               time,
+               lat,
+               lon,
+               0);
+        printf("layer n(cm^-3)   delz(cm)   delz*n(cm^-2)   P(atm)"
+                   "   Ps(atm)\n");
+        for (m=0;m<numLayers;m++)
+        {
+            printf("%u %e %e %e %e %e\n",
+                   m,
+                   N[m+atmosData->npfull],
+                   DELTAZ[m],
+                   N[m+atmosData->npfull]*DELTAZ[m],
+                   P[m],
+                   PS[m+atmosData->npfull]);
+        }
+    }
+*/
 
-  /* setup buffers for re-use under streaming */
-  OpticsBufPtrs_t OpticsBuf_d[*nStreams];
-  RefLinePtrs_t LinesBuf_d[*nStreams];
-  for (s=0; s<*nStreams; ++s){
-    device_optics_init(numLayers,
-                       MAX_NUM_SPECTRAL_LINES,
-                       &(LinesBuf_d[s]),
-                       &(OpticsBuf_d[s]) );
-  }
-  
-  for (m=0; m < (numMols+(*nStreams-1)); m+=*nStreams )
-  {    
-    /* perform LBL optical calcs */
-    for ( s=0; s<*nStreams; ++s){
-      mol=m+s;
-      if ( mol < numMols){
-        device_optics_perMol((*streams)[s],
-                             L[mol].mol,
-                             L[mol].nLines,
-                             loWn,
-                             /* hiWn, */
-                             nF,
-                             resolution,
-                             wingBreadth,
-                             numLayers,
-                             
-                             out_d,
-                             
-                             T_d,
-                             P_d,
-                             
-                             L[mol].iso,
-                             L[mol].Vnn,
-                             L[mol].Snn_ref,
-                             L[mol].Yair,
-                             L[mol].Yself,
-                             L[mol].En,
-                             L[mol].n,
-                             L[mol].d,
-                             &(N_d[(L[mol].mol-1) * atmosData->npfull]),
-                             Z_d,                             
-                             &(PS_d[(L[mol].mol-1) * atmosData->npfull]), /* offsets [mol] into idx@t,lat,lon,
-                                                                           * so PS should be t, lat, lon, mol, z*/
-                             &(LinesBuf_d[s]),
-                             &(OpticsBuf_d[s]) );      
-      }
-    }    
-  }
+    /*Malloc and copy data to the device arrays.*/
+    device_atmos_init(numLayers,
+                      NUM_MOL,
+                      T,
+                      P,
+                      N,
+                      DELTAZ,
+                      PS,
+                      &T_d,
+                      &P_d,
+                      &N_d,
+                      &Z_d,
+                      &PS_d);
 
-  /* block all streams */
-  HANDLE_ERROR( cudaDeviceSynchronize() );
+    /*Malloc the out_d array and set its values to all zeros by memcpying
+      out_h to out_d.  For this to work correctly, out_h should be all zeros.*/
+/*
+    HANDLE_ERROR(cudaMalloc(&out_d,
+                            (numLayers+1)*nF*sizeof(REAL_t)));
+*/
+    HANDLE_ERROR(cudaMalloc(&out_d,
+                            (numLayers)*nF*sizeof(REAL_t)));
+    printf("Memcpy.. out_h -> out_d");
+    printf("Memcpy.. out_h -> out_d");
+    HANDLE_ERROR(cudaMemcpy(out_d,
+                            out,
+                            numLayers*nF*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
 
-  /* free tmp buffers */
-  for (s=0; s<*nStreams; ++s){
-    device_optics_free(&(LinesBuf_d[s]),
-                       &(OpticsBuf_d[s]) );
-  }
-  
-  /* d2h */
-  printf("Memcpy opticalDepth (out) to host..");
-  HANDLE_ERROR( cudaMemcpy(out, out_d, numLayers*nF*sizeof(REAL_t),cudaMemcpyDeviceToHost) );
-  printf("..done\n");
-  
-  device_atmos_free(T_d,
-                    P_d,
-                    N_d,
-                    Z_d,
-                    PS_d);
-    
-  HANDLE_ERROR(cudaFree(out_d));
-  
-  return EXIT_SUCCESS;
+    /*Setup buffers for re-use under streaming.*/
+    OpticsBufPtrs_t OpticsBuf_d[*nStreams];
+    RefLinePtrs_t LinesBuf_d[*nStreams];
+    for (s=0;s<*nStreams;++s)
+    {
+        device_optics_init(numLayers,
+                           MAX_NUM_SPECTRAL_LINES,
+                           &(LinesBuf_d[s]),
+                           &(OpticsBuf_d[s]));
+    }
+
+    /*Loop throught the molecules and calculate the optical depth values.*/
+    for (m=0;m<(numMols+(*nStreams-1));m+=*nStreams)
+    {
+        for (s=0;s<*nStreams;++s)
+        {
+            mol = m+s;
+            if (mol<numMols)
+            {
+                device_optics_perMol((*streams)[s],
+                                     L[mol].mol,
+                                     L[mol].nLines,
+                                     loWn,
+                                     nF,
+                                     resolution,
+                                     wingBreadth,
+                                     numLayers,
+                                     out_d,
+                                     T_d,
+                                     P_d,
+                                     L[mol].iso,
+                                     L[mol].Vnn,
+                                     L[mol].Snn_ref,
+                                     L[mol].Yair,
+                                     L[mol].Yself,
+                                     L[mol].En,
+                                     L[mol].n,
+                                     L[mol].d,
+                                     &(N_d[(L[mol].mol-1)*atmosData->npfull]),
+                                     Z_d,
+                                     &(PS_d[(L[mol].mol-1)*atmosData->npfull]),
+                                     &(LinesBuf_d[s]),
+                                     &(OpticsBuf_d[s]));
+            }
+        }
+    }
+
+    /*Synchronize all streams.*/
+    HANDLE_ERROR(cudaDeviceSynchronize());
+
+    /*Free device buffers.*/
+    for (s=0;s<*nStreams;++s)
+    {
+        device_optics_free(&(LinesBuf_d[s]),
+                           &(OpticsBuf_d[s]));
+    }
+
+    /*Memcpy the optical depths from the device back to the host.*/
+    printf("Memcpy opticalDepth (out) to host..");
+    HANDLE_ERROR(cudaMemcpy(out,
+                            out_d,
+                            numLayers*nF*sizeof(REAL_t),
+                            cudaMemcpyDeviceToHost));
+    printf("..done\n");
+
+    /*Free device arrays.*/
+    device_atmos_free(T_d,
+                      P_d,
+                      N_d,
+                      Z_d,
+                      PS_d);
+    HANDLE_ERROR(cudaFree(out_d));
+
+    return EXIT_SUCCESS;
 }
+
+/*---------------------------------------------------------------------------*/
 
 #else
+/*---------------------------------------------------------------------------*/
 int device_launch(int* nStreams,
                   void** streams,
                   const unsigned int numMols,
                   const char* const molFnames[],
                   const REAL_t loWn,
-                  /* const REAL_t hiWn, */
                   const unsigned int nF,
                   const REAL_t resolution,
                   const unsigned int wingBreadth,
@@ -2183,23 +3292,28 @@ int device_launch(int* nStreams,
                   int lat,
                   int lon)
 {
-  /* shut these wwarnings down */
-  (void) nStreams;
-  (void) streams;
-  (void) numMols;
-  (void) molFnames;
-  (void) loWn;
-  (void) nF;
-  (void) resolution;
-  (void) wingBreadth;
-  (void) atmosData;
-  (void) out;
-  (void) time;
-  (void) lat;
-  (void) lon;
-  printf("\n\nYou've not compiled with NVCC, device_launch does nothing...\n\n");
-  return -1;
+    /*Prevent compiler warnings.*/
+    (void) nStreams;
+    (void) streams;
+    (void) numMols;
+    (void) molFnames;
+    (void) loWn;
+    (void) nF;
+    (void) resolution;
+    (void) wingBreadth;
+    (void) atmosData;
+    (void) out;
+    (void) time;
+    (void) lat;
+    (void) lon;
+
+    printf("\n\nYou've not compiled with NVCC, device_launch does"
+               " nothing...\n\n");
+
+    return -1;
 }
+
+/*---------------------------------------------------------------------------*/
 #endif
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -2223,7 +3337,7 @@ int main(int argc,
     unsigned int compute_lon_end;
     unsigned int mol;
     size_t idx;
-    REAL_t* out = NULL;
+    REAL_t *out = NULL;
 
     struct arguments arguments;
     static char default_output_fname[] ="didyouforgettospecifyoutfile.nc";
@@ -2318,8 +3432,8 @@ int main(int argc,
     {
         fprintf(stderr,
                 "Error(main): more than one target specified.  Please use"
-                " either --host or --device or neither flag to just default"
-                " to device 0.\n");
+                    " either --host or --device or neither flag to just"
+                    " default to device 0.\n");
         exit(EXIT_FAILURE);
     }
     else if (arguments.mpi != 0 && (arguments.device == 0 &&
@@ -2327,7 +3441,7 @@ int main(int argc,
     {
         fprintf(stderr,
                 "Error(main): when specifying mpi you must specify the number"
-                " of devices per node or --host.\n");
+                    " of devices per node or --host.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -2346,7 +3460,7 @@ int main(int argc,
     {
         fprintf(stderr,
                 "Error(main): you have invoked with the program with --mpi"
-                " but did not used an mpirun style executer.\n");
+                    " but did not used an mpirun style executer.\n");
         exit(EXIT_FAILURE);
     }
 #else
@@ -2355,7 +3469,7 @@ int main(int argc,
     {
         fprintf(stderr,
                 "Error(main): you must build with -DMPI_ENABLED in order to"
-                " use MPI.\n");
+                    " use MPI.\n");
         exit(EXIT_SUCCESS);
     }
 #endif
@@ -2382,8 +3496,8 @@ int main(int argc,
     {
         fprintf(stderr,
                 "Warning(main): the number of hitfiles (%d) does not match"
-                " the number of prescribed concentrations (%d). Checking for"
-                " overrides...\n",
+                    " the number of prescribed concentrations (%d). Checking"
+                    " for overrides...\n",
                 arguments.nhitfiles,
                 arguments.nmolConc);
         if (arguments.nmolConc+arguments.nmolConcOver == arguments.nhitfiles)
@@ -2396,8 +3510,8 @@ int main(int argc,
         {
             fprintf(stderr,
                     "\t...found %d overrides.\nError(main): the number of"
-                    " inputted hitfiles does not match the number of inputted"
-                    " + overridden molecular concentrations.\n",
+                        " inputted hitfiles does not match the number of"
+                        " inputted + overridden molecular concentrations.\n",
                     arguments.nmolConcOver);
             exit(EXIT_FAILURE);
         }
@@ -2418,12 +3532,12 @@ int main(int argc,
     /* output file and compute setup is very different for mpi */
     if (arguments.mpi != 0)
     {
-        OUTPUT_FNAME = (char*)malloc(strlen(arguments.output_file) + 9);
+        OUTPUT_FNAME = (char *)malloc(strlen(arguments.output_file) + 9);
         if (OUTPUT_FNAME == NULL)
         {
             fprintf(stderr,
                     "Error(main): malloc failed for %zu bytes of"
-                    " OUTPUTFNAME.\n",
+                        " OUTPUTFNAME.\n",
                     strlen(arguments.output_file) + 9);
             exit(EXIT_FAILURE);
         }
@@ -2432,9 +3546,9 @@ int main(int argc,
         {
             fprintf(stderr, 
                     "Warning(main): specified %d global lats across ranks=%zu"
-                    " yields between %d and %d lats per rank.  This will"
-                    " result in idle hardware, suggest a different work"
-                    " share.\n",
+                        " yields between %d and %d lats per rank.  This will"
+                        " result in idle hardware, suggest a different work"
+                        " share.\n",
                     world_size,
                     atmosData.nlat,
                     lat,
@@ -2472,8 +3586,8 @@ int main(int argc,
 
     /*Declare stream parameters.*/
 #ifdef __NVCC__
-    int nstreams=-1;
-    cudaStream_t* streams=NULL;
+    int nstreams = -1;
+    cudaStream_t* streams = NULL;
 #endif
 
     /*Setup HITRAN lines.*/
@@ -2488,15 +3602,6 @@ int main(int argc,
                                         flags,
                                         arguments.w,
                                         arguments.W);
-/*
-        checkMolConfig(&arguments,
-                       HitLines[mol].mol,
-                       atmosData.PS,
-                       time,
-                       atmosData.nlat,
-                       atmosData.nlon,
-                       numLayers);
-*/
 
         /*Check the molecular configurations.  For all molecules whose
           partial pressure is not taken from the input NetCDF file, calculate
@@ -2571,7 +3676,7 @@ int main(int argc,
 #else
                     fprintf(stderr,
                             "Error(main): requested cuda launch type (%d),"
-                            " but compiled host only.\n",
+                                " but compiled host only.\n",
                             launchType);
                     exit(EXIT_FAILURE);
 #endif
@@ -2580,7 +3685,7 @@ int main(int argc,
                 {
                     fprintf(stderr,
                             "Error(main): unkown launch type (%d)"
-                            " requested.\n",
+                                " requested.\n",
                             launchType);
                     exit(EXIT_FAILURE);
                 }
@@ -2693,6 +3798,6 @@ int main(int argc,
     MPI_Finalize();
 #endif
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
