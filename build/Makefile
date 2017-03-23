@@ -26,19 +26,19 @@ libgrtcode.so: grtcode.o TIPS_2011.o parseHITRANfile.o cudaHelpers.o parseNetcdf
 libparseNetcdfRadiation.so: parseNetcdfRadiation.o
 	$(NVCC) $(NVCCLDFLAGS) $(NVCCFLAGS) $^ -o $@
 
-%.o: %.c
+%.o: ../src/%.c
 	$(NVCC) -x cu -dc $(NVCCLDFLAGS) $(NVCCFLAGS) -DSKIPMAIN -c $< -o $@
 
-%.o: %.cu
+%.o: ../src/%.cu
 	$(NVCC) -x cu -dc $(NVCCLDFLAGS) $(NVCCFLAGS) -DSKIPMAIN -c $< -o $@
 
 TIPS_2011.unittest.x: 
-	$(NVCC) -x cu $(NVCCFLAGS) TIPS_2011.c cudaHelpers.cu -o $@
+	$(NVCC) -x cu $(NVCCFLAGS) ../src/TIPS_2011.c ../src/cudaHelpers.cu -o $@
 
 grtcode.x: grtcode.o TIPS_2011.o parseHITRANfile.o cudaHelpers.o parseNetcdfRadiation.o voigt.o outputNetcdfSpec.o continuum.o
 	$(NVCC) $(NVCCFLAGS)  $^ -o $@
 
-parseNetcdfRadiation.x: parseNetcdfRadiation.c
+parseNetcdfRadiation.x: ../src/parseNetcdfRadiation.c
 	$(NVCC) $(NVCCFLAGS) $^ -o $@
 clean:
 	-rm -f *.o
