@@ -307,7 +307,7 @@ endif
 #Water
 if ( -f "RFM_SMALLSUBSET_RESULTS/${h2o_rfm_reference_file}" ) then
     echo "Verifiying h2o results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$h2o_rfm_reference_file -o$h2o_verification_results ../RESULTS/$h2o_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$h2o_rfm_reference_file -o$h2o_verification_results ../../RESULTS/$h2o_output_file
     if ($?) then
         echo "Error: verificaton of water results failed."
         exit 1
@@ -317,7 +317,7 @@ endif
 #Carbon dioxide
 if ( -f "RFM_SMALLSUBSET_RESULTS/${co2_rfm_reference_file}" ) then
     echo "Verifiying co2 results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co2_rfm_reference_file -o$co2_verification_results ../RESULTS/$co2_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co2_rfm_reference_file -o$co2_verification_results ../../RESULTS/$co2_output_file
     if ($?) then
         echo "Error: verificaton of carbon dioxide results failed."
         exit 1
@@ -327,7 +327,7 @@ endif
 #Ozone
 if ( -f "RFM_SMALLSUBSET_RESULTS/${o3_rfm_reference_file}" ) then
     echo "Verifiying o3 results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o3_rfm_reference_file -o$o3_verification_results ../RESULTS/$o3_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o3_rfm_reference_file -o$o3_verification_results ../../RESULTS/$o3_output_file
     if ($?) then
         echo "Error: verificaton of ozone results failed."
         exit 1
@@ -337,7 +337,7 @@ endif
 #Nitrous oxide.
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${n2o_rfm_reference_file}" ) then
 #    echo "Verifiying n2o results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$n2o_rfm_reference_file -o$n2o_verification_results ../RESULTS/$n2o_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$n2o_rfm_reference_file -o$n2o_verification_results ../../RESULTS/$n2o_output_file
 #    if ($?) then
 #        echo "Error: verificaton of nitrous oxide results failed."
 #        exit 1
@@ -347,7 +347,7 @@ endif
 #Carbon monoxide
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${co_rfm_reference_file}" ) then
 #    echo "Verifiying co results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co_rfm_reference_file -o$co_verification_results ../RESULTS/$co_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$co_rfm_reference_file -o$co_verification_results ../../RESULTS/$co_output_file
 #    if ($?) then
 #        echo "Error: verificaton of carbon monoxide results failed."
 #        exit 1
@@ -357,7 +357,7 @@ endif
 #Methane
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${ch4_rfm_reference_file}" ) then
 #    echo "Verifiying ch4 results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$ch4_rfm_reference_file -o$ch4_verification_results ../RESULTS/$ch4_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$ch4_rfm_reference_file -o$ch4_verification_results ../../RESULTS/$ch4_output_file
 #    if ($?) then
 #        echo "Error: verificaton of methane results failed."
 #        exit 1
@@ -367,7 +367,7 @@ endif
 #Oxygen
 #if ( -f "RFM_SMALLSUBSET_RESULTS/${o2_rfm_reference_file}" ) then
 #    echo "Verifiying o2 results against the RFM file."
-#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o2_rfm_reference_file -o$o2_verification_results ../RESULTS/$o2_output_file
+#    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$o2_rfm_reference_file -o$o2_verification_results ../../RESULTS/$o2_output_file
 #    if ($?) then
 #        echo "Error: verificaton of oxygen results failed."
 #        exit 1
@@ -377,7 +377,7 @@ endif
 #5 Gases
 if ( -f "RFM_SMALLSUBSET_RESULTS/${gas5_rfm_reference_file}" ) then
     echo "Verifiying 5 gas results against the RFM file."
-    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$gas5_rfm_reference_file -o$gas5_verification_results ../RESULTS/$gas5_output_file
+    ./verification.x -rRFM_SMALLSUBSET_RESULTS/$gas5_rfm_reference_file -o$gas5_verification_results ../../RESULTS/$gas5_output_file
     if ($?) then
         echo "Error: verificaton of 5 gas results failed."
         exit 1
@@ -427,42 +427,42 @@ if ($?) then
 endif
 
 #Move the outputted ".gnuplot" files to the plots directory.
-mv "${h2o_verification_results}.gnuplot" ./plots/
+mv "${h2o_verification_results}.gnuplot" ../plots/
 if ($?) then
     echo "Error: moving water output file to plots directory failed."
     exit 1
 endif
-mv "${co2_verification_results}.gnuplot" ./plots/
+mv "${co2_verification_results}.gnuplot" ../plots/
 if ($?) then
     echo "Error: moving carbon dioxide output file to plots directory failed."
     exit 1
 endif
-mv "${o3_verification_results}.gnuplot" ./plots/
+mv "${o3_verification_results}.gnuplot" ../plots/
 if ($?) then
     echo "Error: moving ozone output file to plots directory failed."
     exit 1
 endif
-#mv "${n2o_verification_results}.gnuplot" ./plots/
+#mv "${n2o_verification_results}.gnuplot" ../plots/
 #if ($?) then
 #    echo "Error: moving nitrous oxide output file to plots directory failed."
 #    exit 1
 #endif
-#mv "${co_verification_results}.gnuplot" ./plots/
+#mv "${co_verification_results}.gnuplot" ../plots/
 #if ($?) then
 #    echo "Error: moving carbon monoxide output file to plots directory failed."
 #    exit 1
 #endif
-#mv "${ch4_verification_results}.gnuplot" ./plots/
+#mv "${ch4_verification_results}.gnuplot" ../plots/
 #if ($?) then
 #    echo "Error: moving methane output file to plots directory failed."
 #    exit 1
 #endif
-#mv "${o2_verification_results}.gnuplot" ./plots/
+#mv "${o2_verification_results}.gnuplot" ../plots/
 #if ($?) then
 #    echo "Error: moving oxygen output file to plots directory failed."
 #    exit 1
 #endif
-mv "${gas5_verification_results}.gnuplot" ./plots/
+mv "${gas5_verification_results}.gnuplot" ../plots/
 if ($?) then
     echo "Error: moving 5 gas output file to plots directory failed."
     exit 1
@@ -474,7 +474,7 @@ echo "Verifications for ${test_type} test suite complete ..."
 #Create the plots and gifs.
 
 #Change to the plots directory.
-cd ./plots
+cd ../plots
 
 #Get rid of any old verification binaries and executables.
 echo "Creating plots ..."
