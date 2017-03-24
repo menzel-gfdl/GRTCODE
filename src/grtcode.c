@@ -1607,25 +1607,24 @@ void eval_profile(unsigned int const molId,
 
         const int fsteps = ceil((REAL_t)breadth/resolution);
 
-        /*Find index of nearest frequency bin to line.*/
-        const REAL_t thisLine = Vnn[ltid];
-        fcenterid = (2*((thisLine-loWn)/resolution)+1)/2;
-        if (fcenterid < nF)
-        {
 #pragma unroll
-            for (lyr=0;lyr<numLayers;++lyr)
+        for (lyr=0;lyr<numLayers;++lyr)
+        {
+            loffset = lyr*nL + ltid;
+            pShift = PShift[loffset];
+
+            /*Find index of nearest frequency bin to line.*/
+            fcenterid = (2*((pShift-loWn)/resolution)+1)/2;
+            if (fcenterid >= 0 && fcenterid < nF)
             {
-                loffset = lyr*nL + ltid;
                 gam = Gam[loffset];
-                pShift = PShift[loffset];
                 snn = S[loffset];
                 tauu = tauU_d[lyr];
                 len = pathlength_d[lyr];
-
                 temp = T[lyr];
                 alphad = gauAlphad(temp,
                                    molarMass,
-                                   thisLine);
+                                   pShift);
 
                 /*Calculate the optical depth values from the left edge of
                   the line to the line center.*/
@@ -1937,24 +1936,23 @@ void eval_profile_h(unsigned int const molId,
 
         const int fsteps = ceil((REAL_t)breadth/resolution);
 
-        /*Find index of nearest frequency bin to line.*/
-        const REAL_t thisLine = Vnn[ltid] ;
-        fcenterid = (2*((thisLine-loWn)/resolution) + 1)/2;
-        if (fcenterid < nF)
+        for (lyr=0;lyr<numLayers;++lyr)
         {
-            for (lyr=0;lyr<numLayers;++lyr)
+            loffset = lyr*nL + ltid;
+            pShift = PShift[loffset];
+
+            /*Find index of nearest frequency bin to line.*/
+            fcenterid = (2*((pShift-loWn)/resolution) + 1)/2;
+            if (fcenterid >= 0 && fcenterid < nF)
             {
-                loffset = lyr*nL + ltid;
                 gam = Gam[loffset];
-                pShift = PShift[loffset];
                 snn = S[loffset];
                 tauu = tauU[lyr];
                 len = pathlength[lyr];
-
                 temp = T[lyr];
                 alphad = gauAlphad(temp,
                                    molarMass,
-                                   thisLine);
+                                   pShift);
 
                 /*Calculate the optical depth values from the left edge of
                   the line to the line center.*/
