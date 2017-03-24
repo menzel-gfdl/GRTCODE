@@ -35,6 +35,7 @@
 #include "outputNetcdfSpec.h"
 #include "voigt.h"
 #include "continuum.h"
+#include "RFMvoigt.h"
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 /*Helper data structures.*/
@@ -1305,18 +1306,27 @@ REAL_t Knn_Voigt(REAL_t const snn,
 __inline__ __host__ __device__
 #endif
 REAL_t tau_Voigt(REAL_t const Snn,
-                 REAL_t const Vnn,
                  REAL_t const F,
                  REAL_t const gam,
-                 REAL_t const gam2,
                  REAL_t const PshiftCorrection,
-                 REAL_t const eta,
                  REAL_t const alphad,
                  REAL_t const u,
                  REAL_t const pathlength)
 {
-    return ((pathlength*u)*
-            Knn_Voigt(Snn,Vnn,F,gam,gam2,PshiftCorrection,eta,alphad));
+    /*Local variables*/
+    double freqs[1];
+    float Knn[1];
+
+    freqs[0] = (double)F;
+    voigt_shape_function(1,
+                         freqs,
+                         (double)PshiftCorrection,
+                         alphad*((float)0.83255461115),
+                         (float)gam,
+                         (float)Snn,
+                         Knn);
+
+    return (pathlength*u*Knn[0]);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1586,7 +1596,6 @@ void eval_profile(unsigned int const molId,
         unsigned int loffset;
 
         REAL_t gam;
-        REAL_t gam2;
         REAL_t pShift;
         REAL_t snn;
         REAL_t tauu;
@@ -1594,9 +1603,7 @@ void eval_profile(unsigned int const molId,
 
         const REAL_t molarMass = getMolarMass(molId);
         REAL_t temp;
-        REAL_t etav;
         REAL_t alphad;
-        REAL_t gaufwhm;
 
         const int fsteps = ceil((REAL_t)breadth/resolution);
 
@@ -1610,18 +1617,12 @@ void eval_profile(unsigned int const molId,
             {
                 loffset = lyr*nL + ltid;
                 gam = Gam[loffset];
-                gam2 = gam*gam;
                 pShift = PShift[loffset];
                 snn = S[loffset];
                 tauu = tauU_d[lyr];
                 len = pathlength_d[lyr];
 
                 temp = T[lyr];
-                gaufwhm = gauFWHM(temp,
-                                  molarMass,
-                                  thisLine);
-                etav = eta(2.*gam,
-                           gaufwhm);
                 alphad = gauAlphad(temp,
                                    molarMass,
                                    thisLine);
@@ -1638,8 +1639,8 @@ void eval_profile(unsigned int const molId,
                         /*Atomics must be used for now because of a race on
                           load-alter-write out[ftid].*/
                         atomicAdd(&(out[lyr*nF+ftid]),
-                                  tau_Voigt(snn,thisLine,f,gam,gam2,pShift,
-                                            etav,alphad,tauu,len));
+                                  tau_Voigt(snn,f,gam,pShift,
+                                            alphad,tauu,len));
                     }
                 }
 
@@ -1655,8 +1656,8 @@ void eval_profile(unsigned int const molId,
                         /*Atomics must be used for now because of a race on
                           load-alter-write out[ftid].*/
                         atomicAdd(&(out[lyr*nF+ftid]),
-                                  tau_Voigt(snn,thisLine,f,gam,gam2,pShift,
-                                            etav,alphad,tauu,len));
+                                  tau_Voigt(snn,f,gam,pShift,
+                                            alphad,tauu,len));
                     }
                 }
             }
@@ -1925,7 +1926,6 @@ void eval_profile_h(unsigned int const molId,
         unsigned int loffset;
 
         REAL_t gam;
-        REAL_t gam2;
         REAL_t pShift;
         REAL_t snn;
         REAL_t tauu;
@@ -1933,9 +1933,7 @@ void eval_profile_h(unsigned int const molId,
 
         const REAL_t molarMass = getMolarMass(molId);
         REAL_t temp;
-        REAL_t etav;
         REAL_t alphad;
-        REAL_t gaufwhm;
 
         const int fsteps = ceil((REAL_t)breadth/resolution);
 
@@ -1948,18 +1946,12 @@ void eval_profile_h(unsigned int const molId,
             {
                 loffset = lyr*nL + ltid;
                 gam = Gam[loffset];
-                gam2 = gam*gam;
                 pShift = PShift[loffset];
                 snn = S[loffset];
                 tauu = tauU[lyr];
                 len = pathlength[lyr];
 
                 temp = T[lyr];
-                gaufwhm = gauFWHM(temp,
-                                  molarMass,
-                                  thisLine);
-                etav = eta(2.*gam,
-                           gaufwhm);
                 alphad = gauAlphad(temp,
                                    molarMass,
                                    thisLine);
@@ -1972,12 +1964,9 @@ void eval_profile_h(unsigned int const molId,
                     {
                         f = ((REAL_t)ftid)*resolution + loWn;
                         out[lyr*nF+ftid] += tau_Voigt(snn,
-                                                      thisLine,
                                                       f,
                                                       gam,
-                                                      gam2,
                                                       pShift,
-                                                      etav,
                                                       alphad,
                                                       tauu,
                                                       len);
@@ -1992,12 +1981,9 @@ void eval_profile_h(unsigned int const molId,
                     {
                         f = ((REAL_t)ftid)*resolution + loWn;
                         out[lyr*nF+ftid] += tau_Voigt(snn,
-                                                      thisLine,
                                                       f,
                                                       gam,
-                                                      gam2,
                                                       pShift,
-                                                      etav,
                                                       alphad,
                                                       tauu,
                                                       len);
