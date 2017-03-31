@@ -30,8 +30,6 @@ typedef struct OpticsBufPtrs_t {
   REAL_t* S;
 } OpticsBufPtrs_t;
 
-
-
 #ifdef __NVCC__
 #ifdef __cplusplus
 extern "C"
@@ -61,7 +59,5 @@ int host_launch(const unsigned int numMols,
                 radiationOutputFields_t* atmosData,
                 REAL_t* const out);
 #endif
-
-
 
 #endif
