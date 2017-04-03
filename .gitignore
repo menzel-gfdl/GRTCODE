@@ -1,11 +1,17 @@
 #Compiled binaries and executables
-./build/*.o
-./build/*.x
-./run/*.x
-./run/verification/rfm_layer_test/build/*.o
-./run/verification/rfm_layer_test/build/*.x
-./run/verification/rfm_layer_test/run/*.x
+build/*.o
+build/*.x
+run/*.x
+run/verification/rfm_layer_test/build/*.o
+run/verification/rfm_layer_test/build/*.x
+run/verification/rfm_layer_test/run/*.x
 
 #Output files.
-./run/verification/rfm_layer_test/run/*.time_summary
-./run/verification/rfm_layer_test/run/RESULTS/*.rfm.out.*
+run/RESULTS/*.nc
+run/verification/rfm_layer_test/run/*.timing_summary
+run/verification/rfm_layer_test/run/rfm.runlog
+run/verification/rfm_layer_test/run/RESULTS/*.rfm.out.*
+run/verification/plots/*.gnuplot
+run/verification/plots/*.png
+run/verification/plots/*.gif
+run/verification/plots/*errors_above*
