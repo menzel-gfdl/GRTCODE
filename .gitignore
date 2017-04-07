@@ -16,6 +16,8 @@ run/verification/plots/*.png
 run/verification/plots/*.gif
 run/verification/plots/*errors_above*
 run/HITFILES/*.lines_specific
+tests/*.pyc
 
 #Symlinks
 run/verification/rfm_layer_test/run/HITRAN2012.bin
+

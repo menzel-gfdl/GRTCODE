@@ -4,6 +4,7 @@ import re
 import subprocess
 import sys
 import time
+from extract_single_line import create_lines_specific_hitran_file
 from hitran_utils import hitranDict, hitranDictKeyString
 
 lineShapeDict = {"voigt"   : "VOI",
@@ -22,7 +23,7 @@ def run_rfm(mols,
             maxFreq,
             freqRes,
             lines=[],
-            forceBuild=False)
+            forceBuild=False):
     """
     Build (if necessary) and run the RFM model.
     """

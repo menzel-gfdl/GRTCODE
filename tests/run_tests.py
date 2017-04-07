@@ -6,7 +6,7 @@ import os
 import re
 import sys
 from run_grtcode import run_grtcode
-
+from run_rfm import run_rfm
 
 MIN_RES = 10.
 MAX_RES = 0.001
@@ -324,4 +324,13 @@ if __name__ == "__main__":
                 lines=tLines,
                 forceBuild=True)
 
-
+    #Run the test using rfm.
+    run_rfm(testObject.mols,
+            "layer_cond",
+            "../",
+            testObject.lineShape,
+            testObject.lowFreq,
+            testObject.highFreq,
+            testObject.res,
+            lines=tLines,
+            forceBuild=True)

@@ -113,7 +113,7 @@ def run_grtcode(mols,
 
     #If a specific set of lines will be used, then generate the necessary
     #hitran file for each molecule.
-    if len(lines) > 0:
+    if lines:
         newHitranFiles = {}
         for m in molecules:
             tmp = (m.strip()).lower()
