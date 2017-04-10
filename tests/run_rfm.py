@@ -2,6 +2,7 @@
 import os
 import re
 import subprocess
+from subprocess import Popen, PIPE
 import sys
 import time
 from extract_single_line import create_lines_specific_hitran_file
@@ -14,6 +15,20 @@ lineShapeDict = {"voigt"   : "VOI",
 lineShapeDictKeyString = ""
 for key in lineShapeDict:
     lineShapeDictKeyString += "\t" + key + "\n"
+
+def create_hitbin_from(parfiles, out="mypar.bin", header="mypar.bin HITRAN"):
+    parout = out + ".par"
+    # Concatenate parfiles
+    with open(parout, "w") as fout:
+        for f in parfiles:
+            with open(f) as fin:
+                fout.write(fin.read())
+    # Convert combined parfile to bin
+    pinput = [parout,
+              "", # wavenumbers, use default for now
+              out,
+              header]
+    Popen(['./hitbin'], stdin=PIPE).stdin.write(os.linesep.join(pinput) + os.linesep)
 
 def run_rfm(mols,
             layerFile,
@@ -130,9 +145,8 @@ def run_rfm(mols,
             runHitDict[key] = grtHitDir + "/" + hitranDict[key]
 
     #Create the necessary hitran binary file, as required by the RFM model.
-
-
-
+    parfiles = glob.glob('../run/HITFILES/0*.par')
+    create_hitbin_from(parfiles)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Layer(object):

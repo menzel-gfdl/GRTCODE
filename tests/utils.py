@@ -11,9 +11,8 @@ def run_make(buildDir,
     if not isinstance(buildDir,str):
         raise TypeError("inputted build directory (" + repr(buildDir) +
                             ") must be a string.\n")
-    if not isinstance(target,str):
-        raise TypeError("inputted make target (" + repr(target) +
-                            ") must be a string.\n")
+    if isinstance(target,str):
+	target = target.split()
 
     #Store the current directory.
     pwd = os.getcwd()
@@ -27,8 +26,7 @@ def run_make(buildDir,
                              buildDir + ".\n")
 
     #Run make target.
-    makeArgs = ["make",
-                target]
+    makeArgs = ["make"] + target
     tmp = subprocess.Popen(makeArgs)
     tmp.wait()
     if tmp.returncode != 0:
