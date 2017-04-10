@@ -145,8 +145,8 @@ def run_rfm(mols,
             runHitDict[key] = grtHitDir + "/" + hitranDict[key]
 
     #Create the necessary hitran binary file, as required by the RFM model.
-    parfiles = glob.glob('../run/HITFILES/0*.par')
-    create_hitbin_from(parfiles)
+    run_make(".", ["FC=gfortran", "hitbin"])
+    create_hitbin_from(runHitDict.keys())
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Layer(object):
