@@ -2,7 +2,7 @@ import os
 import subprocess
 
 def run_make(buildDir,
-             target):
+             target=[]):
     """
     Run make target in the inputted build directory.
     """
