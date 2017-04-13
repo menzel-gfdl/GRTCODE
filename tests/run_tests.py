@@ -314,15 +314,15 @@ if __name__ == "__main__":
         tLines = []
     else:
         tLines = testObject.lines
-    run_grtcode(testObject.mols,
-                "smallSubset_2t.nc",
-                "../",
-                testObject.lineShape,
-                testObject.lowFreq,
-                testObject.highFreq,
-                testObject.res,
-                lines=tLines,
-                forceBuild=True)
+#    run_grtcode(testObject.mols,
+#                "smallSubset_2t.nc",
+#                "../",
+#                testObject.lineShape,
+#                testObject.lowFreq,
+#                testObject.highFreq,
+#                testObject.res,
+#                lines=tLines,
+#                forceBuild=True)
 
     #Run the test using rfm.
     run_rfm(testObject.mols,

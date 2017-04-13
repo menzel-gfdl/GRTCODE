@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 import os
 import re
+import errno
 import subprocess
 from subprocess import Popen, PIPE
+import optparse
 import sys
 import time
 from extract_single_line import create_lines_specific_hitran_file
 from hitran_utils import hitranDict, hitranDictKeyString
+from utils import run_executable, move_file, run_make
 
 lineShapeDict = {"voigt"   : "VOI",
                  "lorentz" : "LOR",
@@ -16,13 +19,19 @@ lineShapeDictKeyString = ""
 for key in lineShapeDict:
     lineShapeDictKeyString += "\t" + key + "\n"
 
-def create_hitbin_from(parfiles, out="mypar.bin", header="mypar.bin HITRAN"):
+def create_hitbin_from(parfiles, out="mypar.bin", header="TEMPORARY FILE: MODIFY AT YOUR OWN RISK"):
     parout = out + ".par"
     # Concatenate parfiles
     with open(parout, "w") as fout:
         for f in parfiles:
             with open(f) as fin:
                 fout.write(fin.read())
+    # Get rid of the old bin file. sorry old bin file that you may have needeed...
+    try:
+        os.unlink(out)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
     # Convert combined parfile to bin
     pinput = [parout,
               "", # wavenumbers, use default for now
@@ -145,8 +154,12 @@ def run_rfm(mols,
             runHitDict[key] = grtHitDir + "/" + hitranDict[key]
 
     #Create the necessary hitran binary file, as required by the RFM model.
-    run_make(".", ["FC=gfortran", "hitbin"])
-    create_hitbin_from(runHitDict.keys())
+    os.chdir(pwd)
+    run_executable("make", ["FC=gfortran", "hitbin"])
+    run_make(rfmBuildDir)
+    hitbinf = "mypar.bin"
+    create_hitbin_from(runHitDict.values(), out=hitbinf)
+    move_file(hitbinf, rfmRunDir)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Layer(object):
