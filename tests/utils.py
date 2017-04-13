@@ -12,26 +12,26 @@ def run_make(buildDir,
         raise TypeError("inputted build directory (" + repr(buildDir) +
                             ") must be a string.\n")
     if isinstance(target,str):
-	target = target.split()
+        target = target.split()
 
     #Store the current directory.
     pwd = os.getcwd()
 
-    #Change to the build directory.
-    os.chdir(buildDir)
-
     #Make sure a Makefile exists in the build directory.
-    if not "Makefile" in os.listdir("."):
+    if not "Makefile" in os.listdir(buildDir):
         raise ValueError("no Makefile exists in the build directory " +
                              buildDir + ".\n")
+
+    #Change to the build directory.
+    os.chdir(buildDir)
 
     #Run make target.
     makeArgs = ["make"] + target
     tmp = subprocess.Popen(makeArgs)
     tmp.wait()
     if tmp.returncode != 0:
-        raise ValueError("make " + target + " failed and returned code " +
-                             str(tmp.returncode) + ".\n")
+        raise ValueError("make " + " ".join(map(str,target)) + " failed and" +
+                             " returned code " + str(tmp.returncode) + ".\n")
 
     #Change back to the directory you started in.
     os.chdir(pwd)
@@ -61,7 +61,7 @@ def copy_file(fileName,
                              "returned code " + str(tmp.returncode) + ".\n")
 
 def run_executable(executable,
-                   args):
+                   args=None):
     """
     Run the inputted executable with the inputted arguments.
     """
@@ -70,27 +70,29 @@ def run_executable(executable,
     if not isinstance(executable,str):
         raise TypeError("inputted executable (" + repr(executable) +
                             ") must be a string.\n")
-    if not isinstance(args,list) and not isinstance(args,set):
-        raise TypeError("inputted arguments must be a list or set.\n")
-    for arg in args:
-        if not isinstance(arg,str):
-            raise TypeError("inputted argument (" + repr(args) +
-                                ") must be a string.\n")
+
+    if args:
+        if not isinstance(args,list) and not isinstance(args,set):
+            raise TypeError("inputted arguments must be a list or set.\n")
+        for arg in args:
+            if not isinstance(arg,str):
+                raise TypeError("inputted argument (" + repr(args) +
+                                    ") must be a string.\n")
 
     #Remove duplicates from args.
-    tmpSet = set(args)
+    if args:
+        tmpSet = set(args)
 
     #Run the executable.
     execArgs = []
     execArgs.append(executable)
-    for arg in tmpSet:
-        execArgs.append(arg)
+    if args:
+        for arg in tmpSet:
+            execArgs.append(arg)
     tmp = subprocess.Popen(execArgs)
     tmp.wait()
     if tmp.returncode != 0:
-        execString = ""
-        for arg in execArgs:
-            execString += arg + " "
+        execString = " ".join(map(str,execArgs))
         raise ValueError(execString + " failed and returned code " +
                              str(tmp.returncode) + ".\n")
 

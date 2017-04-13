@@ -314,23 +314,28 @@ if __name__ == "__main__":
         tLines = []
     else:
         tLines = testObject.lines
-#    run_grtcode(testObject.mols,
-#                "smallSubset_2t.nc",
-#                "../",
-#                testObject.lineShape,
-#                testObject.lowFreq,
-#                testObject.highFreq,
-#                testObject.res,
-#                lines=tLines,
-#                forceBuild=True)
+    grt_output_file, grt_timing = run_grtcode(testObject.mols,
+                                              "smallSubset_2t.nc",
+                                              "../",
+                                              testObject.lineShape,
+                                              testObject.lowFreq,
+                                              testObject.highFreq,
+                                              testObject.res,
+                                              lines=tLines,
+                                              forceBuild=False)
 
     #Run the test using rfm.
-    run_rfm(testObject.mols,
-            "layer_cond",
-            "../",
-            testObject.lineShape,
-            testObject.lowFreq,
-            testObject.highFreq,
-            testObject.res,
-            lines=tLines,
-            forceBuild=True)
+    rfm_timing = run_rfm(testObject.mols,
+                         "layer_cond",
+                         "../",
+                         testObject.lineShape,
+                         testObject.lowFreq,
+                         testObject.highFreq,
+                         testObject.res,
+                         lines=tLines,
+                         forceBuild=False)
+
+    #Write out timings to stdout.
+    sys.stdout.write("\nTimings: \nGRTcode runtime (s): " + str(grt_timing) +
+                     "\nRFM runtime (s):     " +  str(rfm_timing) + "\n")
+

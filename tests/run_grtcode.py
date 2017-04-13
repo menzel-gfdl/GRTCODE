@@ -1,8 +1,10 @@
-import os
+from os import chdir, getcwd, listdir
+from time import time
 from extract_single_line import create_lines_specific_hitran_file
 from hitran_utils import hitranDict, hitranDictKeyString
 from utils import copy_file, move_file, run_executable, run_make
 
+#Dictionary used for running the grtcode executable.
 ppmvDict = {"h2o" : "-1a",
             "co2" : "-2400",
             "o3"  : "-3a",
@@ -11,11 +13,13 @@ ppmvDict = {"h2o" : "-1a",
             "ch4" : "-61.7",
             "o2"  : "-7200000"}
 
+#Dictionary used for running the correct grtcode executable.
 grtExecDict = {"voigt"     : "grtcode.x",
                "voigt_ida" : "grtcodeIdaVoigt.x",
                "lorentz"   : "grtcodeLorentz.x",
                "doppler"   : "grtcodeGauss.x"}
 
+#String containing the names of all valid line shape strings.
 grtExecDictKeyString = ""
 for key in grtExecDict:
     grtExecDictKeyString += "\t" + key + "\n"
@@ -30,7 +34,8 @@ def run_grtcode(mols,
                 lines=[],
                 forceBuild=False):
     """
-    Build (if necessary) and run grtcode.
+    Build (if necessary) and run grtcode.  Return the path of the output
+    file and the time it took to run the executable.
     """
 
     #Check mols input.
@@ -41,7 +46,7 @@ def run_grtcode(mols,
             raise TypeError("the inputted molecule (" + repr(m) +
                                 ") must be a string.\n")
         tmp = (m.strip()).lower()
-        if not tmp in hitranDict:
+        if tmp not in hitranDict:
             raise ValueError("the inputted molecule (" + tmp + ") must be" +
                                  " one of:\n" + hitranDictKeyString)
 
@@ -59,7 +64,7 @@ def run_grtcode(mols,
     if not isinstance(lineShape,str):
         raise TypeError("the inputted line shape (" + repr(lineShape) +
                             ") must be a string.\n")
-    if not lineShape in grtExecDict:
+    if lineShape not in grtExecDict:
         raise ValueError("the inputted line shape (" + lineShape +
                              ") must be one of:\n" + grtExecDictKeyString)
 
@@ -79,11 +84,11 @@ def run_grtcode(mols,
                             repr(freqRes) + ") must be an int or a float.\n")
 
     #Store the current directory.
-    pwd = os.getcwd()
+    pwd = getcwd()
 
     #Change into the inputted GRT base directory.  Store necessary paths.
-    os.chdir(baseDir)
-    grtHomeDir = os.getcwd()
+    chdir(baseDir)
+    grtHomeDir = getcwd()
     grtBuildDir = grtHomeDir + "/build"
     grtRunDir = grtHomeDir + "/run"
     grtInputDir = grtRunDir + "/INPUT"
@@ -91,7 +96,7 @@ def run_grtcode(mols,
     grtResultsDir = grtRunDir + "/RESULTS"
 
     #Check that the inputted atmosphere file exists in the correct directory.
-    if not atmosFile in os.listdir(grtInputDir):
+    if atmosFile not in listdir(grtInputDir):
         raise ValueError("the inputted atmosphere file (" + atmosFile +
                              ") does not exist in the directory " +
                              grtInputDir + ".\n")
@@ -100,10 +105,9 @@ def run_grtcode(mols,
     molecules = set(mols)
 
     #Check whether the necessary hitran files exist.
-    os.chdir(grtHitDir)
     for m in molecules:
         tmp = (m.strip()).lower()
-        if not hitranDict[tmp] in os.listdir("./"):
+        if hitranDict[tmp] not in listdir(grtHitDir):
             raise ValueError("the hitran file (" + hitranDict[tmp] +
                                  ") does not exist in the directory " +
                                  grtHitDir + ".\n")
@@ -128,22 +132,19 @@ def run_grtcode(mols,
 
     #Build the executable if necessary.
     executable = grtExecDict[lineShape]
-    if forceBuild or not executable in os.listdir(grtRunDir):
-
-        #Change to the build directory.
-        os.chdir(grtBuildDir)
+    if forceBuild or executable not in listdir(grtRunDir):
 
         #Run make clean and make all_grtcode.
-        run_make(".",
+        run_make(grtBuildDir,
                  "clean")
-        run_make(".",
+        run_make(grtBuildDir,
                  "all_grtcode")
 
         #Copy the executable to the run directory.
-        copy_file(executable,
+        copy_file(grtBuildDir + "/" + executable,
                   grtRunDir)
 
-    #Run the executable.
+    #Run the executable.  Time how long the executable takes to run.
     grtOutputFile = "foo"
     args = ["-a" + grtInputDir + "/" + atmosFile,
             "-o" + grtOutputFile,
@@ -154,14 +155,16 @@ def run_grtcode(mols,
         tmp = (m.strip()).lower()
         args.append(ppmvDict[tmp])
         args.append(runHitDict[tmp])
+    start = time()
     run_executable(grtRunDir + "/" + executable,
                    args)
+    timing = time() - start
 
     #Move the output into the results directory.
     move_file(grtOutputFile,
               grtResultsDir)
 
     #Change back to the directory you started in.
-    os.chdir(pwd)
+    chdir(pwd)
 
-    return grtResultsDir + grtOutputFile
+    return (grtResultsDir+grtOutputFile),timing
