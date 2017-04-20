@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from os import chdir, getcwd, linesep, listdir, remove, unlink
 from re import compile, escape
 from subprocess import Popen, PIPE
@@ -16,13 +15,16 @@ lineShapeDictKeyString = ""
 for key in lineShapeDict:
     lineShapeDictKeyString += "\t" + key + "\n"
 
-def create_hitbin_from(parfiles, out="mypar.bin", header="TEMPORARY FILE: MODIFY AT YOUR OWN RISK"):
+def create_hitbin_from(parfiles,
+                       out="mypar.bin",
+                       header="TEMPORARY FILE: MODIFY AT YOUR OWN RISK"):
     parout = out + ".par"
     # Concatenate parfiles
     with open(parout, "w") as fout:
         for f in parfiles:
             with open(f) as fin:
                 fout.write(fin.read())
+
     # Get rid of the old bin file. sorry old bin file that you may have needeed...
     try:
         unlink(out)
@@ -240,6 +242,7 @@ def run_rfm(mols,
     hitbinf = "mypar.bin"
     create_hitbin_from(runHitDict.values(),
                        out=hitbinf)
+    print("\n",listdir(getcwd()),hitbinf,"\n")
     move_file(hitbinf,
               rfmRunDir)
 
@@ -298,14 +301,15 @@ def run_rfm(mols,
 
     #Loop through the layers.
     timing = 0.0
-    for layer in layers:
+    rfmOutFiles = []
+    for i,layer in enumerate(layers):
 
         #Append the layer id onto the end of the RFM output file name.
-        rfmOutFile = rfmOutBaseName + str(layer.layerID)
+        rfmOutFiles.append(rfmOutBaseName + str(layer.layerID))
 
         #Put the output file name in the RFM driver input file.
         modify_line_after_identifiers("OPT",
-                                      rfmOutFile,
+                                      rfmOutFiles[i],
                                       rfmDriverFile)
 
         #Put the correct layer thickness in the RFM driver input file.
@@ -342,16 +346,14 @@ def run_rfm(mols,
 
     #Modify the RFM output files so that each optical depth value is on its
     #own line and move the output files into the RFM results directory.
-    patternString = r'' + escape(rfmOutBaseName)
-    patternRFM = compile(patternString)
-    contents = listdir(rfmRunDir)
-    for item in contents:
-        if patternRFM.search(item.strip()):
-            modify_rfm_output(item.strip(),
-                              rfmResultsDir)
-            remove(item.strip())
+    finalRfmOutFiles = []
+    for item in rfmOutFiles:
+        modify_rfm_output(item,
+                          rfmResultsDir)
+        remove(item)
+        finalRfmOutFiles.append(rfmResultsDir + "/" + item)
 
     #Change back to the directory you started in.
     chdir(pwd)
 
-    return timing
+    return timing, finalRfmOutFiles

@@ -7,6 +7,7 @@ import re
 import sys
 from run_grtcode import run_grtcode
 from run_rfm import run_rfm
+from verify_results import verify_results
 
 MIN_RES = 10.
 MAX_RES = 0.001
@@ -250,14 +251,14 @@ class testParams(object):
         if maxLine < minLine:
             raise ValueError("maxLine (" + str(maxLine) + ") cannot be" +
                                  " < minLine (" + str(minLine) + ").\n")
-        if maxLine > self.highFreq:
-            raise ValueError("frequency upper bound (" + str(self.highFreq) +
-                                 ") must be >= the highest line (" +
-                                 str(maxLine) + ").\n")
-        if minLine < self.lowFreq:
-            raise ValueError("frequency lower bound (" + str(self.lowFreq) +
-                                 ") must be <= the lowest line (" +
-                                 str(minLine) + ").\n")
+#       if maxLine > self.highFreq:
+#           raise ValueError("frequency upper bound (" + str(self.highFreq) +
+#                                ") must be >= the highest line (" +
+#                                str(maxLine) + ").\n")
+#       if minLine < self.lowFreq:
+#           raise ValueError("frequency lower bound (" + str(self.lowFreq) +
+#                                ") must be <= the lowest line (" +
+#                                str(minLine) + ").\n")
         if self.highFreq < self.lowFreq:
             raise ValueError("highFreq (" + str(self.highFreq) + ") cannot"
                              " be < lowFreq (" + str(self.lowFreq) + ").\n")
@@ -267,17 +268,16 @@ class testParams(object):
         Print out the members of self.
         """
 
-        print self.testName
-        print self.configFile
-        print self.mols
-        print self.lineShape
-        print self.lines
-        print self.lowFreq
-        print self.highFreq
-        print self.res
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#def run_rfm(testObj):
+        print("\nTest properties:")
+        print("Test name:         " + self.testName)
+        print("Config file:       " + self.configFile)
+        print("Molecules:         " + str(self.mols))
+        print("Lineshape:         " + self.lineShape)
+        print("Lines:             " + str(self.lines))
+        print("Low Freq (1/cm):   " + str(self.lowFreq))
+        print("High Freq (1/cm):  " + str(self.highFreq))
+        print("Resolution (1/cm): " + str(self.res))
+        print("\n")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
@@ -324,18 +324,28 @@ if __name__ == "__main__":
                                               lines=tLines,
                                               forceBuild=False)
 
-    #Run the test using rfm.
-    rfm_timing = run_rfm(testObject.mols,
-                         "layer_cond",
-                         "../",
-                         testObject.lineShape,
-                         testObject.lowFreq,
-                         testObject.highFreq,
-                         testObject.res,
-                         lines=tLines,
-                         forceBuild=False)
+    #Run the test using RFM.
+    rfm_timing,rfm_output_files = run_rfm(testObject.mols,
+                                          "layer_cond",
+                                          "../",
+                                          testObject.lineShape,
+                                          testObject.lowFreq,
+                                          testObject.highFreq,
+                                          testObject.res,
+                                          lines=tLines,
+                                          forceBuild=False)
 
-    #Write out timings to stdout.
-    sys.stdout.write("\nTimings: \nGRTcode runtime (s): " + str(grt_timing) +
+    #Verify the results.
+    max_abs_diff, max_rel_diff, out_files = verify_results(grt_output_file,
+                                                           rfm_output_files,
+                                                           True,
+                                                           "optical_depths")
+
+
+    #Write out differences and timings to stdout.
+    sys.stdout.write("\nMax absolute difference: " + str(max_abs_diff) +
+                     "\nMax relative difference: " + str(max_rel_diff) +
+                     "\n"
+                     "\nTimings: \nGRTcode runtime (s): " + str(grt_timing) +
                      "\nRFM runtime (s):     " +  str(rfm_timing) + "\n")
 

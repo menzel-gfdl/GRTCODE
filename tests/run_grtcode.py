@@ -167,4 +167,4 @@ def run_grtcode(mols,
     #Change back to the directory you started in.
     chdir(pwd)
 
-    return (grtResultsDir+grtOutputFile),timing
+    return (grtResultsDir + "/" + grtOutputFile),timing
