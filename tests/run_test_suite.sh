@@ -1,88 +1,73 @@
-#!/bin/tcsh -f
-
-#Generate test data files for the Smallsubset input atmosphere.
-
-#Set the name of the HITRAN files.
-set h2o_hitran_file = "01_hit12.par"
-set co2_hitran_file = "02_hit12.par"
-set o3_hitran_file = "03_hit12.par"
-set n2o_hitran_file = "04_hit08.par"
-set co_hitran_file = "05_hit12.par"
-set ch4_hitran_file = "06_hit12.par"
-set o2_hitran_file = "07_hit12.par"
-
-#Make sure that the HITRAN files exist in the correct directory.
-if (! -f "run/HITFILES/${h2o_hitran_file}") then
-    echo "Error: the file ${h2o_hitran_file} does not exist in the HITRAN directory."
-    exit
-endif
-if (! -f "run/HITFILES/${co2_hitran_file}") then
-    echo "Error: the file ${co2_hitran_file} does not exist in the HITRAN directory."
-    exit
-endif
-if (! -f "run/HITFILES/${o3_hitran_file}") then
-    echo "Error: the file ${o3_hitran_file} does not exist in the HITRAN directory."
-    exit
-endif
-if (! -f "run/HITFILES/${n2o_hitran_file}") then
-    echo "Error: the file ${n2o_hitran_file} does not exist in the HITRAN directory."
-    exit
-endif
-if (! -f "run/HITFILES/${co_hitran_file}") then
-    echo "Error: the file ${co_hitran_file} does not exist in the HITRAN directory."
-    exit
-endif
-if (! -f "run/HITFILES/${ch4_hitran_file}") then
-    echo "Error: the file ${ch4_hitran_file} does not exist in the HITRAN directory."
-    exit
-endif
-if (! -f "run/HITFILES/${o2_hitran_file}") then
-    echo "Error: the file ${o2_hitran_file} does not exist in the HITRAN directory."
-    exit
-endif
-
-#Set default values
-set test_type = "smallsubset"
-set atmos_data_file = "smallSubset_2t.nc"
-set min_wavenumber = "1"
-set max_wavenumber = "3000"
-set wavenumber_res = "1"
-set h2o_ppmv = "from_atmos_file"
-set co2_ppmv = "400"
-set o3_ppmv = "from_atmos_file"
-set n2o_ppmv = "0.32"
-set co_ppmv = "0"
-set ch4_ppmv = "1.7"
-set o2_ppmv = "200000"
-
-#Make sure that the default atmosphere input data file exists in the correct
-#directory.
-if (! -f "run/INPUT/${atmos_data_file}") then
-    echo "Error: the file ${atmos_data_file} does not exist in the INPUT directory."
-    exit
-endif
+#!/bin/bash
 
 #Handle command line arguments.
-if ($#argv == 0) then
-    echo "No arguments given, using default values."
-else
-    echo "Error: No command line arguments supported."
-    exit
-endif
+echo $#
+if [ $# -eq 0 ]; then
+    echo "No command line arguments given.  Using defaults."
+    echo "Running all 7 molecules, for all lines, at all layers."
 
-#Set the test_type and atmosphere input file.
-#if ($argv[1] == "smallsubset") then
-#    set test_type = "smallsubset"
-#    set atmos_data_file = "smallSubset_2t.nc"
-#else
-#    echo "Error: test type must be smallsubset."
-#    exit
-#endif
+    test_type="Default"
+    mols=( "h2o" "co2" "o3" "n2o" "co" "ch4" "o2" )
+    counter=0
+    for $i in "${mols[@]}"; do
+        case "$i" in
+            "h2o")
+                hitfiles[$counter]="01_hit12.par";;
+            "co2")
+                hitfiles[$counter]="02_hit12.par";;
+            o3)
+                hitfiles[$counter]="03_hit12.par";;
+            n2o)
+                hitfiles[$counter]="04_hit08.par";;
+            co)
+                hitfiles[$counter]="05_hit12.par";;
+            ch4)
+                hitfiles[$counter]="06_hit12.par";;
+            o2)
+                hitfiles[$counter]="07_hit12.par";;
+        esac
+        counter=$counter + 1
+    done
+    echo "${hitfiles[0]}"
+    exit
+
+#   hitfiles=( "01_hit12.par" "02_hit12.par" "03_hit12.par" "04_hit08.par" \
+#              "05_hit12.par" "06_hit12.par" "07_hit12.par" )
+#   ppmv=( "from_atmos_file" "400" "from_atmos_file" "0.32" "0" "1.7" \
+#          "200000" )
+#   atmosfiles="smallSubset_2t.nc"
+#   min_wavenumber="1"
+#   max_wavenumber="3000"
+#   wavenumber_res="1"
+fi
+
+#Make sure that the HITRAN files exist in the correct directory.
+for i in "${hitfiles[@]}"; do
+    echo "$i"
+    if [ ! -e "run/HITFILES/$i" ]; then
+        echo "Error: the file run/HITFILES/$i does not exist."
+        exit 1
+    fi
+done
+
+#Make sure that the atmosphere input data file exists in the correct
+#directory.
+for i in "$atmosfiles"; do
+    if [ ! -e "run/INPUT/$i" ]; then
+        echo "Error: the file run/INPUT/$i does not exist."
+        exit 1
+    fi
+done
 
 #Print out starting test suite message.
-echo "Running ${test_type} test suite ..."
+echo "Running $test_type ..."
 
 #Set the output file names.
+for $i in "${ppmv[@]}"; do
+
+done
+
+
 set h2o_output_file = "h2o_${test_type}_test_W_${max_wavenumber}_ppmv_${h2o_ppmv}.nc"
 set co2_output_file = "co2_${test_type}_test_W_${max_wavenumber}_ppmv_${co2_ppmv}.nc"
 set o3_output_file = "o3_${test_type}_test_W_${max_wavenumber}_ppmv_${o3_ppmv}.nc"

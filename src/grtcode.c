@@ -21,22 +21,32 @@
 #include <mpi.h>
 #endif
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <string.h>
-#include <assert.h>
 #include <argp.h>
+#include <assert.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "continuum.h"
+#include "eval_gamma.h"
+#include "eval_profile.h"
+#include "eval_pShift.h"
+#include "eval_Snn_correction.h"
+#include "GasProps.h"
+#include "GaussianFuncs.h"
 #include "grtcode.h"
-#include "TIPS_2011.h"
+#include "IdaVoigtFuncs.h"
+#include "LineShapeUtils.h"
+#include "LorentzFuncs.h"
+#include "outputNetcdfSpec.h"
 #include "parseHITRANfile.h"
 #include "parseNetcdfRadiation.h"
-#include "outputNetcdfSpec.h"
-#include "voigt.h"
-#include "continuum.h"
+#include "pre_eval_Snn.h"
+#include "RfmVoigtFuncs.h"
+#include "TIPS_2011.h"
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*---------------------------------------------------------------------------*/
 /*Helper data structures.*/
 
 /*These are equal to HITRAN_MOLID-1.*/
@@ -52,14 +62,11 @@ typedef enum MoleculeNumber_t
     NUM_MOL = 7
 } MoleculeNumber_t;
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-/*Argp variables and functions.*/
-
 /*---------------------------------------------------------------------------*/
 /*Set argp variables.*/
 
 const char *argp_program_version = "lbl-dev 0.1";
-const char *argp_program_bug_address = "<garrett.wright@noaa.gov>";
+const char *argp_program_bug_address = "<raymond.menzel@noaa.gov>";
 static char doc[] = "GFDL style documentation goes >/\n\n\\"
                         "<^here.\n\v"
                         "Other Documentation goes here.";
@@ -239,6 +246,7 @@ static struct argp_option options[] =
     {0}
 };
 
+/*---------------------------------------------------------------------------*/
 /*Command line arguments structure.*/
 struct arguments
 {
@@ -285,7 +293,7 @@ static double parse_MolecConc(char *arg)
     }
 
     /*Get the inputted molecular concentration.*/
-    if (arg[0] == 'a' )
+    if (arg[0] == 'a')
     {
         /*A leading 'a' character specifies that the concentration should be
          taken from the "nc" file.*/
@@ -471,163 +479,6 @@ static error_t parse_opt(int key,
 /*Necessary argp struct.*/
 static struct argp argp = {options,parse_opt,args_doc,doc};
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------------*/
-/*For a given molecule, set the partial pressure at each time, latitude,
-  longitude, and height.
-
-  Arguments:
-      val   [in]      Molecular concentration in pressure units (ppmv).
-      PS    [in,out]  Array of partial pressures (atm).  This array is stored
-                          as [time][lat][lon][molecule][height].
-      P     [in]      Array of atmospheric pressures (atm).  This array is
-                          stored as [time][lat][lon][height].
-      molId [in]      Id of the molecule whose partial pressure is being
-                          calculated.
-      ntime [in]      Size of the time dimension for the pressure arrays.
-      nlat  [in]      Size of the latitude dimension for the pressure
-                          arrays.
-      nlon  [in]      Size of the longitude dimension for the pressure
-                          arrays.
-      nlvl  [in]      Size of the height dimension for the pressure arrays.
-*/
-static void setGlobalPartialPres(double const val,
-                                 REAL_t *PS,
-                                 REAL_t const * const P,
-                                 unsigned int const molId,
-                                 size_t const ntime,
-                                 size_t const nlat,
-                                 size_t const nlon,
-                                 size_t const nlvl)
-{
-    /*Local variables*/
-    unsigned int itr;                         /*Loop variable.*/
-    unsigned int lat;                         /*Loop variable.*/
-    unsigned int lon;                         /*Loop variable.*/
-    unsigned int time;                        /*Loop variable.*/
-    size_t ps_off;                            /*Array offset for partial
-                                                  pressure.*/
-    size_t p_off;                             /*Array offset for pressure.*/
-    const size_t ps_off_mol = (molId-1)*nlvl; /*Used to calculate the offset
-                                                  for the given molecule.*/
-
-    /*Loop through the arrays.*/
-    for (time=0;time<ntime;++time)
-    {
-        for (lat=0;lat<nlat;++lat)
-        {
-            for (lon=0;lon<nlon;++lon)
-            {
-                /*Calculate the offsets.*/
-                ps_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
-                         lon*NUM_MOL*nlvl + ps_off_mol;
-                p_off = time*(nlat*nlon*nlvl) + lat*(nlon*nlvl) + lon*nlvl;
-
-                /*Calculate the partial pressures.*/
-                for (itr=0;itr<nlvl;++itr)
-                {
-                    PS[ps_off+itr] = (val/1.e6)*P[p_off+itr];
-                }
-            }
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the number density of the air from the ideal gas law.
-
-  Arguments:
-      P_atm [in]  Pressure (atm).
-      T_k   [in]  Temperature (K).
-
-  Return:
-      (P_atm*6.022E23)/(T_k*82.057338)  Number density (cm^-3).
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t idealGasNumberDensity(REAL_t const P_atm,
-                             REAL_t const T_k)
-{
-    /*Local variables*/
-    const REAL_t R = 82.057338; /*Gas constant (cm^3*atm*K^-1*mol^-1).*/
-    const REAL_t AV = 6.022E23; /*Avagadro's number (1/mol).*/
-
-    return (P_atm*AV)/(R*T_k);
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the number density for a molecular species.
-
-  Arguments:
-      N           [in,out]  Number density (cm^-3).  This array is stored as
-                                [time][lat][lon][molecule][height].
-      PartialPres [in]      Partial pressure (atm).  This array is stored as
-                                [time][lat][lon][molecule][height].
-      T           [in]      Temperature (K).  This array is stored as
-                                [time][lat][lon][height].
-      hitranMolId [in]      Molecule id from the hitran database.
-      ntime       [in]      Size of the time dimension for the partial
-                                pressure, temperature, and number density
-                                arrays.
-      nlat        [in]      Size of the latitude dimension for the partial
-                                pressure, temperature, and number density
-                                arrays.
-      nlon        [in]      Size of the longitude dimension for the partial
-                                pressure, temperature, and number density
-                                arrays.
-      nlvl        [in]      Size of the height dimension for the partial
-                                pressure, temperature, and number density
-                                arrays.
-*/
-static void setGlobalNumberDensity(REAL_t * const N,
-                                   REAL_t const * const PartialPres,
-                                   REAL_t const * const T,
-                                   unsigned int const hitranMolId,
-                                   size_t const ntime,
-                                   size_t const nlat,
-                                   size_t const nlon,
-                                   size_t const nlvl)
-{
-    /*Local variables*/
-    unsigned int itr;                              /*Loop variable.*/
-    unsigned int lat;                              /*Loop variable.*/
-    unsigned int lon;                              /*Loop variable.*/
-    unsigned int time;                             /*Loop variable.*/
-    size_t off;                                    /*Array offset.*/
-    size_t n_off;                                  /*Array offset.*/
-    const size_t n_off_mol = (hitranMolId-1)*nlvl; /*Used to calculate the
-                                                       offset for the inputted
-                                                       molecule.*/
-
-    /*Loop through the arrays.*/
-    for(time=0;time<ntime;++time)
-    {
-        for(lat=0;lat<nlat;++lat)
-        {
-            for(lon=0;lon<nlon;++lon)
-            {
-                /*Calculate the array offsets.*/
-                off = time*nlat*nlon*nlvl + lat*nlon*nlvl + lon*nlvl;
-                n_off = time*nlat*nlon*NUM_MOL*nlvl + lat*nlon*NUM_MOL*nlvl +
-                        lon*NUM_MOL*nlvl + n_off_mol;
-
-                /*Calculate the number densities using the ideal gas law.*/
-                for (itr=0;itr<nlvl;++itr)
-                {
-                    N[n_off+itr] = idealGasNumberDensity(PartialPres[n_off+itr],
-                                                         T[off+itr]);
-                }
-            }
-        }
-    }
-
-    return;
-}
-
 /*---------------------------------------------------------------------------*/
 /*Calculate parital pressures and number densities for the molecule designated
   by the inputted molid.
@@ -673,6 +524,7 @@ static void checkMolConfig(struct arguments *args,
                                      time,
                                      nlat,
                                      nlon,
+                                     (size_t)NUM_MOL,
                                      nlvl);
             }
             break;
@@ -690,6 +542,7 @@ static void checkMolConfig(struct arguments *args,
                                      time,
                                      nlat,
                                      nlon,
+                                     (size_t)NUM_MOL,
                                      nlvl);
             }
             break;
@@ -707,6 +560,7 @@ static void checkMolConfig(struct arguments *args,
                                      time,
                                      nlat,
                                      nlon,
+                                     (size_t)NUM_MOL,
                                      nlvl);
             }
             break;
@@ -724,6 +578,7 @@ static void checkMolConfig(struct arguments *args,
                                      time,
                                      nlat,
                                      nlon,
+                                     (size_t)NUM_MOL,
                                      nlvl);
             }
             break;
@@ -741,6 +596,7 @@ static void checkMolConfig(struct arguments *args,
                                      time,
                                      nlat,
                                      nlon,
+                                     (size_t)NUM_MOL,
                                      nlvl);
             }
             break;
@@ -758,6 +614,7 @@ static void checkMolConfig(struct arguments *args,
                                      time,
                                      nlat,
                                      nlon,
+                                     (size_t)NUM_MOL,
                                      nlvl);
             }
             break;
@@ -775,6 +632,7 @@ static void checkMolConfig(struct arguments *args,
                                      time,
                                      nlat,
                                      nlon,
+                                     (size_t)NUM_MOL,
                                      nlvl);
             }
             break;
@@ -816,6 +674,7 @@ static void checkMolConfig(struct arguments *args,
                            time,
                            nlat,
                            nlon,
+                           (size_t)NUM_MOL,
                            nlvl);
 
     return;
@@ -828,35 +687,10 @@ static void checkMolConfig(struct arguments *args,
   keep global device memory accesses aligned.  Here we choose 2^19.*/
 #define MAX_NUM_SPECTRAL_LINES 524288
 
-/*Set the reference temperature (K) for the HITRAN database.  See:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-*/
-const REAL_t TREF = 296.0;
-
-/*Set the second radiation constant (cm*K).  This should be equal to (hc/k).*/
-const REAL_t c2 = 1.4387686;
-
-/*Set the value of pi and 1/pi.*/
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-#ifndef M_1_PI
-#define M_1_PI 0.31830988618379067154
-#endif
-
 /*Set the maximum number of CUDA streams.*/
 #ifndef MAXNSTREAMS
 #define MAXNSTREAMS 2
 #endif
-
-/* const REAL_t c1 = 1.191042869E-8; /\* W/m2*sr*cm-4 noaa units*\/ /\* used in rad solver *\/ */
-/* const REAL_t corK =1.66;      /\* used in rad solver *\/ */
-/* for quick reference */
-/* const REAL_t c1 = 1.191042869E-16;  /\* first radiation constant W*m2*sr^1*cm^-1 , SI*\/ */
-/* const REAL_t c2 = 1.4387770E-2;  /\* second radiation constant meters Kelvin from SI *\/ */
-
 
 /*---------------------------------------------------------------------------*/
 /*Include some GPU helper functions.*/
@@ -872,1143 +706,6 @@ const REAL_t c2 = 1.4387686;
 #include "cudaHelpers.cuh"
 
 #endif
-
-/*---------------------------------------------------------------------------*/
-/*Return the molar mass of the molecule specified by the inputted molecule
-  id.
-
-  Arguments:
-      hitranMolId [in]  Molecule id from the HITRAN database.
-
-  Return:
-      Mass of the molecule (g/mol).
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t getMolarMass(int const hitranMolId)
-{
-    /*Local variables*/
-    REAL_t res; /*Molar mass of the molecule.*/
-
-    /*Get the molar mass of the inputted molecule.*/
-    switch(hitranMolId)
-    {
-        case 1:
-            /*h2o*/
-            res = 18.01528;
-            break;
-        case 2:
-            /*co2*/
-            res = 44.01;
-            break;
-        case 3:
-            /*o3*/
-            res = 48.;
-            break;
-        case 4:
-            /*n2o*/
-            res = 44.013;
-            break;
-        case 5:
-            /*co*/
-            res = 28.01;
-            break;
-        case 6:
-            /*ch4*/
-            res = 16.04;
-            break;
-        case 7:
-            /*o2*/
-            res = 32.;
-            break;
-        default:
-            /*Molecule not implemented.*/
-/*
-#if !defined(__CUDA_ARCH__)
-            fprintf(stderr,
-                    "Error, the molecular with (0-based) molId=%d is not"
-                        " implemented in getMolarMass, something is probably"
-                        " very very wrong. Aborting\n.",
-                    hitranMolId);
-            exit(EXIT_FAILURE);
-#else
-*/
-            assert(0);
-/*
-#endif
-*/
-            break;
-    }
-
-    return res;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the total internal partition function for the inputted molecule
-  using the method located in TIPS_2011.cu.
-
-  Arguments:
-      moldId [in]  A molecule id.
-      T      [in]  Temperature (K).
-      iso    [in]  Isotope index.
-
-  Return:
-      The total internal partition function.
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t Q(uint8_t const molId,
-         REAL_t const T,
-         uint8_t const iso)
-{
-    /*Local variables*/
-    float gsi; /*State independent nuclear degeneracy factor.*/
-    REAL_t Qt; /*Total internal partition function.*/
-
-    /*Calculate the total internal parition function.*/
-    QT(molId,
-       T,
-       iso,
-       &gsi,
-       &Qt);
-/*
-    printf("Q(molId=%d,T=%f,isoIdx=%d) = %f \n",
-           molId,
-           T,
-           iso,
-           Qt);
-*/
-
-    return Qt;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the pressure broadened line halfwidth.  See equation A12 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      P     [in]  Pressure (atm).
-      T     [in]  Temperature (K).
-      Yself [in]  Self-broadened halfwidth at half maximum (cm^-1*atm^-1).
-      Yair  [in]  Air-broadened halfwidth at half maximum (cm^-1*atm^-1).
-      n     [in]  Coefficient of temperature dependence of the air-broadened
-                      halfwidth at half maximum.
-      Ps    [in]  Partial pressure (atm).
-
-  Return:
-      Pressure broadened line halfwidth (cm^-1).
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t compute_gamma(REAL_t const P,
-                     REAL_t const T,
-                     float const Yself,
-                     float const Yair,
-                     float const n,
-                     REAL_t const Ps)
-{
-    /*Calculate the pressure broadened line halfwidth.*/
-    const REAL_t gam = pow((TREF/T),(REAL_t)n)*
-                       ((((REAL_t)Yair)*(P-Ps)) + (((REAL_t)Yself)*Ps));
-/*
-    printf("compute_gamma(P=%f, T=%f, Yself=%f, Yair=%f, n=%f, Ps=%f) = %f\n",
-           P,
-           T,
-           Yself,
-           Yair,
-           n,
-           Ps,
-           gam);
-*/
-
-    return gam;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the pressure-shift correction of the line position.  See
-  equation A13 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      Vnn [in]  Spectral line transition frequency (cm^-1).
-      d   [in]  Air-broadened pressure shift at (T=296K,p=1atm) of the line
-                    transition frequency (cm^-1*atm^-1).
-      P   [in]  Pressure (atm).
-
-  Return:
-      Pressure-shift correction of the line position (cm^-1).
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t pressureShiftCorrection(REAL_t const Vnn,
-                               float const d,
-                               REAL_t const P)
-{
-    return (Vnn + ((REAL_t)d)*P);
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the normalized line shape function assuming a Lorentz profile.
-  See equation A14 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      F                [in]  Frequency (cm^-1).
-      gam              [in]  Pressure boardened line halfwidth (cm^-1).
-      gam2             [in]  Square of the pressure broadened line
-                                 halfwidth (cm^-2).
-      PshiftCorrection [in]  Pressure-shift correction of the line
-                                 position (cm^-1).
-
-  Return:
-      Value of the normalized line shape function assuming a Lorentz
-          profile (cm).
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t lorentzianKernel(REAL_t const F,
-                        REAL_t const gam,
-                        REAL_t const gam2,
-                        REAL_t const PshiftCorrection)
-{
-    /*Local variables*/
-    const REAL_t del = (F-PshiftCorrection); /*Frequency difference (cm^-1).*/
-
-    return (((REAL_t)M_1_PI)*(gam/(gam2+(del*del))));
-}
-
-/*---------------------------------------------------------------------------*/
-/*Part of the temperature correction of the line intensity.  Includes all
-  terms dependent on the reference temperature.  See equation A11 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      molId   [in]  Molecule id.
-      iso     [in]  Isotope index.
-      Vnn     [in]  Spectral line transition frequency (cm^-1).
-      En      [in]  Lower state energy of the transition (cm^-1).
-      Snn_ref [in]  Spectral line intensity at reference
-                        temperature 296K (cm).
-
-  Return:
-      A partial correction to the line intensity (cm).
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t Snn_partialCorrection(uint8_t const molId,
-                             uint8_t const iso,
-                             REAL_t const Vnn,
-                             float const En,
-                             REAL_t const Snn_ref)
-{
-    return (Snn_ref*Q(molId,TREF,iso))/
-           (exp(-c2*En/TREF)*(1-exp(-c2*(Vnn/TREF))));
-}
-
-/*---------------------------------------------------------------------------*/
-/*Part of the temperature correction of the line intensity due to the current
-  temperature.  See equation A11 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      molId       [in]  Molecule id.
-      T           [in]  Temperature (K).
-      iso         [in]  Isotope index.
-      Vnn         [in]  Spectral line transition frequency (cm^-1).
-      En          [in]  Lower state energy of the transition (cm^-1).
-      Snn_partial [in]  Partial correction to the line intensity (cm).
-  Return:
-      Temperature correction of the line intensity (cm).
-*/
-#ifdef __NVCC__
-__host__ __device__
-#endif
-REAL_t Snn_Tcorrection(uint8_t const molId,
-                       REAL_t const T,
-                       uint8_t const iso,
-                       REAL_t const Vnn,
-                       float const En,
-                       REAL_t const Snn_partial)
-{
-    return (Snn_partial/Q(molId,T,iso))*(((REAL_t)1)-exp(-c2*Vnn/T))*
-           exp(-c2*En/T);
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the monochromatic absorption coefficient at the inputted
-  frequency, assuming a Lorentz line profile.  See equation A15 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      snn              [in]  Temperature-corrected line intensity (cm).
-      F                [in]  Frequency (cm^-1).
-      gam              [in]  Pressure broadened line halfwidth (cm^-1).
-      gam2             [in]  Square of the pressure broadened line
-                                 halfwidth (cm^-2).
-      PshiftCorrection [in]  Pressure-shift correction of the line
-                                 position (cm^-1).
-
-  Return:
-      Monochromatic absorption coefficient (cm^2).
-*/
-#ifdef __NVCC__
-__inline__ __host__ __device__
-#endif
-REAL_t Knn_Lor(REAL_t const snn,
-               REAL_t const F,
-               REAL_t const gam,
-               REAL_t const gam2,
-               REAL_t const PshiftCorrection)
-{
-    return (snn*lorentzianKernel(F,gam,gam2,PshiftCorrection));
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the dimensionless optical depth, assuming a Lorentz line shape
-  function.  See equation A16 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      Snn              [in]  Temperature-corrected line intensity (cm).
-      F                [in]  Frequency (cm^-1).
-      gam              [in]  Pressure broadened line halfwidth (cm^-1).
-      gam2             [in]  Square of the pressure broadened line
-                                 halfwidth (cm^-2).
-      PshiftCorrection [in]  Pressure-shift correction of the line
-                                 position (cm^-1).
-      u                [in]  Number density (cm^-3).
-      pathlength       [in]  Path length (cm).
-
-  Return:
-      The dimensionless optical depth.
-*/
-#ifdef __NVCC__
-__inline__ __host__ __device__
-#endif
-REAL_t tau_Lor(REAL_t const Snn,
-               REAL_t const F,
-               REAL_t const gam,
-               REAL_t const gam2,
-               REAL_t const PshiftCorrection,
-               REAL_t const u,
-               REAL_t const pathlength)
-{
-    return ((pathlength*u)*Knn_Lor(Snn,F,gam,gam2,PshiftCorrection));
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the monochromatic absorption coefficient at the inputted
-  frequency, assuming a pseudovoigt line profile.  See equation A15 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      snn              [in]  Temperature-corrected line intensity (cm).
-      vnn              [in]  Spectral line transition frequency (cm^-1).
-      F                [in]  Frequency (cm^-1).
-      gam              [in]  Pressure broadened line halfwidth (cm^-1).
-      gam2             [in]  Square of the pressure broadened line
-                                 halfwidth (cm^-2).
-      PshiftCorrection [in]  Pressure-shift correction of the line
-                                 position (cm^-1).
-      eta              [in]  Mixing parameter for the pseudovoigt line shape
-                                 function.
-      alphad           [in]  alphad parameter for the gaussian line shape
-                                 function (cm^-1).
-
-  Return:
-      Monochromatic absorption coefficient (cm^2).
-*/
-#ifdef __NVCC__
-__inline__ __host__ __device__
-#endif
-REAL_t Knn_Voigt(REAL_t const snn,
-                 REAL_t const vnn,
-                 REAL_t const F,
-                 REAL_t const gam,
-                 REAL_t const gam2,
-                 REAL_t const PshiftCorrection,
-                 REAL_t const eta,
-                 REAL_t const alphad)
-{
-    /*Calculate the Lorentz line profile.*/
-    const float ly = lorentzianKernel(F,
-                                      gam,
-                                      gam2,
-                                      PshiftCorrection);
-
-    /*Calculate the Gaussian line profile.*/
-    const float gy = gauKernel(F,
-                               vnn,
-                               alphad);
-/*
-    printf("Lor Kernel: %f \t Gau Kernel(v=%f, vnn=%f, alphad= %f)= %f \n",
-           ly,
-           F,
-           vnn,
-           alphad,
-           gy);
-*/
-
-    return (snn*pseudoVoigt(eta,ly,gy));
-}
-
-/*---------------------------------------------------------------------------*/
-/*Calculate the dimensionless optical depth, assuming a pseudovoigt line shape
-  function.  See equation A16 from:
-
-  Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
-      665-710.
-
-  Arguments:
-      Snn              [in]  Temperature-corrected line intensity (cm).
-      Vnn              [in]  Spectral line transition frequency (cm^-1).
-      F                [in]  Frequency (cm^-1).
-      gam              [in]  Pressure broadened line halfwidth (cm^-1).
-      gam2             [in]  Square of the pressure broadened line
-                                 halfwidth (cm^-2).
-      PshiftCorrection [in]  Pressure-shift correction of the line
-                                 position (cm^-1).
-      eta              [in]  Mixing parameter for the pseudovoigt line shape
-                                 function.
-      alphad           [in]  alphad parameter for the gaussian line shape
-                                 function (cm^-1).
-      u                [in]  Number density (cm^-3).
-      pathlength       [in]  Path length (cm).
-
-  Return:
-      The dimensionless optical depth.
-*/
-
-#ifdef __NVCC__
-__inline__ __host__ __device__
-#endif
-REAL_t tau_Voigt(REAL_t const Snn,
-                 REAL_t const Vnn,
-                 REAL_t const F,
-                 REAL_t const gam,
-                 REAL_t const gam2,
-                 REAL_t const PshiftCorrection,
-                 REAL_t const eta,
-                 REAL_t const alphad,
-                 REAL_t const u,
-                 REAL_t const pathlength)
-{
-    return ((pathlength*u)*
-            Knn_Voigt(Snn,Vnn,F,gam,gam2,PshiftCorrection,eta,alphad));
-}
-
-/*---------------------------------------------------------------------------*/
-
-#ifdef __NVCC__
-/*---------------------------------------------------------------------------*/
-/*Compute the pressure broadened line halfwidth for each transition.
-
-  Arguments:
-      numLayers [in]      Size of the height dimension for the inputted
-                              arrays.
-      nL        [in]      Size of the line dimension for the inputted arrays.
-      P         [in]      Array of pressures (atm).  This array is stored as
-                              [height].
-      T         [in]      Array of temperatures (K).  This array is stored as
-                              [height].
-      Ps        [in]      Array of partial pressures (atm).  This array is
-                              stored as [height].
-      Yself     [in]      Array of self-broadened halfwidth at half
-                              maximum (cm^-1*atm^-1).  This array is stored as
-                              [line].
-      Yair      [in]      Array of air-broadened halfwidth at half
-                              maximum (cm^-1*atm^-1).  This array is stored as
-                              [line].
-      n         [in]      Array of coefficients of temperature dependence of
-                              the air-broadened halfwidth at half maximum.
-                              This array is stored as [line].
-      Gam       [in,out]  Array of pressure broadened line halfwidths (cm^-1).
-                              This array is stored as [height][line].
-*/
-__global__
-void eval_gamma(unsigned int const numLayers,
-                unsigned int const nL,
-                REAL_t const * const P,
-                REAL_t const * const T,
-                REAL_t const * const Ps,
-                float const * const Yself,
-                float const * const Yair,
-                float const * const n,
-                REAL_t *Gam)
-{
-    /*Local variables*/
-    unsigned int lyr;
-    unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-
-    if (ltid < nL)
-    {
-#pragma unroll
-        for (lyr=0;lyr<numLayers;++lyr)
-        {
-            Gam[lyr*nL+ltid] = compute_gamma(P[lyr],
-                                             T[lyr],
-                                             Yself[ltid],
-                                             Yair[ltid],
-                                             n[ltid],
-                                             Ps[lyr]);
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the pressure-shift correction of the line position for each
-  transition.
-
-  Arguments:
-      numLayers [in]      Size of the height dimension for the inputted
-                              arrays.
-      nL        [in]      Size of the line dimension for the inputted arrays.
-      P         [in]      Array of pressures (atm).  This array is stored as
-                              [height].
-      Vnn       [in]      Array of spectral line transition frequencies
-                              (cm^-1).  This array is stored as [line].
-      d         [in]      Array of air-broadened pressure shifts at
-                              (T=296K,p=1atm) of the line transition
-                              frequencies (cm^-1*atm^-1).  This array is
-                              stored as [line].
-      PShift    [in,out]  Array of pressure-shift corrections of the line
-                              positions (cm^-1).  This array is stored as
-                              [height][line].
-*/
-__global__
-void eval_pShift(unsigned int const numLayers,
-                 unsigned int const nL,
-                 REAL_t const * const P,
-                 REAL_t const * const Vnn,
-                 float const * const d,
-                 REAL_t * const PShift)
-{
-    /*Local variables*/
-    unsigned int lyr;
-    unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-
-    if (ltid < nL)
-    {
-#pragma unroll
-        for (lyr=0;lyr<numLayers;++lyr)
-        {
-            PShift[lyr*nL+ltid] = pressureShiftCorrection(Vnn[ltid],
-                                                          d[ltid],
-                                                          P[lyr]);
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the first part of the temperature correction of the line intensities
-  for each transition.  These include all terms dependent on the HITRAN
-  reference temperature.
-
-  Arguments:
-      nL        [in]    Size of the line dimension for the inputted arrays.
-      molId     [in]    Molecule id.
-      iso       [in]    Array of isotope indexes.  This array is stored as
-                            [line].
-      Vnn       [in]    Array of spectral line transition frequencies
-                            (cm^-1).  This array is stored as [line].
-      En        [in]    Array of lower state energies of the transitions
-                            (cm^-1).  This array is stored as [line].
-      Snn_ref [in,out]  Array of spectral line intensities (cm).  This
-                            array is stored as [line].
-*/
-__global__
-void pre_eval_Snn(unsigned int const nL,
-                  uint8_t const molId,
-                  uint8_t const * const iso,
-                  REAL_t const * const Vnn,
-                  float const * const En,
-                  REAL_t *Snn_ref)
-{
-    /*Local variables*/
-    int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-
-    if (ltid < nL)
-    {
-        Snn_ref[ltid] = Snn_partialCorrection(molId,
-                                              iso[ltid],
-                                              Vnn[ltid],
-                                              En[ltid],
-                                              Snn_ref[ltid]);
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the temperature correction of the line intensities for each
-  transition.
-
-  Arguments:
-      numLayers   [in]      Size of the height dimension for the inputted
-                                arrays.
-      nL          [in]      Size of the line dimension for the inputted
-                                arrays.
-      molId       [in]      Molecule id.
-      T           [in]      Array of temperatures (K).  This array is stored
-                                as [height].
-      iso         [in]      Array of isotope indexes.  This array is stored
-                                as [line].
-      Vnn         [in]      Array of spectral line transition frequencies
-                                (cm^-1).  This array is stored as [line].
-      En          [in]      Array of lower state energies of the transitions
-                                (cm^-1).  This array is stored as [line].
-      Snn_partial [in]      Array of partially corrected spectral line
-                                intensities (cm).  This array is stored
-                                as [line].
-      S           [in,out]  Array of corrected spectral line intensities (cm).
-                                This array is stored as [height][line].
-*/
-__global__
-void eval_Snn_correction(unsigned int const numLayers,
-                         unsigned int const nL,
-                         uint8_t const molId,
-                         REAL_t const * const T,
-                         uint8_t const * const iso,
-                         REAL_t const * const Vnn,
-                         float const * const En,
-                         REAL_t const * const Snn_partial,
-                         REAL_t * const S)
-{
-    /*Local variables*/
-    unsigned int lyr;
-    unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-
-    if (ltid < nL)
-    {
-#pragma unroll
-        for (lyr=0;lyr<numLayers;++lyr)
-        {
-            S[lyr*nL+ltid] = Snn_Tcorrection(molId,
-                                             T[lyr],
-                                             iso[ltid],
-                                             Vnn[ltid],
-                                             En[ltid],
-                                             Snn_partial[ltid]);
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the dimensionless optical depth values at each desired frequency.
-
-  Arguments:
-      molId        [in]      Molecule id.
-      nL           [in]      Size of the line dimension for the inputted
-                                 arrays.
-      nF           [in]      Size of the frequency dimension for the outputted
-                                 array.
-      loWn         [in]      Lowest frequency where the optical depth is
-                                 calculated (cm^-1).
-      resolution   [in]      Frequency resolution for the optical depth
-                                 values (cm^-1).
-      numLayers    [in]      Size of the height dimension for the inputted
-                                 arrays.
-      breadth      [in]      Integer number of frequencies that each molecular
-                                 line spans.
-      T            [in]      Array of temperatures (K).  This array is stored
-                                 as [height].
-      Vnn          [in]      Array of spectral line transition frequencies
-                                 (cm^-1).  This array is stored as [line].
-      Gam          [in]      Array of pressure broadened line halfwidths
-                                 (cm^-1).  This array is stored as
-                                 [height][line].
-      PShift       [in]      Array of pressure-shift corrections of the line
-                                 positions (cm^-1).  This array is stored as
-                                 [height][line].
-      S            [in]      Array of corrected spectral line intensities (cm).
-                                 This array is stored as [height][line].
-      tauU_d       [in]      Array of number densities (cm^-3).  This array
-                                 is stored as [height].
-      pathlength_d [in]      Array of path lengths (cm).  This array is stored
-                                 as [height].
-      out          [in,out]  Array of dimensionless optical depths.  This
-                                 array is stored as [height][frequency].
-*/
-__global__
-void eval_profile(unsigned int const molId,
-                  unsigned int const nL,
-                  int const nF,
-                  REAL_t const loWn,
-                  REAL_t const resolution,
-                  unsigned int const numLayers,
-                  unsigned int const breadth,
-                  REAL_t const * const T,
-                  REAL_t const * const Vnn,
-                  REAL_t const * const Gam,
-                  REAL_t const * const PShift,
-                  REAL_t const * const S,
-                  REAL_t const * const tauU_d,
-                  REAL_t const * const pathlength_d,
-                  REAL_t * const out)
-{
-    /*Local variables*/
-    unsigned int ltid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (ltid < nL)
-    {
-        int ftid;
-        int fcenterid;
-        REAL_t f;
-        unsigned int lyr;
-        unsigned int loffset;
-
-        REAL_t gam;
-        REAL_t gam2;
-        REAL_t pShift;
-        REAL_t snn;
-        REAL_t tauu;
-        REAL_t len;
-
-        const REAL_t molarMass = getMolarMass(molId);
-        REAL_t temp;
-        REAL_t etav;
-        REAL_t alphad;
-        REAL_t gaufwhm;
-
-        const int fsteps = ceil((REAL_t)breadth/resolution);
-
-        /*Find index of nearest frequency bin to line.*/
-        const REAL_t thisLine = Vnn[ltid];
-        fcenterid = (2*((thisLine-loWn)/resolution)+1)/2;
-        if (fcenterid < nF)
-        {
-#pragma unroll
-            for (lyr=0;lyr<numLayers;++lyr)
-            {
-                loffset = lyr*nL + ltid;
-                gam = Gam[loffset];
-                gam2 = gam*gam;
-                pShift = PShift[loffset];
-                snn = S[loffset];
-                tauu = tauU_d[lyr];
-                len = pathlength_d[lyr];
-
-                temp = T[lyr];
-                gaufwhm = gauFWHM(temp,
-                                  molarMass,
-                                  thisLine);
-                etav = eta(2.*gam,
-                           gaufwhm);
-                alphad = gauAlphad(temp,
-                                   molarMass,
-                                   thisLine);
-
-                /*Calculate the optical depth values from the left edge of
-                  the line to the line center.*/
-#pragma unroll
-                for (ftid=fcenterid-((int)fsteps);ftid<=fcenterid;++ftid)
-                {
-                    if (ftid >= 0)
-                    {
-                        f = ((REAL_t)ftid)*resolution + loWn;
-
-                        /*Atomics must be used for now because of a race on
-                          load-alter-write out[ftid].*/
-                        atomicAdd(&(out[lyr*nF+ftid]),
-                                  tau_Voigt(snn,thisLine,f,gam,gam2,pShift,
-                                            etav,alphad,tauu,len));
-                    }
-                }
-
-                /*Calculate the optical depth values from the right edge of
-                  the line to the line center.*/
-#pragma unroll
-                for (ftid=fcenterid+((int)fsteps);ftid>fcenterid;--ftid)
-                {
-                    if (ftid < nF)
-                    {
-                        f = ((REAL_t)ftid)*resolution + loWn;
-
-                        /*Atomics must be used for now because of a race on
-                          load-alter-write out[ftid].*/
-                        atomicAdd(&(out[lyr*nF+ftid]),
-                                  tau_Voigt(snn,thisLine,f,gam,gam2,pShift,
-                                            etav,alphad,tauu,len));
-                    }
-                }
-            }
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-#endif
-
-/*---------------------------------------------------------------------------*/
-/*Compute the pressure broadened line halfwidth for each transition.
-
-  Arguments:
-      numLayers [in]      Size of the height dimension for the inputted
-                              arrays.
-      nL        [in]      Size of the line dimension for the inputted arrays.
-      P         [in]      Array of pressures (atm).  This array is stored as
-                              [height].
-      T         [in]      Array of temperatures (K).  This array is stored as
-                              [height].
-      Ps        [in]      Array of partial pressures (atm).  This array is
-                              stored as [height].
-      Yself     [in]      Array of self-broadened halfwidth at half
-                              maximum (cm^-1*atm^-1).  This array is stored as
-                              [line].
-      Yair      [in]      Array of air-broadened halfwidth at half
-                              maximum (cm^-1*atm^-1).  This array is stored as
-                              [line].
-      n         [in]      Array of coefficients of temperature dependence of
-                              the air-broadened halfwidth at half maximum.
-                              This array is stored as [line].
-      Gam       [in,out]  Array of pressure broadened line halfwidths (cm^-1).
-                              This array is stored as [height][line].
-*/
-void eval_gamma_h(unsigned int const numLayers,
-                  unsigned int const nL,
-                  REAL_t const * const P,
-                  REAL_t const * const T,
-                  REAL_t const * const Ps,
-                  float const * const Yself,
-                  float const * const Yair,
-                  float const * const n,
-                  REAL_t * const Gam)
-{
-    /*Local variables*/
-    unsigned int lyr;
-    unsigned int ltid;
-
-    for(ltid=0;ltid<nL;++ltid)
-    {
-        for(lyr=0;lyr<numLayers;++lyr)
-        {
-            Gam[lyr*nL+ltid] = compute_gamma(P[lyr],
-                                             T[lyr],
-                                             Yself[ltid],
-                                             Yair[ltid],
-                                             n[ltid],
-                                             Ps[lyr]);
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the pressure-shift correction of the line position for each
-  transition.
-
-  Arguments:
-      numLayers [in]      Size of the height dimension for the inputted
-                              arrays.
-      nL        [in]      Size of the line dimension for the inputted arrays.
-      P         [in]      Array of pressures (atm).  This array is stored as
-                              [height].
-      Vnn       [in]      Array of spectral line transition frequencies
-                              (cm^-1).  This array is stored as [line].
-      d         [in]      Array of air-broadened pressure shifts at
-                              (T=296K,p=1atm) of the line transition
-                              frequencies (cm^-1*atm^-1).  This array is
-                              stored as [line].
-      PShift    [in,out]  Array of pressure-shift corrections of the line
-                              positions (cm^-1).  This array is stored as
-                              [height][line].
-*/
-void eval_pShift_h(unsigned int const numLayers,
-                   unsigned int const nL,
-                   REAL_t const * const P,
-                   REAL_t const * const Vnn,
-                   float const * const d,
-                   REAL_t * const PShift)
-{
-    /*Local variables*/
-    unsigned int lyr;
-    unsigned int ltid;
-
-    for (ltid=0;ltid<nL;++ltid)
-    {
-        for (lyr=0;lyr<numLayers;++lyr)
-        {
-            PShift[lyr*nL+ltid] = pressureShiftCorrection(Vnn[ltid],
-                                                          d[ltid],
-                                                          P[lyr]);
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the first part of the temperature correction of the line intensities
-  for each transition.  These include all terms dependent on the HITRAN
-  reference temperature.
-
-  Arguments:
-      nL        [in]    Size of the line dimension for the inputted arrays.
-      molId     [in]    Molecule id.
-      iso       [in]    Array of isotope indexes.  This array is stored as
-                            [line].
-      Vnn       [in]    Array of spectral line transition frequencies
-                            (cm^-1).  This array is stored as [line].
-      En        [in]    Array of lower state energies of the transitions
-                            (cm^-1).  This array is stored as [line].
-      Snn_ref [in,out]  Array of spectral line intensities (cm).  This
-                            array is stored as [line].
-*/
-void pre_eval_Snn_h(unsigned int const nL,
-                    uint8_t const molId,
-                    uint8_t const * const iso,
-                    REAL_t const * const Vnn,
-                    float const * const En,
-                    REAL_t * const Snn_ref)
-{
-    /*Local variables*/
-    unsigned int ltid;
-
-    for (ltid=0;ltid<nL;++ltid)
-    {
-        Snn_ref[ltid] = Snn_partialCorrection(molId,
-                                              iso[ltid],
-                                              Vnn[ltid],
-                                              En[ltid],
-                                              Snn_ref[ltid]);
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the temperature correction of the line intensities for each
-  transition.
-
-  Arguments:
-      numLayers   [in]      Size of the height dimension for the inputted
-                                arrays.
-      nL          [in]      Size of the line dimension for the inputted
-                                arrays.
-      molId       [in]      Molecule id.
-      T           [in]      Array of temperatures (K).  This array is stored
-                                as [height].
-      iso         [in]      Array of isotope indexes.  This array is stored
-                                as [line].
-      Vnn         [in]      Array of spectral line transition frequencies
-                                (cm^-1).  This array is stored as [line].
-      En          [in]      Array of lower state energies of the transitions
-                                (cm^-1).  This array is stored as [line].
-      Snn_partial [in]      Array of partially corrected spectral line
-                                intensities (cm).  This array is stored
-                                as [line].
-      S           [in,out]  Array of corrected spectral line intensities (cm).
-                                This array is stored as [height][line].
-*/
-void eval_Snn_correction_h(unsigned int const numLayers,
-                           unsigned int const nL,
-                           uint8_t const molId,
-                           REAL_t const * const T,
-                           uint8_t const * const iso,
-                           REAL_t const * const Vnn,
-                           float const * const En,
-                           REAL_t const * const Snn_partial,
-                           REAL_t* const S)
-{
-    /*Local variables*/
-    unsigned int lyr;
-    unsigned int ltid;
-
-    for (ltid=0;ltid<nL;++ltid)
-    {
-        for (lyr=0;lyr<numLayers;++lyr)
-        {
-            S[lyr*nL+ltid] = Snn_Tcorrection(molId,
-                                             T[lyr],
-                                             iso[ltid],
-                                             Vnn[ltid],
-                                             En[ltid],
-                                             Snn_partial[ltid]);
-        }
-    }
-
-    return;
-}
-
-/*---------------------------------------------------------------------------*/
-/*Compute the dimensionless optical depth values at each desired frequency.
-
-  Arguments:
-      molId      [in]      Molecule id.
-      nL         [in]      Size of the line dimension for the inputted
-                               arrays.
-      nF         [in]      Size of the frequency dimension for the outputted
-                               array.
-      loWn       [in]      Lowest frequency where the optical depth is
-                               calculated (cm^-1).
-      resolution [in]      Frequency resolution for the optical depth
-                               values (cm^-1).
-      numLayers  [in]      Size of the height dimension for the inputted
-                               arrays.
-      breadth    [in]      Integer number of frequencies that each molecular
-                               line spans.
-      T          [in]      Array of temperatures (K).  This array is stored
-                               as [height].
-      Vnn        [in]      Array of spectral line transition frequencies
-                               (cm^-1).  This array is stored as [line].
-      Gam        [in]      Array of pressure broadened line halfwidths
-                               (cm^-1).  This array is stored as
-                               [height][line].
-      PShift     [in]      Array of pressure-shift corrections of the line
-                               positions (cm^-1).  This array is stored as
-                               [height][line].
-      S          [in]      Array of corrected spectral line intensities (cm).
-                               This array is stored as [height][line].
-      tauU       [in]      Array of number densities (cm^-3).  This array
-                               is stored as [height].
-      pathlength [in]      Array of path lengths (cm).  This array is stored
-                               as [height].
-      out        [in,out]  Array of dimensionless optical depths.  This
-                               array is stored as [height][frequency].
-*/
-void eval_profile_h(unsigned int const molId,
-                    unsigned int const nL,
-                    int const nF,
-                    REAL_t const loWn,
-                    REAL_t const resolution,
-                    unsigned int const numLayers,
-                    unsigned int const breadth,
-                    REAL_t const * const T,
-                    REAL_t const * const Vnn,
-                    REAL_t const * const Gam,
-                    REAL_t const * const PShift,
-                    REAL_t const * const S,
-                    REAL_t const * const tauU,
-                    REAL_t const * const pathlength,
-                    REAL_t * const out)
-{
-    /*Local variables*/
-    unsigned int ltid;
-
-    for (ltid=0;ltid<nL;++ltid)
-    {
-        int ftid;
-        int fcenterid;
-        REAL_t f;
-        unsigned int lyr;
-        unsigned int loffset;
-
-        REAL_t gam;
-        REAL_t gam2;
-        REAL_t pShift;
-        REAL_t snn;
-        REAL_t tauu;
-        REAL_t len;
-
-        const REAL_t molarMass = getMolarMass(molId);
-        REAL_t temp;
-        REAL_t etav;
-        REAL_t alphad;
-        REAL_t gaufwhm;
-
-        const int fsteps = ceil((REAL_t)breadth/resolution);
-
-        /*Find index of nearest frequency bin to line.*/
-        const REAL_t thisLine = Vnn[ltid] ;
-        fcenterid = (2*((thisLine-loWn)/resolution) + 1)/2;
-        if (fcenterid < nF)
-        {
-            for (lyr=0;lyr<numLayers;++lyr)
-            {
-                loffset = lyr*nL + ltid;
-                gam = Gam[loffset];
-                gam2 = gam*gam;
-                pShift = PShift[loffset];
-                snn = S[loffset];
-                tauu = tauU[lyr];
-                len = pathlength[lyr];
-
-                temp = T[lyr];
-                gaufwhm = gauFWHM(temp,
-                                  molarMass,
-                                  thisLine);
-                etav = eta(2.*gam,
-                           gaufwhm);
-                alphad = gauAlphad(temp,
-                                   molarMass,
-                                   thisLine);
-
-                /*Calculate the optical depth values from the left edge of
-                  the line to the line center.*/
-                for (ftid=fcenterid-((int)fsteps);ftid<=fcenterid;++ftid)
-                {
-                    if (ftid >= 0)
-                    {
-                        f = ((REAL_t)ftid)*resolution + loWn;
-                        out[lyr*nF+ftid] += tau_Voigt(snn,
-                                                      thisLine,
-                                                      f,
-                                                      gam,
-                                                      gam2,
-                                                      pShift,
-                                                      etav,
-                                                      alphad,
-                                                      tauu,
-                                                      len);
-                    }
-                }
-
-                /*Calculate the optical depth values from the right edge of
-                  the line to the line center.*/
-                for (ftid=fcenterid+((int)fsteps);ftid>fcenterid;--ftid)
-                {
-                    if (ftid < nF)
-                    {
-                        f = ((REAL_t)ftid)*resolution + loWn;
-                        out[lyr*nF+ftid] += tau_Voigt(snn,
-                                                      thisLine,
-                                                      f,
-                                                      gam,
-                                                      gam2,
-                                                      pShift,
-                                                      etav,
-                                                      alphad,
-                                                      tauu,
-                                                      len);
-                    }
-                }
-            }
-        }
-    }
-
-    return;
-}
 
 /*---------------------------------------------------------------------------*/
 /*Calculate the dimensionless optical depth values at all appropriate heights
@@ -2186,7 +883,6 @@ int host_optics_perMol(uint8_t const molId,
                    numLayers,
                    breadth,
                    T_h,
-                   Vnn_h,
                    Gam_h,
                    PShift_h,
                    S_h,
@@ -2256,7 +952,6 @@ int host_optics_free(RefLinePtrs_t *L_h,
 
     return EXIT_SUCCESS;
 }
-
 /*---------------------------------------------------------------------------*/
 /*Loop through each molecule, and calculate the optical depth values at
   each height and frequency.
@@ -3014,7 +1709,6 @@ int device_optics_perMol(cudaStream_t stream,
                                                                                 numLayers,
                                                                                 breadth,
                                                                                 T_d,
-                                                                                Vnn_d,
                                                                                 Gam_d,
                                                                                 PShift_d,
                                                                                 S_d,
@@ -3628,14 +2322,8 @@ int main(int argc,
                                               sizeof(REAL_t));
                     }
                     host_launch(nMols,
-/*
-                                hitFnameList,
-*/
                                 HitLines,
                                 ((REAL_t)arguments.w),
-/*
-                                ((REAL_t)arguments.W),
-*/
                                 nF,
                                 arguments.res,
                                 arguments.wingBreadth,
@@ -3657,14 +2345,8 @@ int main(int argc,
                     device_launch(&nstreams,
                                   &streams,
                                   nMols,
-/*
-                                  hitFnameList,
-*/
                                   HitLines,
                                   ((REAL_t)arguments.w),
-/*
-                                  ((REAL_t)arguments.W),
-*/
                                   nF,
                                   arguments.res,
                                   arguments.wingBreadth,
