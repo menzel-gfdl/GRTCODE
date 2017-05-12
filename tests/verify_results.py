@@ -1,4 +1,4 @@
-from netCDF4 import Dataset
+import netCDF4 as nc
 from numpy import float32, zeros_like
 
 def verify_results(grtcode_file_path,
@@ -11,8 +11,8 @@ def verify_results(grtcode_file_path,
     """
 
     #Open the netCDF GRTcode file.
-    grtcode_vals = Dataset(grtcode_file_path,
-                           "r")
+    grtcode_vals = nc.Dataset(grtcode_file_path,
+                              "r")
 
     #Get the GRTcode optical depth dimensions.
     for dim in grtcode_vals.dimensions.values():
