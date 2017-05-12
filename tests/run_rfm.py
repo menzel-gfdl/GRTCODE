@@ -36,7 +36,12 @@ def create_hitbin_from(parfiles,
               "", # wavenumbers, use default for now
               out,
               header]
-    Popen(['./hitbin'], stdin=PIPE).stdin.write(linesep.join(pinput) + linesep)
+    tmp = Popen(['./hitbin'], stdin=PIPE)
+    tmp.communicate(input=(linesep.join(pinput) + linesep))
+    tmp.wait()
+    if tmp.returncode != 0:
+        raise ValueError("./hitbin failed and returned exit code " +
+                             tmp.returncode + ".\n")
 
 class Layer(object):
     """
