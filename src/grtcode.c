@@ -74,7 +74,7 @@ static char doc[] = "GFDL style documentation goes >/\n\n\\"
 #define maxNhitfiles NUM_MOL
 static const unsigned int minNargs=minNhitfiles;
 static const unsigned int maxNargs=maxNhitfiles;
-static char args_doc[] = "-aINPUT.nc -oOUT.nc"
+static char args_doc[] = "-aINPUT.nc -fFORMAT -oOUT.nc"
                              " [molecule concentration specifications]"
                              " HITFILES";
 
@@ -96,7 +96,7 @@ static struct argp_option options[] =
     {"silent",
      's',
      0,
-      OPTION_ALIAS},
+     OPTION_ALIAS},
 
     {"device",
      'd',
@@ -130,6 +130,13 @@ static struct argp_option options[] =
      "INPUT.NC",
      0,
      "NC file containing model atmosphere."},
+
+    {"atmos_format",
+     'f',
+     "FORMAT",
+     0,
+     "Format of the input atmosphere file.  Allowed values are 'rfmip' and"
+         " 'gfdl'."},
 
     {"minw",
      'w',
@@ -186,9 +193,9 @@ static struct argp_option options[] =
      '2',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Carbon Dioxide Concentration.  Supply global value (ppmv)."
-         "  Layer partial pressure = (layer pressure)*"
-         "(carbon dioxide concentration/10^6).",
+     "Carbon Dioxide Concentration.  Default reads from INPUT.NC, else"
+         " supply global value (ppmv).  Layer partial pressure ="
+         " (layer pressure)*(carbon dioxide concentration/10^6).",
      -2},
 
     {"o3",
@@ -204,8 +211,8 @@ static struct argp_option options[] =
      '4',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Nitrous Oxide. Supply global value (ppmv)."
-         "  Layer partial pressure = (layer pressure)*"
+     "Nitrous Oxide.  Default reads from INPUT.NC, else supply global value"
+         " (ppmv).  Layer partial pressure = (layer pressure)*"
          "(nitrous oxide concentration/10^6).",
      -2},
 
@@ -213,17 +220,17 @@ static struct argp_option options[] =
      '5',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Carbon Monoxide Concentration.  Supply global value (ppmv)."
-         "  Layer partial pressure = (layer pressure)*"
-         "(carbon monoxide concentration/10^6).",
+     "Carbon Monoxide Concentration.  Default read from INPUT.NC, else"
+         " supply global value (ppmv).  Layer partial pressure ="
+         " (layer pressure)*(carbon monoxide concentration/10^6).",
      -2},
 
     {"ch4",
      '6',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Methane Conentration.  Supply global value (ppmv)."
-         "  Layer partial pressure = (layer pressure)*"
+     "Methane Conentration.  Default read from INPUT.NC, else supply global"
+         " value (ppmv).  Layer partial pressure = (layer pressure)*"
          "(methane concentration/10^6).",
      -2},
 
@@ -231,8 +238,8 @@ static struct argp_option options[] =
      '7',
      "VAL",
      OPTION_ARG_OPTIONAL,
-     "Oxygen Concentration.  Supply global value (ppmv)."
-         "  Layer partial pressure = (layer_pressure)*"
+     "Oxygen Concentration.  Default read from INPUT.nc, else supply global"
+         " value (ppmv).  Layer partial pressure = (layer_pressure)*"
          "(oxygen concentration/10^6).",
      -2},
 
@@ -251,6 +258,7 @@ static struct argp_option options[] =
 struct arguments
 {
     char *atmos;                  /*Input atmosphere netCDF file.*/
+    char *atmos_format;           /*Format of the inputted netCDF file.*/
     char *hitfiles[maxNhitfiles]; /*Input HITRAN .par files.*/
     int nhitfiles;                /*Total number of inputted HITRAN files.*/
     int nmolConc;                 /*Number of inputted molecular concentrations.*/
@@ -354,6 +362,9 @@ static error_t parse_opt(int key,
         case 'a':
             arguments->atmos = arg;
             break;
+        case 'f':
+            arguments->atmos_format = arg;
+            break;
         case 'w':
             arguments->w = atoi(arg);
             break;
@@ -379,15 +390,6 @@ static error_t parse_opt(int key,
         case '2':
             arguments->co2 = parse_MolecConc(arg);
             arguments->nmolConc++;
-            if (arguments->co2 == -1)
-            {
-                fprintf(stderr,
-                        "Error(parse_opt): Reading the molecular concentration"
-                            " from the inputted netCDF file is not currently"
-                            " supported for this molecule (%c).\n",
-                        key);
-                exit(EXIT_FAILURE);
-            }
             break;
         case '3':
             arguments->o3 = parse_MolecConc(arg);
@@ -396,54 +398,18 @@ static error_t parse_opt(int key,
         case '4':
             arguments->n2o = parse_MolecConc(arg);
             arguments->nmolConc++;
-            if (arguments->n2o == -1)
-            {
-                fprintf(stderr,
-                        "Error(parse_opt): Reading the molecular concentration"
-                            " from the inputted netCDF file is not currently"
-                            " supported for this molecule (%c).\n",
-                        key);
-                exit(EXIT_FAILURE);
-            }
             break;
         case '5':
             arguments->co = parse_MolecConc(arg);
             arguments->nmolConc++;
-            if (arguments->co == -1)
-            {
-                fprintf(stderr,
-                        "Error(parse_opt): Reading the molecular concentration"
-                            " from the inputted netCDF file is not currently"
-                            " supported for this molecule (%c).\n",
-                        key);
-                exit(EXIT_FAILURE);
-            }
             break;
         case '6':
             arguments->ch4 = parse_MolecConc(arg);
             arguments->nmolConc++;
-            if (arguments->ch4 ==-1)
-            {
-                fprintf(stderr,
-                        "Error(parse_opt): Reading the molecular concentration"
-                            " from the inputted netCDF file is not currently"
-                            " supported for this molecule (%c).\n",
-                        key);
-                exit(EXIT_FAILURE);
-            }
             break;
         case '7':
             arguments->o2 = parse_MolecConc(arg);
             arguments->nmolConc++;
-            if (arguments->o2 == -1)
-            {
-                fprintf(stderr,
-                        "Error(parse_opt): Reading the molecular concentration"
-                            " from the inputted netCDF file is not currently"
-                            " supported for this molecule (%c).\n",
-                        key);
-                exit(EXIT_FAILURE);
-            }
             break;
         case 'C':
             arguments->ctm = 1;
@@ -2077,6 +2043,7 @@ int main(int argc,
     arguments.nmolConc = 0;
     arguments.nmolConcOver = 0;
     arguments.atmos = NULL;
+    arguments.atmos_format = NULL;
     arguments.output_file = default_output_fname;
     arguments.wingBreadth = 25;
     arguments.ctm = 0;
@@ -2102,18 +2069,63 @@ int main(int argc,
                &arguments);
 
     /*If a water concentration was not specified in the program's arguments,
-      then use the value from the inputted netCDF file.*/
+      then use the value from the inputted netCDF file if it exists.*/
     if (arguments.h2o == 0)
     {
         arguments.h2o = -1;
         arguments.nmolConcOver++;
     }
 
+    /*If a carbon dioxide concentration was not specified in the program's
+      arguments, then use the value from the inputted netCDF file if it
+      exists.*/
+    if (arguments.co2 == 0)
+    {
+        argumetnts.co2 = -1;
+        arguments.nmolConcOver++;
+    }
+
     /*If a ozone concentration was not specified in the program's arguments,
-      then use the value from the inputted netCDF file.*/
+      then use the value from the inputted netCDF file if it exists.*/
     if (arguments.o3 == 0)
     {
         arguments.o3 = -1;
+        arguments.nmolConcOver++;
+    }
+
+    /*If a nitrous oxide concentration was not specified in the program's
+      arguments, then use the value from the inputted netCDF file if it
+      exists.*/
+    if (arguments.n2o == 0)
+    {
+        arguments.n2o = -1;
+        arguments.nmolConcOver++;
+    }
+
+    /*If a carbon monoxide concentration was not specified in the program's
+      arguments, then use the value from the inputted netCDF file if it
+      exists.*/
+    if (arguments.co == 0)
+    {
+        arguments.co = -1;
+        arguments.nmolConcOver++;
+    }
+
+    /*If a methane concentration was not specified in the program's
+      arguments, then use the value from the inputted netCDF file if it
+      exists.*/
+    if (arguments.ch4 == 0)
+    {
+        arguments.ch4 = -1;
+        arguments.nmolConcOver++;
+    }
+
+    /*If an oxygen concentration was not specified in the program's
+      arguments, then use the value from the inputted netCDF file if it
+      exists.*/
+    if (arguments.o2 == 0)
+    {
+        arguments.o2 = -1;
         arguments.nmolConcOver++;
     }
 
@@ -2179,8 +2191,10 @@ int main(int argc,
 
     /*Read in atmospheric data from the inputted netCDF file.*/
     char *atmosFile = arguments.atmos;
+    char *atmosFormat = arguments.atmos_format;
     radiationOutputFields_t atmosData;
     getAndSetAtmosFieldsFromFile(atmosFile,
+                                 atmosFormat,
                                  &atmosData);
     const unsigned int numLayers = atmosData.npfull;
 

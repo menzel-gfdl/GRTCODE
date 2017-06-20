@@ -32,12 +32,17 @@
 */
 typedef struct radiationInputFields_t
 {
-    float* RH2O;   /*Layer water vapor mixing ratios (kg/kg).*/
-    float* QO3;    /*Layer ozone mixing ratios (kg/kg).*/
-    float* DPFLUX; /*Radiation flus layer thicknesses [(dP/dz)*delta_z] (hPa).*/
-    float* PRESSM; /*Layer pressures (Pa).*/
-    float* TEMP;   /*Layer Temperatures (K).*/
-    float* DELTAZ; /*Layer thicknesses [delta_z] (m).*/
+    float *RH2O;   /*Layer water vapor mixing ratios (kg/kg).*/
+    float *RCO2;   /*Layer carbon dioxide mixing ratios (kg/kg).*/
+    float *QO3;    /*Layer ozone mixing ratios (kg/kg).*/
+    float *RN2O;   /*Layer nitrous oxide mixing ratios (kg/kg).*/
+    float *RCO;    /*Layer carbon monoxide mixing ratios (kg/kg).*/
+    float *RCH4;   /*Layer methane mixing ratios (kg/kg).*/
+    float *RO2;    /*Layer oxygen mixing ratios (kg/kg).*/
+    float *DPFLUX; /*Radiation flus layer thicknesses [(dP/dz)*delta_z] (hPa).*/
+    float *PRESSM; /*Layer pressures (Pa).*/
+    float *TEMP;   /*Layer Temperatures (K).*/
+    float *DELTAZ; /*Layer thicknesses [delta_z] (m).*/
     size_t nlat;   /*Number of latitude grid points.*/
     size_t nlon;   /*Number of longitude grid points.*/
     size_t npfull; /*Number of pressure layers.*/
@@ -85,6 +90,7 @@ int setOutputFields(radiationInputFields_t *in,
                     radiationOutputFields_t *out);
 
 int getAndSetAtmosFieldsFromFile(char fname[],
+                                 char *f_format,
                                  radiationOutputFields_t* out);
 
 int test(char fname[]);
