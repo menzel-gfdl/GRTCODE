@@ -17,13 +17,14 @@ class testParams(object):
         #Initialize members of the class.
         self.test_name = test_name
         self.config_file = config_file
-        self.params_dict = { "atmos_input_file" : "",
-                             "mols"             : "",
-                             "lineshape"        : "",
-                             "lines"            : "",
-                             "low_freq"         : "",
-                             "high_freq"        : "",
-                             "resolution"       : ""}
+        self.params_dict = {"atmos_input_file"      : "",
+                            "atmos_input_file_type" : "",
+                            "mols"                  : "",
+                            "lineshape"             : "",
+                            "lines"                 : "",
+                            "low_freq"              : "",
+                            "high_freq"             : "",
+                            "resolution"            : ""}
 
         #Open the config file.
         try:

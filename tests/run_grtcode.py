@@ -5,13 +5,27 @@ from hitran_utils import hitranDict, hitranDictKeyString
 from utils import copy_file, move_file, run_executable, run_make
 
 #Dictionary used for running the grtcode executable.
-ppmvDict = {"h2o" : "-1a",
-            "co2" : "-2400",
-            "o3"  : "-3a",
-            "n2o" : "-40.32",
-            "co"  : "-50.001",
-            "ch4" : "-61.7",
-            "o2"  : "-7200000"}
+gfdl_ppmvDict = {"h2o" : "-1a",
+                 "co2" : "-2400",
+                 "o3"  : "-3a",
+                 "n2o" : "-40.32",
+                 "co"  : "-50.001",
+                 "ch4" : "-61.7",
+                 "o2"  : "-7200000"}
+
+rfmip_ppmvDict = {"h2o" : "-1a",
+                  "co2" : "-2a",
+                  "o3"  : "-3a",
+                  "n2o" : "-4a",
+                  "co"  : "-5a",
+                  "ch4" : "-6a",
+                  "o2"  : "-7a"}
+
+atmosFileTypeList = ["gfdl",
+                     "rfmip"]
+atmosFileTypeListString = ""
+for item in atmosFileTypeList:
+    atmosFileTypeListString += "\t" + item + "\n"
 
 #Dictionary used for running the correct grtcode executable.
 grtExecDict = {"voigt"     : "grtcode.x",
@@ -26,6 +40,7 @@ for key in grtExecDict:
 
 def run_grtcode(mols,
                 atmosFile,
+                atmosFileType,
                 baseDir,
                 lineShape,
                 minFreq,
@@ -54,6 +69,16 @@ def run_grtcode(mols,
     if not isinstance(atmosFile,str):
         raise TypeError("the inputted atmosphere file (" + repr(atmosFile) +
                             ") must be a string.\n")
+
+    #Check atmosFileType input.
+    if not isinstance(atmosFileType,str):
+        raise TypeError("the inputted atmosphere file (" + repr(atmosFileType)
+                            + ") must be a string.\n")
+    tmp = (atmosFileType.strip()).lower()
+    if tmp not in atmosFileTypeList:
+        raise ValueError("the inputted atmosphere file type (" + tmp +
+                             ") must be one of:\n" +
+                             atmosFileTypeListString)
 
     #Check baseDir input.
     if not isinstance(baseDir,str):
@@ -190,11 +215,19 @@ def run_grtcode(mols,
 
     #Run the executable.  Time how long the executable takes to run.
     grtOutputFile = "foo"
+    tmp = (atmosFileType.strip()).lower()
+    if tmp == "gfdl":
+        ppmvDict = gfdl_ppmvDict
+        input_file_format = "gfdl"
+    else:
+        ppmvDict = rfmip_ppmvDict
+        input_file_format = "rfmip"
     args = ["-a" + grtInputDir + "/" + atmosFile,
             "-o" + grtOutputFile,
             "-w" + str(minFreq),
             "-W" + str(maxFreq),
-            "-r" + str(freqRes)]
+            "-r" + str(freqRes),
+            "-f" + str(input_file_format)]
     for m in molecules:
         tmp = (m.strip()).lower()
         args.append(ppmvDict[tmp])

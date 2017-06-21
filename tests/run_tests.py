@@ -39,6 +39,7 @@ if __name__ == "__main__":
     #Run the test using GRTcode.
     grt_output_file, grt_timing = run_grtcode(testObject.params_dict["mols"].split(),
                                               testObject.params_dict["atmos_input_file"],
+                                              testObject.params_dict["atmos_input_file_type"],
                                               "../",
                                               testObject.params_dict["lineshape"],
                                               testObject.params_dict["low_freq"],
@@ -71,4 +72,3 @@ if __name__ == "__main__":
                      "\n"
                      "\nTimings: \nGRTcode runtime (s): " + str(grt_timing) +
                      "\nRFM runtime (s):     " +  str(rfm_timing) + "\n")
-

@@ -910,7 +910,7 @@ int getAndSetAtmosFieldsFromFile(char fname[],
     if (strcmp("rfmip",f_format) == 0)
     {
         printf("Attempting to open and read input from rfmip formatted file"
-                   "%s.\n",
+                   " %s.\n",
                    fname);
         readRfmipFieldsFromFile(fname,
                                 &in);
@@ -921,7 +921,7 @@ int getAndSetAtmosFieldsFromFile(char fname[],
     else if (strcmp("gfdl",f_format) == 0)
     {
         printf("Attempting to open and read input from gfdl formatted file"
-                   "%s.\n",
+                   " %s.\n",
                    fname);
         readGfdlFieldsFromFile(fname,
                                &in);
