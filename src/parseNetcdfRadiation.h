@@ -32,17 +32,18 @@
 */
 typedef struct radiationInputFields_t
 {
-    float *RH2O;   /*Layer water vapor mixing ratios (kg/kg).*/
-    float *RCO2;   /*Layer carbon dioxide mixing ratios (kg/kg).*/
-    float *QO3;    /*Layer ozone mixing ratios (kg/kg).*/
-    float *RN2O;   /*Layer nitrous oxide mixing ratios (kg/kg).*/
-    float *RCO;    /*Layer carbon monoxide mixing ratios (kg/kg).*/
-    float *RCH4;   /*Layer methane mixing ratios (kg/kg).*/
-    float *RO2;    /*Layer oxygen mixing ratios (kg/kg).*/
-    float *DPFLUX; /*Radiation flus layer thicknesses [(dP/dz)*delta_z] (hPa).*/
+    float *RH2O;   /*Layer water vapor mole fractions (mol/mol) or mixing
+                         ratios (kg/kg).*/
+    float *RCO2;   /*Layer carbon dioxide mole fractions (mol/mol).*/
+    float *QO3;    /*Layer ozone mole fractions (mol/mol) or mixing
+                         ratios (kg/kg).*/
+    float *RN2O;   /*Layer nitrous oxide mole fractions (mol/mol).*/
+    float *RCO;    /*Layer carbon monoxide mole fractions (mol/mol).*/
+    float *RCH4;   /*Layer methane mole fractions (mol/mol).*/
+    float *RO2;    /*Layer oxygen mole fractions (mol/mol).*/
     float *PRESSM; /*Layer pressures (Pa).*/
     float *TEMP;   /*Layer Temperatures (K).*/
-    float *DELTAZ; /*Layer thicknesses [delta_z] (m).*/
+    float *DELTAZ; /*Layer thicknesses (m).*/
     size_t nlat;   /*Number of latitude grid points.*/
     size_t nlon;   /*Number of longitude grid points.*/
     size_t npfull; /*Number of pressure layers.*/
@@ -51,7 +52,8 @@ typedef struct radiationInputFields_t
 } radiationInputFields_t;
 
 /*Notes on units in the radiation output fields.:
-    The output arrays are stored as (time,lat,lon,pressure).
+    The output arrays are stored as (time,lat,lon,pressure) or
+    (time,lat,lon,molecule,pressure).
 */
 typedef struct radiationOutputFields_t
 {
@@ -67,32 +69,32 @@ typedef struct radiationOutputFields_t
     size_t ntime;   /*NUmber of time grid points.*/
 } radiationOutputFields_t;
 
-int radiationInputFieldsMalloc(radiationInputFields_t* in);
+int readRfmipFieldsFromFile(char fname[],
+                            radiationInputFields_t* in);
+
+int setOutputFieldsFromRfmip(radiationInputFields_t *in,
+                             radiationOutputFields_t *out);
+
+int readGfdlFieldsFromFile(char fname[],
+                           radiationInputFields_t* in);
+
+int setOutputFieldsFromGfdl(radiationInputFields_t *in,
+                            radiationOutputFields_t *out);
 
 int radiationOutputFieldsMalloc(radiationOutputFields_t* out);
 
-int radiationInputFieldsFree(radiationInputFields_t* in);
-
 int radiationOutputFieldsFree(radiationOutputFields_t* out);
-
-int readInputFieldsFromFile(char fname[],
-                            radiationInputFields_t* in);
-
-REAL_t getNumberDensity(const REAL_t rh2o,
-                        const REAL_t dpflux,
-                        const int hitranMolId);
-
-REAL_t getPartialPres(REAL_t rh2o,
-                      REAL_t pressm,
-                      const REAL_t molarMass);
-
-int setOutputFields(radiationInputFields_t *in,
-                    radiationOutputFields_t *out);
 
 int getAndSetAtmosFieldsFromFile(char fname[],
                                  char *f_format,
                                  radiationOutputFields_t* out);
 
-int test(char fname[]);
+#ifndef SKIPMAIN
+int test(char fname[],
+         char *f_format);
+
+int test2(char fname[],
+          char *f_format);
+#endif
 
 #endif

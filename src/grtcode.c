@@ -464,172 +464,103 @@ static void checkMolConfig(struct arguments *args,
                            int const time)
 {
     /*Local variables*/
-    REAL_t *PS = atmosData->PS;            /*Molecular partial pressure (atm).*/
-    const size_t nlat = atmosData->nlat;   /*Number of latitude grid points.*/
-    const size_t nlon = atmosData->nlon;   /*Number of longitude grid points.*/
-    const size_t nlvl = atmosData->npfull; /*Number of pressure layers.*/
-    int abort = 0;                         /*Abort flag.*/
+    REAL_t *PS = atmosData->PS;
+    const size_t nlat = atmosData->nlat;
+    const size_t nlon = atmosData->nlon;
+    const size_t nlvl = atmosData->npfull;
+    int in_input_file = 0;
+    int is_rfmip = 0;
+    double concentration;
 
-    /*If the member of the arguments structure named after the molecule is
-      -1 (i.e., args->h2o = -1), then it is assumed that this molecule's
-      partial pressure is taken from the inputted atmosphere file.  Otherwise
-      calculate the parital pressure values for the molecule.*/
+    /*Determine if the input file was a rfmip formatted netcdf file.*/
+    if (strcmp(args->atmos_format,"rfmip") == 0)
+    {
+        is_rfmip = 1;
+    }
+
+    if (molid == 1 || molid == 3)
+    {
+        /*Currently water vapor and ozone concentrations are contained
+          in both kinds (rfmip and gfdl) input netcdf files.*/
+        in_input_file = 1;
+    }
+    else
+    {
+        if (is_rfmip)
+        {
+            /*Currently co2, n2o, co, ch4, and o2 are only contained in
+              gfdl formatted input netcdf files.*/
+            in_input_file = 1;
+        }
+    }
+
+    /*Store the inputted molecular concentration of the inputted molecule.*/
     switch(molid)
     {
         case 1:
-            if (args->h2o == 0)
-            {
-                abort = 1;
-            }
-            else if (args->h2o > 0)
-            {
-                setGlobalPartialPres(args->h2o,
-                                     PS,
-                                     atmosData->P,
-                                     molid,
-                                     time,
-                                     nlat,
-                                     nlon,
-                                     (size_t)NUM_MOL,
-                                     nlvl);
-            }
+            concentration = args->h2o;
             break;
         case 2:
-            if (args->co2 == 0)
-            {
-                abort = 1;
-            }
-            else if (args->co2 > 0)
-            {
-                setGlobalPartialPres(args->co2,
-                                     PS,
-                                     atmosData->P,
-                                     molid,
-                                     time,
-                                     nlat,
-                                     nlon,
-                                     (size_t)NUM_MOL,
-                                     nlvl);
-            }
+            concentration = args->co2;
             break;
         case 3:
-            if (args->o3 == 0)
-            {
-                abort = 1;
-            }
-            else if (args->o3 > 0)
-            {
-                setGlobalPartialPres(args->o3,
-                                     PS,
-                                     atmosData->P,
-                                     molid,
-                                     time,
-                                     nlat,
-                                     nlon,
-                                     (size_t)NUM_MOL,
-                                     nlvl);
-            }
+            concentration = args->o3;
             break;
         case 4:
-            if (args->n2o == 0)
-            {
-                abort = 1;
-            }
-            else if (args->n2o > 0)
-            {
-                setGlobalPartialPres(args->n2o,
-                                     PS,
-                                     atmosData->P,
-                                     molid,
-                                     time,
-                                     nlat,
-                                     nlon,
-                                     (size_t)NUM_MOL,
-                                     nlvl);
-            }
+            concentration = args->n2o;
             break;
         case 5:
-            if (args->co == 0)
-            {
-                abort = 1;
-            }
-            else if (args->co > 0)
-            {
-                setGlobalPartialPres(args->co,
-                                     PS,
-                                     atmosData->P,
-                                     molid,
-                                     time,
-                                     nlat,
-                                     nlon,
-                                     (size_t)NUM_MOL,
-                                     nlvl);
-            }
+            concentration = args->co;
             break;
         case 6:
-            if (args->ch4 == 0)
-            {
-                abort = 1;
-            }
-            else if (args->ch4 > 0)
-            {
-                setGlobalPartialPres(args->ch4,
-                                     PS,
-                                     atmosData->P,
-                                     molid,
-                                     time,
-                                     nlat,
-                                     nlon,
-                                     (size_t)NUM_MOL,
-                                     nlvl);
-            }
+            concentration = args->ch4;
             break;
         case 7:
-            if (args->o2 == 0)
-            {
-                abort = 1;
-            }
-            else if (args->o2 > 0)
-            {
-                setGlobalPartialPres(args->o2,
-                                     PS,
-                                     atmosData->P,
-                                     molid,
-                                     time,
-                                     nlat,
-                                     nlon,
-                                     (size_t)NUM_MOL,
-                                     nlvl);
-            }
+            concentration = args->o2;
             break;
         default:
-            abort = -1;
-        break;
+            fprintf(stderr,
+                    "Error(checkMolConfig): this Hitfiles MolId (%d) does not"
+                        " appear to be supported yet.\n",
+                    molid);
+            exit(EXIT_FAILURE);
     }
 
-    /*Check abort flag and print any necessary errrors.*/
-    if (abort == -1)
+    if (concentration == 0)
     {
-        /*Throw an error if the inputted molecule id does not match any
-          supported molecule.*/
         fprintf(stderr,
-                "Error(checkMolConfig): this Hitfiles MolId (%d) does not"
-                    " appear to be supported yet.\n",
+                "Error(checkMolConfig): an inputted molecular concentration"
+                    " of zero is not currently supported for this"
+                    " Hitfiles MolId (%d).\n",
                 molid);
         exit(EXIT_FAILURE);
     }
-    else if (abort != 0)
+    else if (concentration < 0)
     {
-        /*Throw an error if there are any missing molecular concentration
-          values.*/
-        fprintf(stderr,
-                "Error(checkMolConfig): this Hitfile MolId (%d) does not"
-                    " appear to match any of the provided molecular"
-                    " concentrations. Either a Hitfile is missing, an"
-                    " incorrect Hitfile was inputted, or an extra molecular"
-                    " concentration was specified.\n",
-                molid);
-        exit(EXIT_FAILURE);
+        if (!in_input_file)
+        {
+            fprintf(stderr,
+                    "Error(checkMolConfig): Hitfiles MolId's (%d)"
+                        " concentration is not contained in gfdl formatted"
+                        " input atmosphere files.  Please provide a value"
+                        " on the command line.\n.",
+                    molid);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        /*Calculate the molecule's partial pressure from the inputted
+          concentration (ppmv) value.*/
+        setGlobalPartialPres(concentration,
+                             PS,
+                             atmosData->P,
+                             molid,
+                             time,
+                             nlat,
+                             nlon,
+                             (size_t)NUM_MOL,
+                             nlvl);
     }
 
     /*Calculate the number densities for the molecule.*/
@@ -2081,7 +2012,7 @@ int main(int argc,
       exists.*/
     if (arguments.co2 == 0)
     {
-        argumetnts.co2 = -1;
+        arguments.co2 = -1;
         arguments.nmolConcOver++;
     }
 
