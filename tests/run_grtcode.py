@@ -31,7 +31,7 @@ def run_grtcode(mols,
                 minFreq,
                 maxFreq,
                 freqRes,
-                lines=[],
+                lines,
                 forceBuild=False):
     """
     Build (if necessary) and run grtcode.  Return the path of the output
@@ -69,19 +69,65 @@ def run_grtcode(mols,
                              ") must be one of:\n" + grtExecDictKeyString)
 
     #Check minFreq input.
-    if not isinstance(minFreq,int):
-        raise TypeError("the inputted frequency lower bound(" +
-                            repr(minFreq) + ") must be an int.\n")
+    if isinstance(minFreq,str):
+        try:
+            minFreq = int(minFreq.strip())
+        except:
+            raise ValueError("the inputted frequency lower bound (" +
+                                 repr(minFreq) + ") cannot be converted" +
+                                 " to an int.\n")
+    else:
+        if not isinstance(minFreq,int):
+            raise TypeError("the inputted frequency lower bound (" +
+                                repr(minFreq) + ") must be an int.\n")
 
     #Check maxFreq input.
-    if not isinstance(maxFreq,int):
-        raise TypeError("the inputted frequency upper bound(" +
-                            repr(maxFreq) + ") must be an int.\n")
+    if isinstance(maxFreq,str):
+        try:
+            maxFreq = int(maxFreq.strip())
+        except:
+            raise ValueError("the inputted frequency upper bound (" +
+                                 repr(maxFreq) + ") cannot be converted" +
+                                 " to an int.\n")
+    else:
+        if not isinstance(maxFreq,int):
+            raise TypeError("the inputted frequency upper bound(" +
+                                repr(maxFreq) + ") must be an int.\n")
 
     #Check freqRes input.
-    if not isinstance(freqRes,int) and not isinstance(freqRes,float):
-        raise TypeError("the inputted frequency resolution(" +
-                            repr(freqRes) + ") must be an int or a float.\n")
+    if isinstance(freqRes,str):
+        try:
+            freqRes = float(freqRes.strip())
+        except:
+            raise ValueError("the inputted frequency resolution (" +
+                                 repr(freqRes) + ") cannot be converted" +
+                                 " to a float.")
+    else:
+        if not isinstance(freqRes,int) and not isinstance(freqRes,float):
+            raise TypeError("the inputted frequency resolution (" +
+                                repr(freqRes) + ") must be an int or a " +
+                                "float.\n")
+
+    #Check lines input.
+    use_all_lines = False
+    spectralLines = []
+    if not isinstance(lines,list) and not isinstance(lines,set):
+        raise TypeError("the inputted lines must be a list or a set.\n")
+    if len(lines) == 1 and lines[0].strip() == "all":
+        use_all_lines = True
+    else:
+        for line in lines:
+            if isinstance(line,str):
+                try:
+                    spectralLines.append(float(line.strip()))
+                except:
+                    raise TypeError("the inputted line frequency (" +
+                                        repr(line) + ") cannot be converted" +
+                                        " to a float.")
+            elif not isinstance(lines,int) and not isinstance(lines,float):
+                raise TypeError("the inputted line frequency (" +
+                                    repr(line) + ") must be an int or a " +
+                                    "float.\n")
 
     #Store the current directory.
     pwd = getcwd()
@@ -112,12 +158,10 @@ def run_grtcode(mols,
                                  ") does not exist in the directory " +
                                  grtHitDir + ".\n")
 
-    #Remove any duplicates from the lines list.
-    spectralLines = set(lines)
-
     #If a specific set of lines will be used, then generate the necessary
     #hitran file for each molecule.
-    if lines:
+    if not use_all_lines:
+        spectralLines = set(spectralLines)
         newHitranFiles = {}
         for m in molecules:
             tmp = (m.strip()).lower()
