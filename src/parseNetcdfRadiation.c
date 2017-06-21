@@ -49,7 +49,6 @@ int readRfmipFieldsFromFile(char fname[],
     size_t j;
     size_t k;
     size_t zoffset;
-    size_t poffset;
     size_t loffset;
     float dp;
     float g = 9.80665; /*(m/s^2)*/

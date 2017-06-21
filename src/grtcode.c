@@ -2234,7 +2234,11 @@ int main(int argc,
 
     /*Get filename and parse in lines*/
     RefLine_flags_t flags= {((unsigned int) -1),1,0}; /* host cuda malloc default, host=True, device=false */
+    arguments.T = atmosData.ntime;
+    time = arguments.T;
+/*
     time = arguments.T - arguments.t + 1;
+*/
     for(mol=0;mol<nMols;++mol)
     {
         HitLines[mol] = parseHITRANfile(hitFnameList[mol],
@@ -2253,7 +2257,7 @@ int main(int argc,
     }
 
     /*Compute the spectra.*/
-    for (time=arguments.t;time<=arguments.T;++time)
+    for (time=arguments.t;time<arguments.T;++time)
     {
         for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
         {
