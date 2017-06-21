@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 #include <netcdf.h>
 #include "parseNetcdfRadiation.h"
 
@@ -330,15 +331,13 @@ int readRfmipFieldsFromFile(char fname[],
             for (k=0;k<in->npfull;k++)
             {
                 zoffset = i*(in->nlat)*(in->npfull) + j*(in->npfull) + k;
-                poffset = j*(in->npfull) + k;
                 loffset = j*(in->nphalf) + k;
-                dp = (plevs[loffset+1] - plevs[loffset]);
+                dp = log(plevs[loffset+1]) - log(plevs[loffset]);
                 if (dp < 0)
                 {
                     dp = -1.0*dp;
                 }
-                (in->DELTAZ)[zoffset] = (dp*R*((in->TEMP)[zoffset]))/
-                                            (M*g*((in->PRESSM)[poffset]));
+                (in->DELTAZ)[zoffset] = (dp*R*((in->TEMP)[zoffset]))/(M*g);
             }
         }
     }
@@ -367,6 +366,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
     size_t t;
     size_t i;
     size_t k;
+    REAL_t xh2o;
 
     /*Copy metadata into the output fields from the input fields.*/ 
     out->nlat = in->nlat;
@@ -441,33 +441,34 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
 
                 out->DELTAZ[offset] = ((REAL_t)(in->DELTAZ[offset]))*MToCm;
 
-                out->PS[h2o_offset] = (((REAL_t)(in->RH2O[offset]))*
-                                          ((REAL_t)(in->PRESSM[poffset])))*
-                                          PaToAtm;
+                xh2o = ((REAL_t)(in->RH2O[offset]));
 
-                out->PS[co2_offset] = (((REAL_t)(in->RCO2[t]))*
-                                          ((REAL_t)(in->PRESSM[poffset])))*
-                                          PaToAtm;
+                out->PS[h2o_offset] = ((xh2o*((REAL_t)(in->PRESSM[poffset])))/
+                                          (1.0 + xh2o))*PaToAtm;
 
-                out->PS[o3_offset] = (((REAL_t)(in->QO3[offset]))*
-                                         ((REAL_t)(in->PRESSM[poffset])))*
-                                         PaToAtm;
+                out->PS[co2_offset] = ((((REAL_t)(in->RCO2[t]))*
+                                          ((REAL_t)(in->PRESSM[poffset])))/
+                                          (1.0 + xh2o))*PaToAtm;
 
-                out->PS[n2o_offset] = (((REAL_t)(in->RN2O[t]))*
-                                          ((REAL_t)(in->PRESSM[poffset])))*
-                                          PaToAtm;
+                out->PS[o3_offset] = ((((REAL_t)(in->QO3[offset]))*
+                                         ((REAL_t)(in->PRESSM[poffset])))/
+                                         (1.0 + xh2o))*PaToAtm;
 
-                out->PS[co_offset] = (((REAL_t)(in->RCO[t]))*
-                                         ((REAL_t)(in->PRESSM[poffset])))*
-                                         PaToAtm;
+                out->PS[n2o_offset] = ((((REAL_t)(in->RN2O[t]))*
+                                          ((REAL_t)(in->PRESSM[poffset])))/
+                                          (1.0 + xh2o))*PaToAtm;
 
-                out->PS[ch4_offset] = (((REAL_t)(in->RCH4[t]))*
-                                          ((REAL_t)(in->PRESSM[poffset])))*
-                                          PaToAtm;
+                out->PS[co_offset] = ((((REAL_t)(in->RCO[t]))*
+                                         ((REAL_t)(in->PRESSM[poffset])))/
+                                         (1.0 + xh2o))*PaToAtm;
 
-                out->PS[o2_offset] = (((REAL_t)(in->RO2[t]))*
-                                         ((REAL_t)(in->PRESSM[poffset])))*
-                                         PaToAtm;
+                out->PS[ch4_offset] = ((((REAL_t)(in->RCH4[t]))*
+                                          ((REAL_t)(in->PRESSM[poffset])))/
+                                          (1.0 + xh2o))*PaToAtm;
+
+                out->PS[o2_offset] = ((((REAL_t)(in->RO2[t]))*
+                                         ((REAL_t)(in->PRESSM[poffset])))/
+                                         (1.0 + xh2o))*PaToAtm;
             }
         }
     }
@@ -712,6 +713,7 @@ int setOutputFieldsFromGfdl(radiationInputFields_t *in,
     size_t k;
     size_t i;
     size_t j;
+    REAL_t xh2o;
 
     /*Copy metadata into the output fields from the input fields.*/ 
     out->nlat = in->nlat;
@@ -778,13 +780,15 @@ int setOutputFieldsFromGfdl(radiationInputFields_t *in,
 
                     out->DELTAZ[out_offset] = ((REAL_t)(in->DELTAZ[in_loffset]))*MToCm;
 
-                    out->PS[h2o_offset] = (((REAL_t)(in->RH2O[in_offset]))*
-                                              ((REAL_t)(in->PRESSM[in_offset])))*
-                                              (DryAirM/WaterM)*PaToAtm;
+                    xh2o = ((REAL_t)(in->RH2O[in_offset]))*(DryAirM/WaterM);
 
-                    out->PS[o3_offset] = (((REAL_t)(in->QO3[in_offset]))*
-                                             ((REAL_t)(in->PRESSM[in_offset])))*
-                                             (DryAirM/OzoneM)*PaToAtm;
+                    out->PS[h2o_offset] = ((xh2o*((REAL_t)(in->PRESSM[in_offset])))/
+                                              (1.0 + xh2o))*PaToAtm;
+
+                    out->PS[o3_offset] = ((((REAL_t)(in->QO3[in_offset]))*
+                                             ((REAL_t)(in->PRESSM[in_offset]))*
+                                             (DryAirM/OzoneM))/
+                                             (1.0 + xh2o))*PaToAtm;
                 }
             }
         }
