@@ -447,7 +447,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
 
                 out->PS[co2_offset] = ((((REAL_t)(in->RCO2[t]))*
                                           ((REAL_t)(in->PRESSM[poffset])))/
-                                          (1.0 + xh2o))*PaToAtm;
+                                          (1.0 + xh2o))*PaToAtm*1.e-6;
 
                 out->PS[o3_offset] = ((((REAL_t)(in->QO3[offset]))*
                                          ((REAL_t)(in->PRESSM[poffset])))/
@@ -455,7 +455,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
 
                 out->PS[n2o_offset] = ((((REAL_t)(in->RN2O[t]))*
                                           ((REAL_t)(in->PRESSM[poffset])))/
-                                          (1.0 + xh2o))*PaToAtm;
+                                          (1.0 + xh2o))*PaToAtm*1.e-9;
 
                 out->PS[co_offset] = ((((REAL_t)(in->RCO[t]))*
                                          ((REAL_t)(in->PRESSM[poffset])))/
@@ -463,7 +463,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
 
                 out->PS[ch4_offset] = ((((REAL_t)(in->RCH4[t]))*
                                           ((REAL_t)(in->PRESSM[poffset])))/
-                                          (1.0 + xh2o))*PaToAtm;
+                                          (1.0 + xh2o))*PaToAtm*1.e-9;
 
                 out->PS[o2_offset] = ((((REAL_t)(in->RO2[t]))*
                                          ((REAL_t)(in->PRESSM[poffset])))/
