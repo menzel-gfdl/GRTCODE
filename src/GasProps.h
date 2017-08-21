@@ -47,4 +47,3 @@ void setGlobalNumberDensity(REAL_t * const N,
                             size_t const nlvl);
 
 #endif
-

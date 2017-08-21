@@ -19,4 +19,3 @@ REAL_t eta(REAL_t const lorFWHM,
            REAL_t const gauFWHM);
 
 #endif
-

@@ -37,7 +37,8 @@ if __name__ == "__main__":
     testObject.show()
 
     #Run the test using GRTcode.
-    grt_output_file, grt_timing = run_grtcode(testObject.params_dict["mols"].split(),
+    grt_output_file, grt_timing = run_grtcode(testObject.params_dict["architecture"],
+                                              testObject.params_dict["mols"].split(),
                                               testObject.params_dict["atmos_input_file"],
                                               testObject.params_dict["atmos_input_file_type"],
                                               "../",
@@ -46,7 +47,8 @@ if __name__ == "__main__":
                                               testObject.params_dict["high_freq"],
                                               testObject.params_dict["resolution"],
                                               testObject.params_dict["lines"].split(),
-                                              forceBuild=False)
+                                              skipBuild=False)
+    stdout.write("\nGRTcode runtime (s): " + str(grt_timing) + "\n")
     exit()
 
     #Run the test using RFM.

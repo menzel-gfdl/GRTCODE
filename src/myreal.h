@@ -21,5 +21,4 @@
 /* typedef double REAL_t; */
 typedef float REAL_t;
 
-
 #endif

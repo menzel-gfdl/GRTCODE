@@ -45,6 +45,7 @@
 #include "pre_eval_Snn.h"
 #include "RfmVoigtFuncs.h"
 #include "TIPS_2011.h"
+#include "omp.h"
 
 /*---------------------------------------------------------------------------*/
 /*Helper data structures.*/
@@ -1912,6 +1913,11 @@ int device_launch(int* nStreams,
 int main(int argc,
          char* argv[])
 {
+#ifdef _OPENMP
+    /*Set openmp number of threads.*/
+    omp_set_num_threads(4);
+#endif
+
     /*Local variables*/
     int world_size = -1; /*Number of ranks in MPI_COMM_WORLD.*/
     int world_rank = -1; /*Process rank id in MPI_COMM_WORLD.*/

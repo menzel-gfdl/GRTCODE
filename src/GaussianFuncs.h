@@ -34,4 +34,3 @@ REAL_t gaussian_fwhm(REAL_t const T,
                      REAL_t const v0);
 
 #endif
-

@@ -33,4 +33,3 @@ REAL_t lorentz_fwhm(REAL_t const P,
                     REAL_t const Ps);
 
 #endif
-

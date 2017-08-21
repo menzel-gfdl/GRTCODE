@@ -38,7 +38,15 @@ grtExecDictKeyString = ""
 for key in grtExecDict:
     grtExecDictKeyString += "\t" + key + "\n"
 
-def run_grtcode(mols,
+archTypeList = ["gpu",
+                "cpu",
+                "cpu_openmp"]
+archTypeListString = ""
+for item in archTypeList:
+    archTypeListString += "\t" + item + "\n"
+
+def run_grtcode(architecture,
+                mols,
                 atmosFile,
                 atmosFileType,
                 baseDir,
@@ -47,11 +55,19 @@ def run_grtcode(mols,
                 maxFreq,
                 freqRes,
                 lines,
-                forceBuild=False):
+                skipBuild=False):
     """
-    Build (if necessary) and run grtcode.  Return the path of the output
+    Build and run grtcode.  Return the path of the output
     file and the time it took to run the executable.
     """
+
+    #Check architecture input.
+    if not isinstance(architecture,str):
+        raise TypeError("the inputted architecture (" + repr(architecture) +
+                            ") must be a string.\n")
+    if architecture.lower() not in archTypeList:
+        raise ValueError("the inputted architecture (" + architecture +
+                             ") must be one of:\n" + archTypeListString)
 
     #Check mols input.
     if not isinstance(mols,list) and not isinstance(mols,set):
@@ -201,13 +217,26 @@ def run_grtcode(mols,
 
     #Build the executable if necessary.
     executable = grtExecDict[lineShape]
-    if forceBuild or executable not in listdir(grtRunDir):
+    if not skipBuild:
 
         #Run make clean and make all_grtcode.
+        if architecture.lower() == "gpu":
+            makefile = "Makefile"
+        else:
+            makefile = "Makefile.gnu"
+
+        if architecture.lower() == "cpu_openmp":
+            opts = "OPENMP=on"
+        else:
+            opts = ""
+
         run_make(grtBuildDir,
+                 makefile,
                  "clean")
+
         run_make(grtBuildDir,
-                 "all_grtcode")
+                 makefile,
+                 "all_grtcode " + opts)
 
         #Copy the executable to the run directory.
         copy_file(grtBuildDir + "/" + executable,
@@ -228,6 +257,8 @@ def run_grtcode(mols,
             "-W" + str(maxFreq),
             "-r" + str(freqRes),
             "-f" + str(input_file_format)]
+    if architecture.lower() != "gpu":
+        args.append("-h")
     for m in molecules:
         tmp = (m.strip()).lower()
         args.append(ppmvDict[tmp])

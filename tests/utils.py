@@ -2,6 +2,7 @@ import os
 import subprocess
 
 def run_make(buildDir,
+             makefile="Makefile",
              target=[]):
     """
     Run make target in the inputted build directory.
@@ -18,20 +19,22 @@ def run_make(buildDir,
     pwd = os.getcwd()
 
     #Make sure a Makefile exists in the build directory.
-    if not "Makefile" in os.listdir(buildDir):
-        raise ValueError("no Makefile exists in the build directory " +
+    if not makefile in os.listdir(buildDir):
+        raise ValueError(makefile + "does not exist in the build directory " +
                              buildDir + ".\n")
 
     #Change to the build directory.
     os.chdir(buildDir)
 
     #Run make target.
-    makeArgs = ["make"] + target
+    makeArgs = ["make"] + ["-j12"] + ["-f"] + [makefile] + target
     tmp = subprocess.Popen(makeArgs)
     tmp.wait()
     if tmp.returncode != 0:
-        raise ValueError("make " + " ".join(map(str,target)) + " failed and" +
-                             " returned code " + str(tmp.returncode) + ".\n")
+        raise ValueError("make -f " + makefile + " " + 
+                             " ".join(map(str,target)) +
+                             " failed and returned code " +
+                             str(tmp.returncode) + ".\n")
 
     #Change back to the directory you started in.
     os.chdir(pwd)
