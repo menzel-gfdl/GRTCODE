@@ -10,7 +10,7 @@ void parseCKD(const char fname[],
               REAL_t const res);
 
 #ifdef __NVCC__
-__host__ __device__
+__global__
 void calc_ctm_optdepth(unsigned int const nF,
                        unsigned int const numLayers,
                        REAL_t * const optdepth,

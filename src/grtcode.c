@@ -1734,7 +1734,7 @@ int device_launch(int *nStreams,
                   REAL_t const * const CS_d,
                   REAL_t const * const CF_d,
                   REAL_t const * const T0_d,
-                  REAL_t const * const T0F_d);
+                  REAL_t const * const T0F_d)
 {
     /*Local variables*/
     unsigned int m;
@@ -2288,7 +2288,7 @@ int main(int argc,
     {
         arguments.T = atmosData.ntime - 1;
     }
-    else if (arguments.T > atmosData.ntime-1)
+    else if ((size_t)arguments.T > atmosData.ntime-1)
     {
         fprintf(stderr,
                 "Upper time bound %d excepts the maximum time level (%zu) in"
@@ -2425,7 +2425,6 @@ int main(int argc,
     /*Compute the spectra.*/
     unsigned int lon;
     REAL_t *out = NULL;
-    size_t idx;
     for (time=arguments.t;time<=arguments.T;++time)
     {
         for (lat=compute_lat_beg;lat<compute_lat_end;++lat)

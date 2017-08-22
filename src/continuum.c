@@ -51,7 +51,7 @@ void parseCKD(const char fname[],
                 line_count*sizeof(REAL_t));
     }
 
-    unsigned int count = 0;
+    int count = 0;
     double v0;
     double v1;
     rewind(F);
@@ -154,7 +154,7 @@ void parseCKD(const char fname[],
 
 /*---------------------------------------------------------------------------*/
 #ifdef __NVCC__
-__host__ __device__
+__global__
 void calc_ctm_optdepth(unsigned int const nF,
                        unsigned int const numLayers,
                        REAL_t * const optdepth,
