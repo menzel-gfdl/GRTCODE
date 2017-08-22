@@ -1,31 +1,39 @@
-/* GRTCODE is a GPU-able Radiative Transfer Code
- * Copyright (C) 2016  Garrett Wright
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; version 2.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
- */
-
 #ifndef SET_CONTINUUM_H_
 #define SET_CONTINUUM_H_
 
 #include "myreal.h"
 
-void get_CTM(REAL_t* const OPT_CTM,
-             REAL_t const * const T,
-             REAL_t const * const P,
-             REAL_t const * const HGT,
-             REAL_t const * const H2O,
-             const size_t NLINES,
-             const size_t NLAYERS);
+void parseCKD(const char fname[],
+              REAL_t *AryPtr,
+              const int maxwavenum,
+              const int minw,
+              REAL_t const res);
+
+#ifdef __NVCC__
+__host__ __device__
+void calc_ctm_optdepth(unsigned int const nF,
+                       unsigned int const numLayers,
+                       REAL_t * const optdepth,
+                       REAL_t const * const CS,
+                       REAL_t const * const T,
+                       REAL_t const * const PS_H2O,
+                       REAL_t const * const Z,
+                       REAL_t const * const T0,
+                       REAL_t const * const CF,
+                       REAL_t const * const P,
+                       REAL_t const * const T0F);
+#endif
+
+void calc_ctm_optdepth_h(unsigned int const nF,
+                         unsigned int const numLayers,
+                         REAL_t * const optdepth,
+                         REAL_t const * const CS,
+                         REAL_t const * const T,
+                         REAL_t const * const PS_H2O,
+                         REAL_t const * const Z,
+                         REAL_t const * const T0,
+                         REAL_t const * const CF,
+                         REAL_t const * const P,
+                         REAL_t const * const T0F);
 
 #endif

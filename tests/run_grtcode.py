@@ -1,4 +1,4 @@
-from os import chdir, getcwd, listdir
+from os import chdir, getcwd, listdir, getenv
 from time import time
 from extract_single_line import create_lines_specific_hitran_file
 from hitran_utils import hitranDict, hitranDictKeyString
@@ -223,7 +223,10 @@ def run_grtcode(architecture,
         if architecture.lower() == "gpu":
             makefile = "Makefile"
         else:
-            makefile = "Makefile.gnu"
+            if getenv("HOSTNAME") == "lsrmic01-d":
+                makefile = "Makefile.intel"
+            else:
+                makefile = "Makefile.gnu"
 
         if architecture.lower() == "cpu_openmp":
             opts = "OPENMP=on"
@@ -243,6 +246,7 @@ def run_grtcode(architecture,
                   grtRunDir)
 
     #Run the executable.  Time how long the executable takes to run.
+    chdir(grtRunDir)
     grtOutputFile = "foo"
     tmp = (atmosFileType.strip()).lower()
     if tmp == "gfdl":
@@ -259,6 +263,9 @@ def run_grtcode(architecture,
             "-f" + str(input_file_format)]
     if architecture.lower() != "gpu":
         args.append("-h")
+
+    args.append("-C")
+
     for m in molecules:
         tmp = (m.strip()).lower()
         args.append(ppmvDict[tmp])

@@ -45,5 +45,4 @@ __host__ __device__
 #endif
 REAL_t pseudoVoigt(REAL_t eta, REAL_t lory, REAL_t gauy);
 
-
 #endif

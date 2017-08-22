@@ -164,7 +164,8 @@ static struct argp_option options[] =
      'T',
      "VAL",
      OPTION_ARG_OPTIONAL, 
-     "maximum time (upper bound, inclusive), defaults 0",
+     "maximum time (upper bound, inclusive), defaults to maximum time level"
+         " in the input file.",
      -3},
 
     {"res",
@@ -880,7 +881,12 @@ int host_launch(unsigned int const numMols,
                 REAL_t * const out,
                 int const time,
                 int const lat,
-                int const lon)
+                int const lon,
+                int const continuum,
+                REAL_t const * const CS_h,
+                REAL_t const * const CF_h,
+                REAL_t const * const T0_h,
+                REAL_t const * const T0F_h)
 {
     /*Local variables*/
     unsigned int mol;
@@ -944,6 +950,25 @@ int host_launch(unsigned int const numMols,
     host_optics_free(&LinesBuf_h,
                      &OpticsBuf_h,
                      flags);
+
+    if (continuum)
+    {
+        printf("%s Kernel Launch.. %d frequencies ... ",
+               "calc_ctm_optdepth_h",
+               nF);
+        calc_ctm_optdepth_h(nF,
+                            numLayers,
+                            out,
+                            CS_h,
+                            T,
+                            &(PS[(L[H2O].mol-1)*atmosData->npfull]),
+                            DELTAZ,
+                            T0_h,
+                            CF_h,
+                            P,
+                            T0F_h);
+        printf("..done!\n");
+    }
 
     return EXIT_SUCCESS;
 }
@@ -1704,7 +1729,12 @@ int device_launch(int *nStreams,
                   REAL_t * const out,
                   int const time,
                   int const lat,
-                  int const lon)
+                  int const lon,
+                  int const continuum,
+                  REAL_t const * const CS_d,
+                  REAL_t const * const CF_d,
+                  REAL_t const * const T0_d,
+                  REAL_t const * const T0F_d);
 {
     /*Local variables*/
     unsigned int m;
@@ -1847,6 +1877,40 @@ int device_launch(int *nStreams,
                            &(OpticsBuf_d[s]));
     }
 
+    if (continuum)
+    {
+        /*Calculate the continuum optical depth.*/
+        int dimBlock = 0;
+        int minGridSize = 0;
+        int dimGrid = 0;
+        HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
+                                                        &dimBlock,
+                                                        calc_ctm_optdepth,
+                                                        0,
+                                                        ((int)nF)));
+        dimGrid = (((int)nF) + dimBlock - 1)/dimBlock;
+
+        /*Execute the calc_ctm_optdepth kernel.*/
+        printf("%s Kernel Launch.. %d frequencies ... ",
+               "calc_ctm_optdepth",
+               nF);
+        printf("using dimBlock = %d and dimGrid = %d  ... ",
+               dimBlock,
+               dimGrid);
+        calc_ctm_optdepth<<<(unsigned int)dimGrid,(unsigned int)dimBlock,0,0>>>(nF,
+                                                                                numLayers,
+                                                                                out_d,
+                                                                                CS_d,
+                                                                                T_d,
+                                                                                &(PS_d[(L[H2O].mol-1)*atmosData->npfull]),
+                                                                                Z_d,
+                                                                                T0_d,
+                                                                                CF_d,
+                                                                                P_d,
+                                                                                T0F_d);
+        printf("..done!\n");
+    }
+
     /*Memcpy the optical depths from the device back to the host.*/
     printf("Memcpy opticalDepth (out) to host..");
     HANDLE_ERROR(cudaMemcpy(out,
@@ -1913,36 +1977,14 @@ int device_launch(int* nStreams,
 int main(int argc,
          char* argv[])
 {
-#ifdef _OPENMP
-    /*Set openmp number of threads.*/
-    omp_set_num_threads(4);
-#endif
+    int world_size = -1;
+    int world_rank = -1;
 
-    /*Local variables*/
-    int world_size = -1; /*Number of ranks in MPI_COMM_WORLD.*/
-    int world_rank = -1; /*Process rank id in MPI_COMM_WORLD.*/
 #ifdef MPI_ENABLED
-    int ierr = 0;        /*MPI error code.*/
-#endif
+    /*Initialize MPI.*/
+    int ierr = MPI_Init(&argc,
+                        &argv);
 
-    int time;
-    unsigned int lat;
-    unsigned int compute_lat_beg;
-    unsigned int compute_lat_end;
-    unsigned int lon;
-    unsigned int compute_lon_beg;
-    unsigned int compute_lon_end;
-    unsigned int mol;
-    size_t idx;
-    REAL_t *out = NULL;
-
-    struct arguments arguments;
-    static char default_output_fname[] ="didyouforgettospecifyoutfile.nc";
-
-    /*If necessary, initialize MPI.*/
-#ifdef MPI_ENABLED
-    ierr = MPI_Init(&argc,
-                    &argv);
     if (ierr != MPI_SUCCESS)
     {
         fprintf(stderr,
@@ -1950,6 +1992,7 @@ int main(int argc,
                 ierr);
         exit(EXIT_FAILURE);
     }
+
     ierr = MPI_Comm_size(MPI_COMM_WORLD,
                          &world_size);
     if (ierr != MPI_SUCCESS)
@@ -1959,6 +2002,7 @@ int main(int argc,
                 ierr);
         exit(EXIT_FAILURE);
     }
+
     ierr = MPI_Comm_rank(MPI_COMM_WORLD,
                          &world_rank);
     if (ierr != MPI_SUCCESS)
@@ -1970,7 +2014,11 @@ int main(int argc,
     }
 #endif
 
-    /*Set default argument values.*/
+    /*Handle command line arguments.*/
+    struct arguments arguments;
+    static char default_output_fname[] ="didyouforgettospecifyoutfile.nc";
+
+    /*Set default values.*/
     arguments.silent = 0;
     arguments.verbose = 0;
     arguments.device = 0;
@@ -1987,7 +2035,7 @@ int main(int argc,
     arguments.w = 1;
     arguments.W = 3000;
     arguments.t = 0;
-    arguments.T = 0;
+    arguments.T = -1;
     arguments.res = 1.0;
     arguments.h2o = 0;
     arguments.co2 = 0;
@@ -2004,6 +2052,38 @@ int main(int argc,
                0,
                0,
                &arguments);
+
+#ifndef MPI_ENABLED
+    /*Make sure that MPI_ENABLED was included if MPI is turned on.*/
+    if (arguments.mpi != 0)
+    {
+        fprintf(stderr,
+                "Error(main): you must build with -DMPI_ENABLED in order to"
+                    " use MPI.\n");
+        exit(EXIT_SUCCESS);
+    }
+#endif
+
+    /*Make sure that only one target was specified (device or host).  If
+      mpi is being used, then specify the number of devices (if a GPU
+      run is being performed) or number of CPU cores (if a host-only run is
+      begin performed) will be used.*/
+    if (arguments.device != 0 && arguments.host != 0)
+    {
+        fprintf(stderr,
+                "Error(main): more than one target specified.  Please use"
+                    " either --host or --device or neither flag to just"
+                    " default to device 0.\n");
+        exit(EXIT_FAILURE);
+    }
+    else if (arguments.mpi != 0 && (arguments.device == 0 &&
+             arguments.host == 0))
+    {
+        fprintf(stderr,
+                "Error(main): when specifying mpi you must specify the number"
+                    " of devices per node or --host.\n");
+        exit(EXIT_FAILURE);
+    }
 
     /*If a water concentration was not specified in the program's arguments,
       then use the value from the inputted netCDF file if it exists.*/
@@ -2070,32 +2150,8 @@ int main(int argc,
       points at which the spectra will be calculated).*/
     const unsigned int nF = (arguments.W-arguments.w)/arguments.res + 1;
 
-    /*Make sure either only host or device has been targeted.*/
-    if (arguments.device != 0 && arguments.host != 0)
-    {
-        fprintf(stderr,
-                "Error(main): more than one target specified.  Please use"
-                    " either --host or --device or neither flag to just"
-                    " default to device 0.\n");
-        exit(EXIT_FAILURE);
-    }
-    else if (arguments.mpi != 0 && (arguments.device == 0 &&
-             arguments.host == 0))
-    {
-        fprintf(stderr,
-                "Error(main): when specifying mpi you must specify the number"
-                    " of devices per node or --host.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    /*Set launchType = 0 for host, = 1 for device.*/
+    /*Set the launch type for the run (0 for host, 1 for device).*/
     const int launchType = arguments.host == 1 ? 0 : 1;
-
-#ifdef MPI_ENABLED
-    /*Determine the number of devices.*/
-    const int device_number = world_size % arguments.device;
-
-    assert(device_number >= 0); /* if this ever trips try (a+n) % n */
 
     /*Make sure that mpirun is used to execute the program if mpi is turned
       on.*/
@@ -2106,21 +2162,18 @@ int main(int argc,
                     " but did not used an mpirun style executer.\n");
         exit(EXIT_FAILURE);
     }
-#else
-    /*Make sure that MPI_ENABLED was included if MPI is turned on.*/
-    if (arguments.mpi != 0)
-    {
-        fprintf(stderr,
-                "Error(main): you must build with -DMPI_ENABLED in order to"
-                    " use MPI.\n");
-        exit(EXIT_SUCCESS);
-    }
-#endif
 
-    /*Set the GPU device number.*/
+    /*I'm not sure what was happening with the commented out lines.*/
+/*
+    const int device_number = world_size % arguments.device;
+
+    assert(device_number >= 0);
+*/
+
     if (launchType == 1)
     {
 #ifdef __NVCC__
+        /*Set the GPU to be the host's current device.*/
         const int device_number = arguments.device;
         HANDLE_ERROR(cudaSetDevice(device_number));
 #endif
@@ -2163,31 +2216,34 @@ int main(int argc,
     }
     const unsigned int nMols = arguments.nhitfiles;
     char** hitFnameList = arguments.hitfiles;
-    printf("\nSubmitted %d molecules.\n",nMols);
+    printf("\nSubmitted %d molecules.\n",
+           nMols);
 
     /*Initialize the output file.*/
     int ncid;
     int varid;
-    char *OUTPUT_FNAME=NULL;
-    compute_lat_beg = 0;
-    compute_lat_end = atmosData.nlat;
-    compute_lon_beg = 0;
-    compute_lon_end = atmosData.nlon;
+    char *OUTPUT_FNAME = NULL;
+    unsigned int compute_lat_beg = 0;
+    unsigned int compute_lat_end = atmosData.nlat;
+    unsigned int compute_lon_beg = 0;
+    unsigned int compute_lon_end = atmosData.nlon;
+    unsigned int lat;
 
-    /* output file and compute setup is very different for mpi */
     if (arguments.mpi != 0)
     {
-        OUTPUT_FNAME = (char *)malloc(strlen(arguments.output_file) + 9);
+        OUTPUT_FNAME = (char *)malloc(strlen(arguments.output_file)+9);
         if (OUTPUT_FNAME == NULL)
         {
             fprintf(stderr,
                     "Error(main): malloc failed for %zu bytes of"
-                        " OUTPUTFNAME.\n",
+                        " OUTPUT_FNAME.\n",
                     strlen(arguments.output_file) + 9);
             exit(EXIT_FAILURE);
         }
-        lat = atmosData.nlat / world_size;
-        if(lat*world_size != atmosData.nlat)
+
+        /*Split up the latitudes amongst ranks.*/
+        lat = atmosData.nlat/world_size;
+        if (lat*world_size != atmosData.nlat)
         {
             fprintf(stderr, 
                     "Warning(main): specified %d global lats across ranks=%zu"
@@ -2201,14 +2257,12 @@ int main(int argc,
         }
         compute_lat_beg = world_rank*lat;
         compute_lat_end = compute_lat_beg+lat;
-        if (compute_lat_end>atmosData.nlat)
+        if (compute_lat_end > atmosData.nlat)
         {
             compute_lat_end = atmosData.nlat;
         }
         compute_lon_beg = 0;
         compute_lon_end = atmosData.nlon;
-    /* copy existing name
-     * cat .rankN */
         sprintf(OUTPUT_FNAME,
                 "%s.rank%d",
                 arguments.output_file,
@@ -2229,23 +2283,44 @@ int main(int argc,
                            numLayers,
                            nF);
 
-    /*Declare stream parameters.*/
-#ifdef __NVCC__
-    int nstreams = -1;
-    cudaStream_t* streams = NULL;
-#endif
+    /*Check time bounds.*/
+    if (arguments.T < 0)
+    {
+        arguments.T = atmosData.ntime - 1;
+    }
+    else if (arguments.T > atmosData.ntime-1)
+    {
+        fprintf(stderr,
+                "Upper time bound %d excepts the maximum time level (%zu) in"
+                    " the input file.\n",
+                arguments.T,
+                atmosData.ntime-1);
+        exit(EXIT_FAILURE);
+    }
+    if (arguments.t < 0)
+    {
+        fprintf(stderr,
+                "Lower time bound %d must be >= 0.\n",
+                arguments.t);
+        exit(EXIT_FAILURE);
+    }
+    else if (arguments.t > arguments.T)
+    {
+        fprintf(stderr,
+                "Lower time bound %d cannot be > upper time bound %d.\n",
+                arguments.t,
+                arguments.T);
+        exit(EXIT_FAILURE);
+    }
+    int time = arguments.T - arguments.t + 1;
 
     /*Setup HITRAN lines.*/
     RefLinePtrs_t HitLines[nMols];
-
-    /*Get filename and parse in lines*/
-    RefLine_flags_t flags= {((unsigned int) -1),1,0}; /* host cuda malloc default, host=True, device=false */
-    arguments.T = atmosData.ntime;
-    time = arguments.T;
-/*
-    time = arguments.T - arguments.t + 1;
-*/
-    for(mol=0;mol<nMols;++mol)
+    RefLine_flags_t flags= {((unsigned int) -1),1,0}; /*(host cuda malloc default,
+                                                         host=True,
+                                                         device=false)*/
+    unsigned int mol;
+    for (mol=0;mol<nMols;++mol)
     {
         HitLines[mol] = parseHITRANfile(hitFnameList[mol],
                                         flags,
@@ -2262,8 +2337,96 @@ int main(int argc,
                        time);
     }
 
+    REAL_t *CS_h = NULL;
+    REAL_t *CF_h = NULL;
+    REAL_t *T0_h = NULL;
+    REAL_t *T0F_h = NULL;
+    REAL_t *CS_d = NULL;
+    REAL_t *CF_d = NULL;
+    REAL_t *T0_d = NULL;
+    REAL_t *T0F_d = NULL;
+    if (arguments.ctm == 1)
+    {
+        /*Read in continuum coefficients.*/
+        CS_h = (REAL_t *)calloc(nF,sizeof(REAL_t));
+        parseCKD("INPUT/continuum/296MTCKD25_S.ccf",
+                 CS_h,
+                 nF,
+                 arguments.w,
+                 arguments.res);
+
+        CF_h = (REAL_t *)calloc(nF,sizeof(REAL_t));
+        parseCKD("INPUT/continuum/296MTCKD25_F.ccf",
+                 CF_h,
+                 nF,
+                 arguments.w,
+                 arguments.res);
+
+        T0_h = (REAL_t *)calloc(nF,sizeof(REAL_t));
+        parseCKD("INPUT/continuum/CKDS.ppp",
+                 T0_h,
+                 nF,
+                 arguments.w,
+                 arguments.res);
+
+        T0F_h = (REAL_t *)calloc(nF,sizeof(REAL_t));
+        parseCKD("INPUT/continuum/CKDF.ppp",
+                 T0F_h,
+                 nF,
+                 arguments.w,
+                 arguments.res);
+
+#ifdef __NVCC__
+        if (launchType == 1)
+        {
+            /*Make device copies.*/
+            HANDLE_ERROR(cudaMalloc(&CS_d,
+                                    nF*sizeof(REAL_t)));
+            HANDLE_ERROR(cudaMemcpy(CS_d,
+                                    CS_h,
+                                    nF*sizeof(REAL_t),
+                                    cudaMemcpyHostToDevice));
+
+            HANDLE_ERROR(cudaMalloc(&CF_d,
+                                    nF*sizeof(REAL_t)));
+            HANDLE_ERROR(cudaMemcpy(CF_d,
+                                    CF_h,
+                                    nF*sizeof(REAL_t),
+                                    cudaMemcpyHostToDevice));
+
+            HANDLE_ERROR(cudaMalloc(&T0_d,
+                                    nF*sizeof(REAL_t)));
+            HANDLE_ERROR(cudaMemcpy(T0_d,
+                                    T0_h,
+                                    nF*sizeof(REAL_t),
+                                    cudaMemcpyHostToDevice));
+
+            HANDLE_ERROR(cudaMalloc(&T0F_d,
+                                    nF*sizeof(REAL_t)));
+            HANDLE_ERROR(cudaMemcpy(T0F_d,
+                                    T0F_h,
+                                    nF*sizeof(REAL_t),
+                                    cudaMemcpyHostToDevice));
+        }
+#endif
+    }
+
+    /*Declare stream parameters.*/
+#ifdef __NVCC__
+    int nstreams = -1;
+    cudaStream_t *streams = NULL;
+#endif
+
+#ifdef _OPENMP
+    /*Set openmp number of threads.*/
+    omp_set_num_threads(256);
+#endif
+
     /*Compute the spectra.*/
-    for (time=arguments.t;time<arguments.T;++time)
+    unsigned int lon;
+    REAL_t *out = NULL;
+    size_t idx;
+    for (time=arguments.t;time<=arguments.T;++time)
     {
         for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
         {
@@ -2271,11 +2434,13 @@ int main(int argc,
             {
                 if (launchType == 0)
                 {
-                    if (out == NULL)  /* malloc if needed, otherwise pass */
+                    if (out == NULL)
                     {
                         out = (REAL_t*)calloc(nF*numLayers,
                                               sizeof(REAL_t));
                     }
+
+                    /*Calculate line spectra on the host.*/
                     host_launch(nMols,
                                 HitLines,
                                 ((REAL_t)arguments.w),
@@ -2286,12 +2451,17 @@ int main(int argc,
                                 out,
                                 time,
                                 lat,
-                                lon);
+                                lon,
+                                arguments.ctm,
+                                CS_h,
+                                CF_h,
+                                T0_h,
+                                T0F_h);
                 }
                 else if (launchType == 1)
                 {
 #ifdef __NVCC__
-                    if(out == NULL)  /* malloc if needed, otherwise pass */
+                    if (out == NULL)
                     {
                         HANDLE_ERROR(cudaHostAlloc(&out,
                                                    nF*numLayers*sizeof(REAL_t),
@@ -2309,7 +2479,12 @@ int main(int argc,
                                   out,
                                   time,
                                   lat,
-                                  lon);
+                                  lon,
+                                  arguments.ctm,
+                                  CS_d,
+                                  CF_d,
+                                  T0_d,
+                                  T0F_d);
 #else
                     fprintf(stderr,
                             "Error(main): requested cuda launch type (%d),"
@@ -2321,37 +2496,13 @@ int main(int argc,
                 else
                 {
                     fprintf(stderr,
-                            "Error(main): unkown launch type (%d)"
+                            "Error(main): unknown launch type (%d)"
                                 " requested.\n",
                             launchType);
                     exit(EXIT_FAILURE);
                 }
 
-                /*Calculate the continuum spectra.*/
-                if (arguments.ctm == 1)
-                {
-                    printf("Computing Continuum\n");
-                    assert(arguments.res==1.);  /* presently the continuum code is only safe for widths of one wavenumber */
-                    idx = (time*atmosData.nlon*atmosData.nlat + 
-                           lat*atmosData.nlon + lon)*atmosData.npfull;
-                    /* dbg print */
-                    printf("%zu: T=%g P=%g DELTAZ=%g PS[%zu]=%g \n",
-                           idx,
-                           atmosData.T[idx],
-                           atmosData.P[idx],
-                           atmosData.DELTAZ[idx],
-                           NUM_MOL*idx + H2O*atmosData.npfull,
-                           atmosData.PS[NUM_MOL*idx + H2O*atmosData.npfull]);
-                    /* getchar(); */
-                    get_CTM(out,
-                            &(atmosData.T[idx]),
-                            &(atmosData.P[idx]),
-                            &(atmosData.DELTAZ[idx]),
-                            &(atmosData.PS[NUM_MOL*idx + H2O*atmosData.npfull ]),
-                            nF,
-                            atmosData.npfull);
-                }
-
+                /*Write out the output file.*/
                 fprintf(stderr,
                         "Writing hyperslab of %d samples "
                         "@{t=%d, lat=%d, lon=%d, layers=0:%d} to output"
@@ -2371,10 +2522,12 @@ int main(int argc,
                                                 nF,
                                                 out);
 
-                memset(out, 0, nF*numLayers*sizeof(REAL_t));
-            }  /* nlat */
-        }  /* nlon */
-    }  /* time */
+                memset(out,
+                       0,
+                       nF*numLayers*sizeof(REAL_t));
+            }
+        }
+    }
 
     /*Close the output file.*/
     fprintf(stderr,
@@ -2431,10 +2584,29 @@ int main(int argc,
         free(out);
     }
 
+    if (arguments.ctm == 1)
+    {
+        /*Free malloc'd arrays.*/
+        free(CS_h);
+        free(CF_h);
+        free(T0_h);
+        free(T0F_h);
+
+#ifdef __NVCC__
+        if (launchType == 1)
+        {
+            /*Free device copies.*/
+            HANDLE_ERROR(cudaFree(CS_d));
+            HANDLE_ERROR(cudaFree(CF_d));
+            HANDLE_ERROR(cudaFree(T0_d));
+            HANDLE_ERROR(cudaFree(T0F_d));
+        }
+#endif
+    }
+
 #ifdef MPI_ENABLED
     MPI_Finalize();
 #endif
 
     return EXIT_SUCCESS;
 }
-
