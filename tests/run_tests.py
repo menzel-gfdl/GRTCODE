@@ -5,7 +5,7 @@ from sys import stdout
 from get_test_params import testParams
 from run_grtcode import run_grtcode
 from run_rfm import run_rfm
-from verify_results import verify_results
+#from verify_results import verify_results
 
 if __name__ == "__main__":
 

@@ -204,21 +204,25 @@ void eval_profile_h(unsigned int const molId,
     LineShapeInputs_t in;
     REAL_t line_shape;
 
-#pragma omp parallel for default(none) \
+#pragma omp parallel for schedule(dynamic) \
+                         collapse(2) \
+                         default(none) \
                          private(ltid,loffset,in,fcenterid,snn, \
-                                 molarMass,ftid,line_shape) \
-                         private(lyr,tauu,len,temp)
+                                 molarMass,ftid,line_shape, \
+                                 lyr,tauu,len,temp)
 /*
-                         shared(nL,numLayers,PShift,loWn,resolution,nF,S, \
-                                tauU_d,pathlength_d,T,molId,Gam,fsteps,out)
+                         shared(nL,numLayers,PShift,loWn, \
+                                resolution,nF,S, \
+                                tauU_d,pathlength_d,T,molId, \
+                                Gam,fsteps,out)
 */
     for (lyr=0;lyr<numLayers;++lyr)
     {
-        tauu = tauU_d[lyr];
-        len = pathlength_d[lyr];
-        temp = T[lyr];
         for (ltid=0;ltid<nL;++ltid)
         {
+            tauu = tauU_d[lyr];
+            len = pathlength_d[lyr];
+            temp = T[lyr];
             loffset = lyr*nL + ltid;
             in.lineCenter = PShift[loffset];
 

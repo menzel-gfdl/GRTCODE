@@ -63,9 +63,10 @@ void eval_pShift_h(unsigned int const numLayers,
     unsigned int lyr;
     unsigned int ltid;
 
-#pragma omp parallel for default(none) \
-                         private(ltid) \
-                         private(lyr)
+#pragma omp parallel for schedule(dynamic) \
+                         collapse(2) \
+                         default(none) \
+                         private(ltid,lyr)
 /*
                          shared(nL,numLayers,PShift,Vnn,d,P)
 */

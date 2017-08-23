@@ -77,11 +77,13 @@ void eval_Snn_correction_h(unsigned int const numLayers,
     unsigned int lyr;
     unsigned int ltid;
 
-#pragma omp parallel for default(none) \
-                         private(ltid) \
-                         private(lyr)
+#pragma omp parallel for schedule(dynamic) \
+                         collapse(2) \
+                         default(none) \
+                         private(ltid,lyr)
 /*
-                         shared(nL,numLayers,S,molId,T,iso,Vnn,En,Snn_partial)
+                         shared(nL,numLayers,S,molId,T,iso, \
+                                Vnn,En,Snn_partial)
 */
     for (lyr=0;lyr<numLayers;++lyr)
     {

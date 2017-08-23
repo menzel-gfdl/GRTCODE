@@ -77,10 +77,13 @@ void eval_gamma_h(unsigned int const numLayers,
     unsigned int lyr;
     unsigned int ltid;
 
-#pragma omp parallel for default(none) \
+#pragma omp parallel for schedule(dynamic) \
+                         collapse(2) \
+                         default(none) \
                          private(ltid,lyr)
 /*
-                         shared(nL,numLayers,Gam,P,T,Yself,Yair,n,Ps) \
+                         shared(nL,numLayers,Gam,P,T,Yself, \
+                                Yair,n,Ps) \
 */
     for (lyr=0;lyr<numLayers;++lyr)
     {
