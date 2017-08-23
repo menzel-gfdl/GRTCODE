@@ -178,14 +178,14 @@ void calc_ctm_optdepth(unsigned int const nF,
 #pragma unroll
         for (lyr=0;lyr<numLayers;++lyr)
         {
-            optdepth[lyr*nF+tid] = (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                       PS_H2O[lyr]*Z[lyr]*
-                                       exp(T0[tid]*(tref-T[lyr])))/
-                                       (T[lyr]*kB*pconst) +
-                                       (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                       (P[lyr]-PS_H2O[lyr])*Z[lyr]*
-                                       exp(T0F[tid]*(tref-T[lyr])))/
-                                       (T[lyr]*kB*pconst);
+            optdepth[lyr*nF+tid] += (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
+                                        PS_H2O[lyr]*Z[lyr]*
+                                        exp(T0[tid]*(tref-T[lyr])))/
+                                        (T[lyr]*kB*pconst) +
+                                        (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
+                                        (P[lyr]-PS_H2O[lyr])*Z[lyr]*
+                                        exp(T0F[tid]*(tref-T[lyr])))/
+                                        (T[lyr]*kB*pconst);
         }
     }
 
@@ -220,14 +220,14 @@ void calc_ctm_optdepth_h(unsigned int const nF,
     {
         for (tid=0;tid<nF;++tid)
         {
-            optdepth[lyr*nF+tid] = (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                       PS_H2O[lyr]*Z[lyr]*
-                                       exp(T0[tid]*(tref-T[lyr])))/
-                                       (T[lyr]*kB*pconst) +
-                                       (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                       (P[lyr]-PS_H2O[lyr])*Z[lyr]*
-                                       exp(T0F[tid]*(tref-T[lyr])))/
-                                       (T[lyr]*kB*pconst);
+            optdepth[lyr*nF+tid] += (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
+                                        PS_H2O[lyr]*Z[lyr]*
+                                        exp(T0[tid]*(tref-T[lyr])))/
+                                        (T[lyr]*kB*pconst) +
+                                        (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
+                                        (P[lyr]-PS_H2O[lyr])*Z[lyr]*
+                                        exp(T0F[tid]*(tref-T[lyr])))/
+                                        (T[lyr]*kB*pconst);
         }
     }
 
