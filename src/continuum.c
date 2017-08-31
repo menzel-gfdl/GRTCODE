@@ -171,7 +171,8 @@ void calc_ctm_optdepth(unsigned int const nF,
     unsigned int lyr;
     REAL_t const tref = 296.0;
     REAL_t const kB = 1.3806E-19;
-    REAL_t const pconst = 1013.25;
+    REAL_t const AtmToPa = 101325;
+    REAL_t const CmToM = 0.01;
 
     if (tid < nF)
     {
@@ -179,13 +180,13 @@ void calc_ctm_optdepth(unsigned int const nF,
         for (lyr=0;lyr<numLayers;++lyr)
         {
             optdepth[lyr*nF+tid] += (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        PS_H2O[lyr]*Z[lyr]*
+                                        PS_H2O[lyr]*AtmToPa*Z[lyr]*CmToM*
                                         exp(T0[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB*pconst) +
+                                        (T[lyr]*kB) +
                                         (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        (P[lyr]-PS_H2O[lyr])*Z[lyr]*
+                                        (P[lyr]-PS_H2O[lyr])*AtmToPa*Z[lyr]*CmToM*
                                         exp(T0F[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB*pconst);
+                                        (T[lyr]*kB);
         }
     }
 
@@ -210,25 +211,28 @@ void calc_ctm_optdepth_h(unsigned int const nF,
     unsigned int lyr;
     REAL_t const tref = 296.0;
     REAL_t const kB = 1.3806E-19;
-    REAL_t const pconst = 1013.25;
+    REAL_t const AtmToPa = 101325;
+    REAL_t const CmToM = 0.01;
 
-#pragma omp parallel for collapse(2) default(none) \
-                                     private(lyr,tid) \
-                                     shared(numLayers,nF,optdepth,CS,tref, \
-                                            T,PS_H2O, \
-                                            Z,T0,kB,pconst,CF,P,T0F)
+#pragma omp parallel for collapse(2) \
+                         schedule(static) \
+                         default(none) \
+                         private(lyr,tid) \
+                         shared(numLayers,nF,optdepth,CS,tref, \
+                                T,PS_H2O, \
+                                Z,T0,kB,pconst,CF,P,T0F)
     for (lyr=0;lyr<numLayers;++lyr)
     {
         for (tid=0;tid<nF;++tid)
         {
             optdepth[lyr*nF+tid] += (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        PS_H2O[lyr]*Z[lyr]*
+                                        PS_H2O[lyr]*AtmToPa*Z[lyr]*CmToM*
                                         exp(T0[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB*pconst) +
+                                        (T[lyr]*kB) +
                                         (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        (P[lyr]-PS_H2O[lyr])*Z[lyr]*
+                                        (P[lyr]-PS_H2O[lyr])*AtmToPa*Z[lyr]*CmToM*
                                         exp(T0F[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB*pconst);
+                                        (T[lyr]*kB);
         }
     }
 

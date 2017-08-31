@@ -381,11 +381,11 @@ static error_t parse_opt(int key,
             break;
         case 'r':
             arguments->res = atof(arg);
-            break;      
+            break;
         case 'c':
             arguments->wingBreadth = atoi(arg);
             break;
-        case '1':      
+        case '1':
             arguments->h2o = parse_MolecConc(arg);
             arguments->nmolConc++;
             break;
@@ -961,7 +961,7 @@ int host_launch(unsigned int const numMols,
                             out,
                             CS_h,
                             T,
-                            &(PS[(L[H2O].mol-1)*atmosData->npfull]),
+                            &(PS[H2O*atmosData->npfull]),
                             DELTAZ,
                             T0_h,
                             CF_h,
@@ -1141,7 +1141,7 @@ int device_optics_init(unsigned int const numLayers,
     float elapsed;
     HANDLE_ERROR(cudaEventCreate(&start));
     HANDLE_ERROR(cudaEventCreate(&stop));
-    HANDLE_ERROR(cudaEventRecord(start)); 
+    HANDLE_ERROR(cudaEventRecord(start));
 #endif
 
     /*Malloc device arrays contained in the RefLinesPtrs_t structure.*/
@@ -1200,7 +1200,7 @@ int device_optics_free(RefLinePtrs_t* L_d,
     float elapsed;
     HANDLE_ERROR(cudaEventCreate(&start));
     HANDLE_ERROR(cudaEventCreate(&stop));
-    HANDLE_ERROR(cudaEventRecord(start)); 
+    HANDLE_ERROR(cudaEventRecord(start));
 #endif
 
     /*Free device arrays contained in the RefLinesPtrs_t structure.*/
@@ -1902,7 +1902,7 @@ int device_launch(int *nStreams,
                                                                                 out_d,
                                                                                 CS_d,
                                                                                 T_d,
-                                                                                &(PS_d[(L[H2O].mol-1)*atmosData->npfull]),
+                                                                                &(PS_d[H2O*atmosData->npfull]),
                                                                                 Z_d,
                                                                                 T0_d,
                                                                                 CF_d,
@@ -2221,7 +2221,7 @@ int main(int argc,
 
     /*Initialize the output file.*/
     int ncid;
-    int varid;
+    int varid[6];
     char *OUTPUT_FNAME = NULL;
     unsigned int compute_lat_beg = 0;
     unsigned int compute_lat_end = atmosData.nlat;
@@ -2276,7 +2276,7 @@ int main(int argc,
             "Opening output file %s.\n",
             OUTPUT_FNAME);
     openOpticalDepthOutput(&ncid,
-                           &varid,
+                           varid,
                            OUTPUT_FNAME,
                            compute_lat_end - compute_lat_beg,
                            compute_lon_end - compute_lon_beg,
@@ -2411,6 +2411,41 @@ int main(int argc,
 #endif
     }
 
+    /*Write out dimension data.*/
+/*
+    writeDimensionData(ncid,
+                       varid[0],
+                       (size_t)(arguments.T - arguments.t + 1),
+                       );
+
+    writeDimensionData(ncid,
+                       varid[1],
+                       (size_t)(compute_lat_end - compute_lat_beg),
+                       );
+
+    writeDimensionData(ncid,
+                       varid[2],
+                       (size_t)(compute_lon_end - compute_lon_beg),
+                       );
+
+    writeDimensionData(ncid,
+                       varid[3],
+                       (size_t)(numLayers),
+                       );
+*/
+
+    REAL_t *wvn = (REAL_t *)malloc(sizeof(REAL_t)*nF);
+    int i;
+    for (i=0;i<nF;i++)
+    {
+        wvn[i] = arguments.w + i*arguments.res;
+    }
+    writeDimensionData(ncid,
+                       varid[4],
+                       (size_t)(nF),
+                       wvn);
+    free(wvn);
+
     /*Declare stream parameters.*/
 #ifdef __NVCC__
     int nstreams = -1;
@@ -2513,7 +2548,7 @@ int main(int argc,
                         numLayers,
                         OUTPUT_FNAME);
                 writeOpticalDepthOutputByColumn(ncid,
-                                                varid,
+                                                varid[5],
                                                 time,
                                                 lat-compute_lat_beg,
                                                 lon-compute_lon_beg,

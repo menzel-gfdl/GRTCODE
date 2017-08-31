@@ -1,41 +1,28 @@
-/* GRTCODE is a GPU-able Radiative Transfer Code
- * Copyright (C) 2016  Garrett Wright
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; version 2.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
- */
-
 #ifndef SET_OUTPUTNETCDFSPEC_H_
 #define SET_OUTPUTNETCDFSPEC_H_
 
-void closeOpticalDepthOutput(int ncid);
+void closeOpticalDepthOutput(int const ncid);
 
-void openOpticalDepthOutput(int* ncid,
-                            int* varid,
-                            char FNAME[],
-                            const size_t nlat,
-                            const size_t nlon,
-                            const size_t nlayers,
-                            const size_t nF );
+void openOpticalDepthOutput(int * const ncid,
+                            int * const varid,
+                            char const FNAME[],
+                            size_t const nlat,
+                            size_t const nlon,
+                            size_t const nlayers,
+                            size_t const nF);
 
-void writeOpticalDepthOutputByColumn(const int ncid,
-                                     const int varid,
-                                     const int t,                                    
-                                     const int lat,
-                                     const int lon,
-                                     const int nlayers,
-                                     const int nF,
-                                     float* spectra);
+void writeDimensionData(int const ncid,
+                        int const varid,
+                        size_t const dim_size,
+                        float const * const dim_data);
 
+void writeOpticalDepthOutputByColumn(int const ncid,
+                                     int const varid,
+                                     int const t,
+                                     int const lat,
+                                     int const lon,
+                                     int const nlayers,
+                                     int const nF,
+                                     float const * const spectra);
 
 #endif
