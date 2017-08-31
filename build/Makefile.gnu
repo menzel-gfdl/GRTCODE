@@ -8,7 +8,7 @@ CFLAGS+= $(CLIBS)
 #CFLAGS += $(INCLUDES)
 LDFLAGS= --shared
 
-GRTCODE_REQ_BINS = grtcode.o TIPS_2011.o parseHITRANfile.o parseNetcdfRadiation.o continuum.o outputNetcdfSpec.o eval_gamma.o eval_pShift.o eval_Snn_correction.o pre_eval_Snn.o GasProps.o GaussianFuncs.o IdaVoigtFuncs.o LineShapeUtils.o LorentzFuncs.o RfmVoigtFuncs.o
+GRTCODE_REQ_BINS = grtcode.o TIPS_2011.o parseHITRANfile.o parseNetcdfRadiation.o continuum.o outputNetcdfSpec.o eval_gamma.o eval_pShift.o eval_Snn_correction.o pre_eval_Snn.o GasProps.o GaussianFuncs.o IdaVoigtFuncs.o LineShapeUtils.o LorentzFuncs.o RfmVoigtFuncs.o flux.o
 
 OPENMP =
 ifneq ($(OPENMP),)

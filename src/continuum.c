@@ -220,7 +220,7 @@ void calc_ctm_optdepth_h(unsigned int const nF,
                          private(lyr,tid) \
                          shared(numLayers,nF,optdepth,CS,tref, \
                                 T,PS_H2O, \
-                                Z,T0,kB,pconst,CF,P,T0F)
+                                Z,T0,kB,AtmToPa,CmToM,CF,P,T0F)
     for (lyr=0;lyr<numLayers;++lyr)
     {
         for (tid=0;tid<nF;++tid)

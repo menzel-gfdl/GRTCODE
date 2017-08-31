@@ -44,6 +44,7 @@ typedef struct radiationInputFields_t
     float *PRESSM; /*Layer pressures (Pa).*/
     float *TEMP;   /*Layer Temperatures (K).*/
     float *DELTAZ; /*Layer thicknesses (m).*/
+    float *TSURF; /*Surface temperature (K).*/
     size_t nlat;   /*Number of latitude grid points.*/
     size_t nlon;   /*Number of longitude grid points.*/
     size_t npfull; /*Number of pressure layers.*/
@@ -57,11 +58,12 @@ typedef struct radiationInputFields_t
 */
 typedef struct radiationOutputFields_t
 {
-    REAL_t* N;      /*Layer molecular number densities (1/cm^3).*/
-    REAL_t* P;      /*Layer pressures (atm).*/
-    REAL_t* T;      /*Layer temperatures (K).*/
-    REAL_t* DELTAZ; /*Layer thicknesses (cm).*/
-    REAL_t* PS;     /*Layer parital pressures (atm).*/
+    REAL_t *N;      /*Layer molecular number densities (1/cm^3).*/
+    REAL_t *P;      /*Layer pressures (atm).*/
+    REAL_t *T;      /*Layer temperatures (K).*/
+    REAL_t *DELTAZ; /*Layer thicknesses (cm).*/
+    REAL_t *PS;     /*Layer parital pressures (atm).*/
+    REAL_t *TSURF; /*Surface temperature (K).*/
     size_t nlat;    /*Number of latitude grid points.*/
     size_t nlon;    /*Number of longitude grid points.*/
     size_t npfull;  /*Number of pressure layers.*/

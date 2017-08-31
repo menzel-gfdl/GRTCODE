@@ -204,7 +204,7 @@ void eval_profile_h(unsigned int const molId,
     LineShapeInputs_t in;
     REAL_t line_shape;
 
-#pragma omp parallel for schedule(dynamic) \
+#pragma omp parallel for schedule(static) \
                          collapse(2) \
                          default(none) \
                          private(ltid,loffset,in,fcenterid,snn, \

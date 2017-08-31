@@ -17,12 +17,13 @@ void writeDimensionData(int const ncid,
                         float const * const dim_data);
 
 void writeOpticalDepthOutputByColumn(int const ncid,
-                                     int const varid,
+                                     int const * const varid,
                                      int const t,
                                      int const lat,
                                      int const lon,
                                      int const nlayers,
                                      int const nF,
-                                     float const * const spectra);
+                                     float const * const spectra,
+                                     float const * const fluxes);
 
 #endif

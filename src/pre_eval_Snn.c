@@ -55,7 +55,7 @@ void pre_eval_Snn_h(unsigned int const nL,
 {
     unsigned int ltid;
 
-#pragma omp parallel for schedule(dynamic) \
+#pragma omp parallel for schedule(static) \
                          default(none) \
                          private(ltid)
 /*

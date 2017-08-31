@@ -39,6 +39,7 @@ void openOpticalDepthOutput(int * const ncid,
     int lat_dimid;
     int lon_dimid;
     int lay_dimid;
+    int lev_dimid;
     int f_dimid;
     const int ndims=5;
     int did[1];
@@ -75,6 +76,11 @@ void openOpticalDepthOutput(int * const ncid,
         NCERR(retval);
     }
 
+    if ((retval = nc_def_dim(*ncid,"phalf",nlayers+1,&lev_dimid)))
+    {
+        NCERR(retval);
+    }
+
     if ((retval = nc_def_dim(*ncid,"wavenumber",nF,&f_dimid)))
     {
         NCERR(retval);
@@ -105,8 +111,14 @@ void openOpticalDepthOutput(int * const ncid,
         NCERR(retval);
     }
 
+    did[0] = lev_dimid;
+    if ((retval = nc_def_var(*ncid,"phalf",NC_FLOAT,1,did,&(varid[4]))))
+    {
+        NCERR(retval);
+    }
+
     did[0] = f_dimid;
-    if ((retval = nc_def_var(*ncid,"wavenumber",NC_FLOAT,1,did,&(varid[4]))))
+    if ((retval = nc_def_var(*ncid,"wavenumber",NC_FLOAT,1,did,&(varid[5]))))
     {
         NCERR(retval);
     }
@@ -116,7 +128,13 @@ void openOpticalDepthOutput(int * const ncid,
     dimids[2] = lon_dimid;
     dimids[3] = lay_dimid;
     dimids[4] = f_dimid;
-    if ((retval = nc_def_var(*ncid,"OpticalDepth",NC_FLOAT,ndims,dimids,&(varid[5]))))
+    if ((retval = nc_def_var(*ncid,"OpticalDepth",NC_FLOAT,ndims,dimids,&(varid[6]))))
+    {
+        NCERR(retval);
+    }
+
+    dimids[3] = lev_dimid;
+    if ((retval = nc_def_var(*ncid,"Fluxes",NC_FLOAT,ndims,dimids,&(varid[7]))))
     {
         NCERR(retval);
     }
@@ -126,6 +144,8 @@ void openOpticalDepthOutput(int * const ncid,
     {
         NCERR(retval)
     }
+
+    return;
 }
 
 void writeDimensionData(int const ncid,
@@ -148,36 +168,42 @@ void writeDimensionData(int const ncid,
 }
 
 void writeOpticalDepthOutputByColumn(int const ncid,
-                                     int const varid,
+                                     int const * const varid,
                                      int const t,
                                      int const lat,
                                      int const lon,
                                      int const nlayers,
                                      int const nF,
-                                     float const * const spectra)
+                                     float const * const spectra,
+                                     float const * const fluxes)
 {
     int retval;
     const int ndims = 5;
     size_t start[ndims];
     size_t count[ndims];
 
-    /*A column in time */
-    count[0] = 1;  /* 1 time */
-    count[1] = 1;  /* 1 lat */
-    count[2] = 1;  /* 1 lon */
-    /*is composed of  */
-    count[3] = nlayers;  /* layers in the column */
-    count[4] = nF;       /* samples per layer */
-
-    /*The column we inted to write is at */
+    /*Write out optical depths.*/
+    count[0] = 1;
+    count[1] = 1;
+    count[2] = 1;
+    count[3] = nlayers;
+    count[4] = nF;
     start[0] = t;
     start[1] = lat;
     start[2] = lon;
-    start[3] = 0;  /* zeroth layer */
-    start[4] = 0;  /* zeroth sample */
-
-    if ((retval = nc_put_vara_float(ncid,varid,start,count,spectra)))
+    start[3] = 0;
+    start[4] = 0;
+    if ((retval = nc_put_vara_float(ncid,varid[6],start,count,spectra)))
     {
         NCERR(retval);
     }
+
+    /*Write out fluxes.*/
+    count[3] += 1;
+    if ((retval = nc_put_vara_float(ncid,varid[7],start,count,fluxes)))
+    {
+        NCERR(retval);
+    }
+
+    return;
 }

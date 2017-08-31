@@ -33,6 +33,7 @@
 #include "eval_profile.h"
 #include "eval_pShift.h"
 #include "eval_Snn_correction.h"
+#include "flux.h"
 #include "GasProps.h"
 #include "GaussianFuncs.h"
 #include "grtcode.h"
@@ -886,7 +887,8 @@ int host_launch(unsigned int const numMols,
                 REAL_t const * const CS_h,
                 REAL_t const * const CF_h,
                 REAL_t const * const T0_h,
-                REAL_t const * const T0F_h)
+                REAL_t const * const T0F_h,
+                REAL_t * const fluxes)
 {
     /*Local variables*/
     unsigned int mol;
@@ -905,6 +907,8 @@ int host_launch(unsigned int const numMols,
     REAL_t *DELTAZ = &(atmosData->DELTAZ[idx]);
     REAL_t *N = &(atmosData->N[idx*NUM_MOL]);
     REAL_t *PS = &(atmosData->PS[idx*NUM_MOL]);
+    REAL_t TSURF = atmosData->TSURF[time*atmosData->nlat*atmosData->nlon +
+                                    lat*atmosData->nlon + lon];
 
     /*Set the flags used to malloc/free arrays in a RefLinePtr_t structure.
       {(unsigned int)-1,1,0} = host cuda malloc default, host=True, device=false.*/
@@ -969,6 +973,16 @@ int host_launch(unsigned int const numMols,
                             T0F_h);
         printf("..done!\n");
     }
+
+    /*Calculate the fluxes.*/
+    calcFlux_h(nF,
+               numLayers,
+               fluxes,
+               T,
+               TSURF,
+               out,
+               loWn,
+               resolution);
 
     return EXIT_SUCCESS;
 }
@@ -1734,7 +1748,8 @@ int device_launch(int *nStreams,
                   REAL_t const * const CS_d,
                   REAL_t const * const CF_d,
                   REAL_t const * const T0_d,
-                  REAL_t const * const T0F_d)
+                  REAL_t const * const T0F_d,
+                  REAL_t * const fluxes)
 {
     /*Local variables*/
     unsigned int m;
@@ -1747,6 +1762,7 @@ int device_launch(int *nStreams,
     REAL_t *Z_d;
     REAL_t *PS_d;
     REAL_t *out_d;
+    REAL_t *fluxes_d;
 
     /*Initialize TIPS.*/
     initTIPS_d();
@@ -1765,6 +1781,8 @@ int device_launch(int *nStreams,
     REAL_t *DELTAZ = &(atmosData->DELTAZ[idx]);
     REAL_t *N = &(atmosData->N[idx*NUM_MOL]);
     REAL_t *PS = &(atmosData->PS[idx*NUM_MOL]);
+    REAL_t TSURF = atmosData->TSURF[time*atmosData->nlat*atmosData->nlon +
+                                    lat*atmosData->nlon + lon];
 
     /*Print out values for debugging.  Delete this later.*/
 /*
@@ -1806,17 +1824,21 @@ int device_launch(int *nStreams,
 
     /*Malloc the out_d array and set its values to all zeros by memcpying
       out_h to out_d.  For this to work correctly, out_h should be all zeros.*/
-/*
     HANDLE_ERROR(cudaMalloc(&out_d,
-                            (numLayers+1)*nF*sizeof(REAL_t)));
-*/
-    HANDLE_ERROR(cudaMalloc(&out_d,
-                            (numLayers)*nF*sizeof(REAL_t)));
-    printf("Memcpy.. out_h -> out_d");
+                            numLayers*nF*sizeof(REAL_t)));
     printf("Memcpy.. out_h -> out_d");
     HANDLE_ERROR(cudaMemcpy(out_d,
                             out,
                             numLayers*nF*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
+
+    HANDLE_ERROR(cudaMalloc(&fluxes_d,
+                            (numLayers+1)*nF*sizeof(REAL_t)));
+    printf("Memcpy.. fluxes_h -> fluxes_d");
+    HANDLE_ERROR(cudaMemcpy(fluxes_d,
+                            fluxes,
+                            (numLayers*nF+1)*sizeof(REAL_t),
                             cudaMemcpyHostToDevice));
     printf(".done!\n");
 
@@ -1877,12 +1899,12 @@ int device_launch(int *nStreams,
                            &(OpticsBuf_d[s]));
     }
 
+    int dimBlock = 0;
+    int minGridSize = 0;
+    int dimGrid = 0;
     if (continuum)
     {
         /*Calculate the continuum optical depth.*/
-        int dimBlock = 0;
-        int minGridSize = 0;
-        int dimGrid = 0;
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
                                                         &dimBlock,
                                                         calc_ctm_optdepth,
@@ -1911,6 +1933,31 @@ int device_launch(int *nStreams,
         printf("..done!\n");
     }
 
+    /*Calculate the fluxes.*/
+    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&minGridSize,
+                                                    &dimBlock,
+                                                    calcFlux,
+                                                    0,
+                                                    ((int)nF)));
+    dimGrid = (((int)nF) + dimBlock - 1)/dimBlock;
+
+    /*Execute the calcFlux kernel.*/
+    printf("%s Kernel Launch.. %d frequencies ... ",
+           "calcFlux",
+           nF);
+    printf("using dimBlock = %d and dimGrid = %d  ... ",
+           dimBlock,
+           dimGrid);
+    calcFlux<<<(unsigned int)dimGrid,(unsigned int)dimBlock,0,0>>>(nF,
+                                                                   numLayers,
+                                                                   fluxes_d,
+                                                                   T_d,
+                                                                   TSURF,
+                                                                   out_d,
+                                                                   loWn,
+                                                                   resolution);
+    printf("..done!\n");
+
     /*Memcpy the optical depths from the device back to the host.*/
     printf("Memcpy opticalDepth (out) to host..");
     HANDLE_ERROR(cudaMemcpy(out,
@@ -1919,6 +1966,11 @@ int device_launch(int *nStreams,
                             cudaMemcpyDeviceToHost));
     printf("..done\n");
 
+    HANDLE_ERROR(cudaMemcpy(fluxes,
+                            fluxes_d,
+                            (numLayers+1)*nF*sizeof(REAL_t),
+                            cudaMemcpyDeviceToHost));
+
     /*Free device arrays.*/
     device_atmos_free(T_d,
                       P_d,
@@ -1926,6 +1978,7 @@ int device_launch(int *nStreams,
                       Z_d,
                       PS_d);
     HANDLE_ERROR(cudaFree(out_d));
+    HANDLE_ERROR(cudaFree(fluxes_d));
 
     return EXIT_SUCCESS;
 }
@@ -1946,7 +1999,8 @@ int device_launch(int* nStreams,
                   REAL_t* const out,
                   int time,
                   int lat,
-                  int lon)
+                  int lon,
+                  REAL_t * const fluxes)
 {
     /*Prevent compiler warnings.*/
     (void) nStreams;
@@ -1962,6 +2016,7 @@ int device_launch(int* nStreams,
     (void) time;
     (void) lat;
     (void) lon;
+    (void) fluxes;
 
     printf("\n\nYou've not compiled with NVCC, device_launch does"
                " nothing...\n\n");
@@ -2221,7 +2276,7 @@ int main(int argc,
 
     /*Initialize the output file.*/
     int ncid;
-    int varid[6];
+    int varid[8];
     char *OUTPUT_FNAME = NULL;
     unsigned int compute_lat_beg = 0;
     unsigned int compute_lat_end = atmosData.nlat;
@@ -2441,7 +2496,7 @@ int main(int argc,
         wvn[i] = arguments.w + i*arguments.res;
     }
     writeDimensionData(ncid,
-                       varid[4],
+                       varid[5],
                        (size_t)(nF),
                        wvn);
     free(wvn);
@@ -2460,6 +2515,7 @@ int main(int argc,
     /*Compute the spectra.*/
     unsigned int lon;
     REAL_t *out = NULL;
+    REAL_t *fluxes = NULL;
     for (time=arguments.t;time<=arguments.T;++time)
     {
         for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
@@ -2472,6 +2528,8 @@ int main(int argc,
                     {
                         out = (REAL_t*)calloc(nF*numLayers,
                                               sizeof(REAL_t));
+                        fluxes = (REAL_t*)calloc(nF*(numLayers+1),
+                                                 sizeof(REAL_t));
                     }
 
                     /*Calculate line spectra on the host.*/
@@ -2490,7 +2548,8 @@ int main(int argc,
                                 CS_h,
                                 CF_h,
                                 T0_h,
-                                T0F_h);
+                                T0F_h,
+                                fluxes);
                 }
                 else if (launchType == 1)
                 {
@@ -2499,6 +2558,9 @@ int main(int argc,
                     {
                         HANDLE_ERROR(cudaHostAlloc(&out,
                                                    nF*numLayers*sizeof(REAL_t),
+                                                   cudaHostAllocDefault));
+                        HANDLE_ERROR(cudaHostAlloc(&fluxes,
+                                                   nF*(numLayers+1)*sizeof(REAL_t),
                                                    cudaHostAllocDefault));
                     }
                     device_launch(&nstreams,
@@ -2518,7 +2580,8 @@ int main(int argc,
                                   CS_d,
                                   CF_d,
                                   T0_d,
-                                  T0F_d);
+                                  T0F_d,
+                                  fluxes);
 #else
                     fprintf(stderr,
                             "Error(main): requested cuda launch type (%d),"
@@ -2548,17 +2611,21 @@ int main(int argc,
                         numLayers,
                         OUTPUT_FNAME);
                 writeOpticalDepthOutputByColumn(ncid,
-                                                varid[5],
+                                                varid,
                                                 time,
                                                 lat-compute_lat_beg,
                                                 lon-compute_lon_beg,
                                                 numLayers,
                                                 nF,
-                                                out);
+                                                out,
+                                                fluxes);
 
                 memset(out,
                        0,
                        nF*numLayers*sizeof(REAL_t));
+                memset(fluxes,
+                       0,
+                       nF*(numLayers+1)*sizeof(REAL_t));
             }
         }
     }
@@ -2607,15 +2674,17 @@ int main(int argc,
 /* #endif */
 
     /* cleanup */
-    if (launchType==1)
+    if (launchType == 1)
     {
 #ifdef __NVCC__
         cudaFreeHost(out);
+        cudaFreeHost(fluxes);
 #endif
     }
     else
     {
         free(out);
+        free(fluxes);
     }
 
     if (arguments.ctm == 1)

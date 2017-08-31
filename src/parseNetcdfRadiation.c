@@ -139,24 +139,26 @@ int readRfmipFieldsFromFile(char fname[],
     in->PRESSM = NULL;
     in->TEMP = NULL;
     in->DELTAZ = NULL;
+    in->TSURF = NULL;
 
     /*Malloc space for the radiation input fields.*/
-    in->RH2O = (float *)malloc((in->ntime)*(in->nlat)*(in->npfull)*sizeof(float));
+    in->RH2O = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*(in->npfull)*sizeof(float));
     in->RCO2 = (float *)malloc((in->ntime)*sizeof(float));
-    in->QO3 = (float *)malloc((in->ntime)*(in->nlat)*(in->npfull)*sizeof(float));
+    in->QO3 = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*(in->npfull)*sizeof(float));
     in->RN2O = (float *)malloc((in->ntime)*sizeof(float));
     in->RCO = (float *)malloc((in->ntime)*sizeof(float));
     in->RCH4 = (float *)malloc((in->ntime)*sizeof(float));
     in->RO2 = (float *)malloc((in->ntime)*sizeof(float));
-    in->PRESSM = (float *)malloc((in->nlat)*(in->npfull)*sizeof(float));
-    in->TEMP = (float *)malloc((in->ntime)*(in->nlat)*(in->npfull)*sizeof(float));
-    in->DELTAZ = (float *)malloc((in->ntime)*(in->nlat)*(in->npfull)*sizeof(float));
+    in->PRESSM = (float *)malloc((in->nlat)*(in->nlon)*(in->npfull)*sizeof(float));
+    in->TEMP = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*(in->npfull)*sizeof(float));
+    in->DELTAZ = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*(in->npfull)*sizeof(float));
+    in->TSURF = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*sizeof(float));
 
     /*Make sure that the mallocs succeeded.*/
     if (in->RH2O == NULL || in->RCO2 == NULL || in->QO3 == NULL ||
             in->RN2O == NULL || in->RCO == NULL || in->RCH4 == NULL ||
             in->RO2 == NULL || in->PRESSM == NULL || in->TEMP == NULL ||
-            in->DELTAZ == NULL)
+            in->DELTAZ == NULL || in->TSURF)
     {
         fprintf(stderr,
                 "Error(radiationInputFieldsMalloc): malloc failed for the"
@@ -343,6 +345,20 @@ int readRfmipFieldsFromFile(char fname[],
     free(plevs);
     plevs = NULL;
 
+    /*Read in the surface temperature (K) values.*/
+    if ((retval = nc_inq_varid(ncid,
+                               "surface_temperature",
+                               &varid)))
+    {
+        NCERR(retval);
+    }
+    if ((retval = nc_get_var_float(ncid,
+                                   varid,
+                                   in->TSURF)))
+    {
+        NCERR(retval);
+    }
+
     return EXIT_SUCCESS;
 }
 
@@ -379,6 +395,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
     out->T = NULL;
     out->DELTAZ = NULL;
     out->PS = NULL;
+    out->TSURF = NULL;
     radiationOutputFieldsMalloc(out);
 
     /*Set the radiation output fields.  The input fields are generally
@@ -389,6 +406,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
     {
         for (i=0;i<in->nlat;++i)
         {
+            out->TSURF[t*(in->nlat)+i] = in->TSURF[t*(in->nlat)+i];
             for (k=0;k<in->npfull;++k)
             {
                 /*Calculate the offsets.*/
@@ -483,6 +501,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
     free(in->PRESSM);
     free(in->TEMP);
     free(in->DELTAZ);
+    free(in->TSURF);
     in->RH2O = NULL;
     in->RCO2 = NULL;
     in->QO3 = NULL;
@@ -493,6 +512,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
     in->PRESSM = NULL;
     in->TEMP = NULL;
     in->DELTAZ = NULL;
+    in->TSURF = NULL;
 
     return EXIT_SUCCESS;
 }
@@ -612,6 +632,7 @@ int readGfdlFieldsFromFile(char fname[],
     in->PRESSM = (float *)malloc(size1*sizeof(float));
     in->TEMP = (float *)malloc(size1*sizeof(float));
     in->DELTAZ = (float *)malloc(size2*sizeof(float));
+    in->TSURF = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*sizeof(float));
 
     /*Make sure that the mallocs succeeded.*/
     if (in->RH2O == NULL || in->QO3 == NULL || in->PRESSM == NULL ||
@@ -693,6 +714,29 @@ int readGfdlFieldsFromFile(char fname[],
         NCERR(retval);
     }
 
+    /*There does not seem to a surface temperature in GFDL style input
+      files.  Use the lowest atmospheric level temperature?*/
+    int i;
+    int j;
+    int k;
+    for (i=0;i<(in->ntime);++i)
+    {
+        for (j=0;j<(in->nlat);++j)
+        {
+            for (k=0;k<(in->nlon);++k)
+            {
+                int toff = i*(in->npfull)*(in->nlat)*(in->nlon) +
+                           (in->npfull-1)*(in->nlat)*(in->nlon) +
+                           j*(in->nlon) + k;
+
+                int soff = i*(in->nlat)*(in->nlon) +
+                           j*(in->nlon) + k;
+
+                in->TSURF[soff] = in->TEMP[toff];
+            }
+        }
+    }
+
     return EXIT_SUCCESS;
 }
 
@@ -727,6 +771,7 @@ int setOutputFieldsFromGfdl(radiationInputFields_t *in,
     out->T = NULL;
     out->DELTAZ = NULL;
     out->PS = NULL;
+    out->TSURF = NULL;
     radiationOutputFieldsMalloc(out);
 
     /*Set the radiation output fields.  The input fields are generally
@@ -793,17 +838,31 @@ int setOutputFieldsFromGfdl(radiationInputFields_t *in,
         }
     }
 
+    for (t=0;t<in->ntime;++t)
+    {
+        for (i=0;i<in->nlat;++i)
+        {
+            for (j=0;j<in->nlon;++j)
+            {
+                int off = t*(in->nlat)*(in->nlon) + i*(in->nlon) + j;
+                out->TSURF[off] = in->TSURF[off];
+            }
+        }
+    }
+
     /*Free the radiation input fields.*/
     free(in->RH2O);
     free(in->QO3);
     free(in->PRESSM);
     free(in->TEMP);
     free(in->DELTAZ);
+    free(in->TSURF);
     in->RH2O = NULL;
     in->QO3 = NULL;
     in->PRESSM = NULL;
     in->TEMP = NULL;
     in->DELTAZ = NULL;
+    in->TSURF = NULL;
 
     return EXIT_SUCCESS;
 }
@@ -819,7 +878,7 @@ int radiationOutputFieldsMalloc(radiationOutputFields_t* out)
 
     /*Make sure that the radiation output fields are null.*/
     if (out->N != NULL || out->P != NULL || out->T != NULL ||
-        out->DELTAZ != NULL || out->PS != NULL)
+        out->DELTAZ != NULL || out->PS != NULL || out->TSURF != NULL)
     {
         fprintf(stderr,
                 "Error(radiationOutputFieldsMalloc): please first initialize"
@@ -833,10 +892,11 @@ int radiationOutputFieldsMalloc(radiationOutputFields_t* out)
     out->T = (REAL_t *)malloc(pfulllen*sizeof(REAL_t));
     out->DELTAZ = (REAL_t *)malloc(pfulllen*sizeof(REAL_t));
     out->PS = (REAL_t *)malloc(NUM_MOLS*pfulllen*sizeof(REAL_t));
+    out->TSURF = (REAL_t *)malloc(out->ntime*out->nlat*out->nlon*sizeof(REAL_t));
 
     /*Make sure that the mallocs succeeded.*/
     if (out->N == NULL || out->P == NULL || out->T == NULL ||
-        out->DELTAZ == NULL || out->PS == NULL)
+        out->DELTAZ == NULL || out->PS == NULL || out->TSURF == NULL)
     {
         fprintf(stderr,
                 "Error(radiationOutputFieldsMalloc): malloc failed for the"
@@ -853,7 +913,7 @@ int radiationOutputFieldsFree(radiationOutputFields_t* out)
 {
     /*Make sure that the radiation output fields are not null.*/
     if (out->N == NULL || out->P == NULL || out->T == NULL ||
-        out->DELTAZ == NULL || out->PS == NULL)
+        out->DELTAZ == NULL || out->PS == NULL || out->TSURF)
     {
         fprintf(stderr,
                 "Error(radiationOutputFieldsFree): the output radiation"
@@ -867,6 +927,7 @@ int radiationOutputFieldsFree(radiationOutputFields_t* out)
     free(out->T);
     free(out->DELTAZ);
     free(out->PS);
+    free(out->TSURF);
 
     /*Nullify the radiation output field pointers.*/
     out->N = NULL;
@@ -874,6 +935,7 @@ int radiationOutputFieldsFree(radiationOutputFields_t* out)
     out->T =  NULL;
     out->DELTAZ = NULL;
     out->PS = NULL;
+    out->TSURF = NULL;
 
     return EXIT_SUCCESS;
 }

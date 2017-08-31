@@ -77,7 +77,7 @@ void eval_gamma_h(unsigned int const numLayers,
     unsigned int lyr;
     unsigned int ltid;
 
-#pragma omp parallel for schedule(dynamic) \
+#pragma omp parallel for schedule(static) \
                          collapse(2) \
                          default(none) \
                          private(ltid,lyr)
