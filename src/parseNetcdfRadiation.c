@@ -158,7 +158,7 @@ int readRfmipFieldsFromFile(char fname[],
     if (in->RH2O == NULL || in->RCO2 == NULL || in->QO3 == NULL ||
             in->RN2O == NULL || in->RCO == NULL || in->RCH4 == NULL ||
             in->RO2 == NULL || in->PRESSM == NULL || in->TEMP == NULL ||
-            in->DELTAZ == NULL || in->TSURF)
+            in->DELTAZ == NULL || in->TSURF == NULL)
     {
         fprintf(stderr,
                 "Error(radiationInputFieldsMalloc): malloc failed for the"
@@ -636,7 +636,7 @@ int readGfdlFieldsFromFile(char fname[],
 
     /*Make sure that the mallocs succeeded.*/
     if (in->RH2O == NULL || in->QO3 == NULL || in->PRESSM == NULL ||
-            in->TEMP == NULL || in->DELTAZ == NULL)
+            in->TEMP == NULL || in->DELTAZ == NULL || in->TSURF == NULL)
     {
         fprintf(stderr,
                 "Error(radiationInputFieldsMalloc): malloc failed for the"
@@ -913,7 +913,7 @@ int radiationOutputFieldsFree(radiationOutputFields_t* out)
 {
     /*Make sure that the radiation output fields are not null.*/
     if (out->N == NULL || out->P == NULL || out->T == NULL ||
-        out->DELTAZ == NULL || out->PS == NULL || out->TSURF)
+        out->DELTAZ == NULL || out->PS == NULL || out->TSURF == NULL)
     {
         fprintf(stderr,
                 "Error(radiationOutputFieldsFree): the output radiation"

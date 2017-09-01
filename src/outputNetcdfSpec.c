@@ -44,6 +44,7 @@ void openOpticalDepthOutput(int * const ncid,
     const int ndims=5;
     int did[1];
     int dimids[ndims];
+    int fdimids[4];
 
     /*Create the file.  The NC_CLOBBER parameter tells netCDF to overwrite
       this file, if it already exists. */
@@ -134,7 +135,16 @@ void openOpticalDepthOutput(int * const ncid,
     }
 
     dimids[3] = lev_dimid;
-    if ((retval = nc_def_var(*ncid,"Fluxes",NC_FLOAT,ndims,dimids,&(varid[7]))))
+    if ((retval = nc_def_var(*ncid,"Fluxes_per_wavenumber",NC_FLOAT,ndims,dimids,&(varid[7]))))
+    {
+        NCERR(retval);
+    }
+
+    fdimids[0] = t_dimid;
+    fdimids[1] = lat_dimid;
+    fdimids[2] = lon_dimid;
+    fdimids[3] = lev_dimid;
+    if ((retval = nc_def_var(*ncid,"Fluxes_per_level",NC_FLOAT,4,fdimids,&(varid[8]))))
     {
         NCERR(retval);
     }
@@ -175,12 +185,16 @@ void writeOpticalDepthOutputByColumn(int const ncid,
                                      int const nlayers,
                                      int const nF,
                                      float const * const spectra,
-                                     float const * const fluxes)
+                                     float const * const fluxes,
+                                     float const * const fluxes_accumulated)
 {
     int retval;
     const int ndims = 5;
     size_t start[ndims];
     size_t count[ndims];
+    const int fndims = 4;
+    size_t fstart[fndims];
+    size_t fcount[fndims];
 
     /*Write out optical depths.*/
     count[0] = 1;
@@ -198,9 +212,23 @@ void writeOpticalDepthOutputByColumn(int const ncid,
         NCERR(retval);
     }
 
-    /*Write out fluxes.*/
+    /*Write out fluxes at each wavenumber.*/
     count[3] += 1;
     if ((retval = nc_put_vara_float(ncid,varid[7],start,count,fluxes)))
+    {
+        NCERR(retval);
+    }
+
+    /*Write out accumulated fluxes at each level.*/
+    fcount[0] = 1;
+    fcount[1] = 1;
+    fcount[2] = 1;
+    fcount[3] = nlayers + 1;
+    fstart[0] = t;
+    fstart[1] = lat;
+    fstart[2] = lon;
+    fstart[3] = 0;
+    if ((retval = nc_put_vara_float(ncid,varid[8],fstart,fcount,fluxes_accumulated)))
     {
         NCERR(retval);
     }

@@ -2,9 +2,6 @@
 #include "flux.h"
 #include "myreal.h"
 
-
-#include <stdio.h>
-
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -25,9 +22,12 @@ __global__ void calcFlux(unsigned int const nF,
     REAL_t I_up;
     REAL_t const wv = w + tid*res;
     unsigned int i;
-    REAL_t tc;
+    REAL_t tc_down;
     REAL_t const coef = -1.66;
-    REAL_t p;
+    REAL_t p_down;
+    REAL_t tc_up;
+    REAL_t p_up;
+    int up_index;
 
     if (tid < nF)
     {
@@ -43,14 +43,16 @@ __global__ void calcFlux(unsigned int const nF,
 #pragma unroll
         for (i=0;i<numLayers;++i)
         {
-            tc = exp(coef*tau[i*nF+tid]);
-            p = planckFunc(T[i],wv)*(1-tc);
-
-            I_down = p + I_down*tc;
-            I_up = p + I_up*tc;
-
+            tc_down = exp(coef*tau[i*nF+tid]);
+            p_down = planckFunc(T[i],wv)*(1-tc_down);
+            I_down = p_down + I_down*tc_down;
             fluxOut[(i+1)*nF+tid] += M_PI*I_down;
-            fluxOut[(numLayers-1-i)*nF+tid] += M_PI*I_up;
+
+            up_index = numLayers - 1 - i;
+            tc_up = exp(coef*tau[up_index*nF+tid]);
+            p_up = planckFunc(T[up_index],wv)*(1-tc_up);
+            I_up = p_up + I_up*tc_up;
+            fluxOut[up_index*nF+tid] += M_PI*I_up;
         }
     }
 
@@ -90,7 +92,7 @@ void calcFlux_h(unsigned int const nF,
         for (j=0;j<nF;++j)
         {
             tc = exp(coef*tau[i*nF+j]);
-            p = planckFunc(T[i],w+i*res)*(1-tc);
+            p = planckFunc(T[i],w+j*res)*(1-tc);
 
             I_down[j] = p + I_down[j]*tc;
             I_up[j] = p + I_up[j]*tc;
@@ -118,3 +120,38 @@ REAL_t planckFunc(REAL_t const T,
 
     return ((2*h*c*c*wm*wm*wm)/(exp(h*c*wm/(kB*T))-1));
 }
+
+void sum_fluxes(unsigned int const nF,
+                unsigned int const numLevels,
+                REAL_t const * const fluxes,
+                REAL_t * const fluxes_accumulated,
+                REAL_t const res)
+{
+    REAL_t const MToCm = 100;
+    REAL_t const resm = res*MToCm; /*Wavenumber resolution (m).*/
+
+    for (unsigned int i=0;i<numLevels;++i)
+    {
+        fluxes_accumulated[i] = 0;
+        for (unsigned int j=0;j<nF-1;++j)
+        {
+            REAL_t a = fluxes[i*nF+j];
+            REAL_t b = fluxes[i*nF+j+1] - a;
+            fluxes_accumulated[i] += resm*(a+0.5*b);
+        }
+    }
+
+    return;
+}
+
+#ifndef SKIPMAIN
+#include <stdlib.h>
+
+int main(int argc,char **argv)
+{
+
+
+    return EXIT_SUCCESS
+}
+
+#endif

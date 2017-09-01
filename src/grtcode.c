@@ -2276,7 +2276,7 @@ int main(int argc,
 
     /*Initialize the output file.*/
     int ncid;
-    int varid[8];
+    int varid[9];
     char *OUTPUT_FNAME = NULL;
     unsigned int compute_lat_beg = 0;
     unsigned int compute_lat_end = atmosData.nlat;
@@ -2516,9 +2516,16 @@ int main(int argc,
     unsigned int lon;
     REAL_t *out = NULL;
     REAL_t *fluxes = NULL;
+    REAL_t *fluxes_accumulated = NULL;
+/*
     for (time=arguments.t;time<=arguments.T;++time)
+*/
+    for (time=0;time<=0;++time)
     {
+/*
         for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
+*/
+        for (lat=0;lat<1;++lat)
         {
             for (lon=compute_lon_beg;lon<compute_lon_end;++lon)
             {
@@ -2530,6 +2537,8 @@ int main(int argc,
                                               sizeof(REAL_t));
                         fluxes = (REAL_t*)calloc(nF*(numLayers+1),
                                                  sizeof(REAL_t));
+                        fluxes_accumulated = (REAL_t*)calloc((numLayers+1),
+                                                             sizeof(REAL_t));
                     }
 
                     /*Calculate line spectra on the host.*/
@@ -2561,6 +2570,9 @@ int main(int argc,
                                                    cudaHostAllocDefault));
                         HANDLE_ERROR(cudaHostAlloc(&fluxes,
                                                    nF*(numLayers+1)*sizeof(REAL_t),
+                                                   cudaHostAllocDefault));
+                        HANDLE_ERROR(cudaHostAlloc(&fluxes_accumulated,
+                                                   (numLayers+1)*sizeof(REAL_t),
                                                    cudaHostAllocDefault));
                     }
                     device_launch(&nstreams,
@@ -2599,6 +2611,13 @@ int main(int argc,
                     exit(EXIT_FAILURE);
                 }
 
+                /*Sum the fluxes. Should this be a kernel?*/
+                sum_fluxes(nF,
+                           numLayers+1,
+                           fluxes,
+                           fluxes_accumulated,
+                           arguments.res);
+
                 /*Write out the output file.*/
                 fprintf(stderr,
                         "Writing hyperslab of %d samples "
@@ -2618,7 +2637,8 @@ int main(int argc,
                                                 numLayers,
                                                 nF,
                                                 out,
-                                                fluxes);
+                                                fluxes,
+                                                fluxes_accumulated);
 
                 memset(out,
                        0,
@@ -2679,12 +2699,14 @@ int main(int argc,
 #ifdef __NVCC__
         cudaFreeHost(out);
         cudaFreeHost(fluxes);
+        cudaFreeHost(fluxes_accumulated);
 #endif
     }
     else
     {
         free(out);
         free(fluxes);
+        free(fluxes_accumulated);
     }
 
     if (arguments.ctm == 1)

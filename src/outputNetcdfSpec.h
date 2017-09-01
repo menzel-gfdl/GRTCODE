@@ -24,6 +24,7 @@ void writeOpticalDepthOutputByColumn(int const ncid,
                                      int const nlayers,
                                      int const nF,
                                      float const * const spectra,
-                                     float const * const fluxes);
+                                     float const * const fluxes,
+                                     float const * const fluxes_accumulated);
 
 #endif

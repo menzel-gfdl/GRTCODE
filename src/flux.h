@@ -29,4 +29,10 @@ __host__ __device__
 REAL_t planckFunc(REAL_t const T,
                   REAL_t const w);
 
+void sum_fluxes(unsigned int const nF,
+                unsigned int const numLevels,
+                REAL_t const * const fluxes,
+                REAL_t * const fluxes_accumulated,
+                REAL_t const res);
+
 #endif
