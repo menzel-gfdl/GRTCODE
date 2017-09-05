@@ -9,7 +9,8 @@
 #ifdef __NVCC__
 __global__ void calcFlux(unsigned int const nF,
                          unsigned int const numLayers,
-                         REAL_t * const fluxOut,
+                         REAL_t * const fluxDown,
+                         REAL_t * const fluxUp,
                          REAL_t const * const T,
                          REAL_t const Tsurf,
                          REAL_t const * const tau,
@@ -37,8 +38,8 @@ __global__ void calcFlux(unsigned int const nF,
         /*Longwave intensity from the surface.*/
         I_up = planckFunc(Tsurf,wv);
 
-        fluxOut[tid] = M_PI*I_down;
-        fluxOut[numLayers*nF+tid] = M_PI*I_up;
+        fluxDown[tid] = M_PI*I_down;
+        fluxUp[numLayers*nF+tid] = M_PI*I_up;
 
 #pragma unroll
         for (i=0;i<numLayers;++i)
@@ -46,13 +47,13 @@ __global__ void calcFlux(unsigned int const nF,
             tc_down = exp(coef*tau[i*nF+tid]);
             p_down = planckFunc(T[i],wv)*(1-tc_down);
             I_down = p_down + I_down*tc_down;
-            fluxOut[(i+1)*nF+tid] += M_PI*I_down;
+            fluxDown[(i+1)*nF+tid] = M_PI*I_down;
 
             up_index = numLayers - 1 - i;
             tc_up = exp(coef*tau[up_index*nF+tid]);
             p_up = planckFunc(T[up_index],wv)*(1-tc_up);
             I_up = p_up + I_up*tc_up;
-            fluxOut[up_index*nF+tid] += M_PI*I_up;
+            fluxUp[up_index*nF+tid] = M_PI*I_up;
         }
     }
 
@@ -63,7 +64,8 @@ __global__ void calcFlux(unsigned int const nF,
 
 void calcFlux_h(unsigned int const nF,
                 unsigned int const numLayers,
-                REAL_t * const fluxOut,
+                REAL_t * const fluxDown,
+                REAL_t * const fluxUp,
                 REAL_t const * const T,
                 REAL_t const Tsurf,
                 REAL_t const * const tau,
@@ -75,30 +77,36 @@ void calcFlux_h(unsigned int const nF,
     REAL_t I_down[nF];
     REAL_t I_up[nF];
     unsigned int j;
-    REAL_t tc;
-    REAL_t coef = -1.66;
-    REAL_t p;
+    REAL_t tc_down;
+    REAL_t p_down;
+    REAL_t tc_up;
+    REAL_t p_up;
+    int up_index;
+    REAL_t const coef = -1.66;
 
     for (i=0;i<nF;++i)
     {
         I_down[i] = 0;
         I_up[i] = planckFunc(Tsurf,w+i*res);
-        fluxOut[i] = M_PI*I_down[i];
-        fluxOut[numLayers*nF+i] = M_PI*I_up[i];
+        fluxDown[i] = M_PI*I_down[i];
+        fluxUp[numLayers*nF+i] = M_PI*I_up[i];
     }
 
     for (i=0;i<numLayers;++i)
     {
+        up_index = numLayers - 1 - i;
+
         for (j=0;j<nF;++j)
         {
-            tc = exp(coef*tau[i*nF+j]);
-            p = planckFunc(T[i],w+j*res)*(1-tc);
+            tc_down = exp(coef*tau[i*nF+j]);
+            p_down = planckFunc(T[i],w+j*res)*(1-tc_down);
+            I_down[j] = p_down + I_down[j]*tc_down;
+            fluxDown[(i+1)*nF+j] = M_PI*I_down[j];
 
-            I_down[j] = p + I_down[j]*tc;
-            I_up[j] = p + I_up[j]*tc;
-
-            fluxOut[(i+1)*nF+j] += M_PI*I_down[j];
-            fluxOut[(numLayers-1-i)*nF+j] += M_PI*I_up[j];
+            tc_up = exp(coef*tau[up_index*nF+j]);
+            p_up = planckFunc(T[up_index],w+j*res)*(1-tc_up);
+            I_up[j] = p_up + I_up[j]*tc_up;
+            fluxUp[up_index*nF+j] = M_PI*I_up[j];
         }
     }
 
@@ -128,7 +136,7 @@ void sum_fluxes(unsigned int const nF,
                 REAL_t const res)
 {
     REAL_t const MToCm = 100;
-    REAL_t const resm = res*MToCm; /*Wavenumber resolution (m).*/
+    REAL_t const resm = res*MToCm; /*Wavenumber resolution (1/m).*/
 
     for (unsigned int i=0;i<numLevels;++i)
     {

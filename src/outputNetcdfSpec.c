@@ -135,7 +135,12 @@ void openOpticalDepthOutput(int * const ncid,
     }
 
     dimids[3] = lev_dimid;
-    if ((retval = nc_def_var(*ncid,"Fluxes_per_wavenumber",NC_FLOAT,ndims,dimids,&(varid[7]))))
+    if ((retval = nc_def_var(*ncid,"Fluxes_down_per_wavenumber",NC_FLOAT,ndims,dimids,&(varid[7]))))
+    {
+        NCERR(retval);
+    }
+
+    if ((retval = nc_def_var(*ncid,"Fluxes_up_per_wavenumber",NC_FLOAT,ndims,dimids,&(varid[8]))))
     {
         NCERR(retval);
     }
@@ -144,7 +149,12 @@ void openOpticalDepthOutput(int * const ncid,
     fdimids[1] = lat_dimid;
     fdimids[2] = lon_dimid;
     fdimids[3] = lev_dimid;
-    if ((retval = nc_def_var(*ncid,"Fluxes_per_level",NC_FLOAT,4,fdimids,&(varid[8]))))
+    if ((retval = nc_def_var(*ncid,"Fluxes_down_per_level",NC_FLOAT,4,fdimids,&(varid[9]))))
+    {
+        NCERR(retval);
+    }
+
+    if ((retval = nc_def_var(*ncid,"Fluxes_up_per_level",NC_FLOAT,4,fdimids,&(varid[10]))))
     {
         NCERR(retval);
     }
@@ -185,8 +195,10 @@ void writeOpticalDepthOutputByColumn(int const ncid,
                                      int const nlayers,
                                      int const nF,
                                      float const * const spectra,
-                                     float const * const fluxes,
-                                     float const * const fluxes_accumulated)
+                                     float const * const fluxesDown,
+                                     float const * const fluxesUp,
+                                     float const * const fluxesDown_accumulated,
+                                     float const * const fluxesUp_accumulated)
 {
     int retval;
     const int ndims = 5;
@@ -214,7 +226,11 @@ void writeOpticalDepthOutputByColumn(int const ncid,
 
     /*Write out fluxes at each wavenumber.*/
     count[3] += 1;
-    if ((retval = nc_put_vara_float(ncid,varid[7],start,count,fluxes)))
+    if ((retval = nc_put_vara_float(ncid,varid[7],start,count,fluxesDown)))
+    {
+        NCERR(retval);
+    }
+    if ((retval = nc_put_vara_float(ncid,varid[8],start,count,fluxesUp)))
     {
         NCERR(retval);
     }
@@ -228,7 +244,11 @@ void writeOpticalDepthOutputByColumn(int const ncid,
     fstart[1] = lat;
     fstart[2] = lon;
     fstart[3] = 0;
-    if ((retval = nc_put_vara_float(ncid,varid[8],fstart,fcount,fluxes_accumulated)))
+    if ((retval = nc_put_vara_float(ncid,varid[9],fstart,fcount,fluxesDown_accumulated)))
+    {
+        NCERR(retval);
+    }
+    if ((retval = nc_put_vara_float(ncid,varid[10],fstart,fcount,fluxesUp_accumulated)))
     {
         NCERR(retval);
     }

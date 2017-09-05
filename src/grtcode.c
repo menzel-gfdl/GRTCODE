@@ -888,7 +888,8 @@ int host_launch(unsigned int const numMols,
                 REAL_t const * const CF_h,
                 REAL_t const * const T0_h,
                 REAL_t const * const T0F_h,
-                REAL_t * const fluxes)
+                REAL_t * const fluxesDown,
+                REAL_t * const fluxesUp)
 {
     /*Local variables*/
     unsigned int mol;
@@ -977,7 +978,8 @@ int host_launch(unsigned int const numMols,
     /*Calculate the fluxes.*/
     calcFlux_h(nF,
                numLayers,
-               fluxes,
+               fluxesDown,
+               fluxesUp,
                T,
                TSURF,
                out,
@@ -1749,7 +1751,8 @@ int device_launch(int *nStreams,
                   REAL_t const * const CF_d,
                   REAL_t const * const T0_d,
                   REAL_t const * const T0F_d,
-                  REAL_t * const fluxes)
+                  REAL_t * const fluxesDown,
+                  REAL_t * const fluxesUp)
 {
     /*Local variables*/
     unsigned int m;
@@ -1762,7 +1765,8 @@ int device_launch(int *nStreams,
     REAL_t *Z_d;
     REAL_t *PS_d;
     REAL_t *out_d;
-    REAL_t *fluxes_d;
+    REAL_t *fluxesDown_d;
+    REAL_t *fluxesUp_d;
 
     /*Initialize TIPS.*/
     initTIPS_d();
@@ -1833,11 +1837,20 @@ int device_launch(int *nStreams,
                             cudaMemcpyHostToDevice));
     printf(".done!\n");
 
-    HANDLE_ERROR(cudaMalloc(&fluxes_d,
+    HANDLE_ERROR(cudaMalloc(&fluxesDown_d,
                             (numLayers+1)*nF*sizeof(REAL_t)));
-    printf("Memcpy.. fluxes_h -> fluxes_d");
-    HANDLE_ERROR(cudaMemcpy(fluxes_d,
-                            fluxes,
+    printf("Memcpy.. fluxesDown_h -> fluxesDown_d");
+    HANDLE_ERROR(cudaMemcpy(fluxesDown_d,
+                            fluxesDown,
+                            (numLayers*nF+1)*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
+
+    HANDLE_ERROR(cudaMalloc(&fluxesUp_d,
+                            (numLayers+1)*nF*sizeof(REAL_t)));
+    printf("Memcpy.. fluxesUp_h -> fluxesUp_d");
+    HANDLE_ERROR(cudaMemcpy(fluxesUp_d,
+                            fluxesUp,
                             (numLayers*nF+1)*sizeof(REAL_t),
                             cudaMemcpyHostToDevice));
     printf(".done!\n");
@@ -1950,7 +1963,8 @@ int device_launch(int *nStreams,
            dimGrid);
     calcFlux<<<(unsigned int)dimGrid,(unsigned int)dimBlock,0,0>>>(nF,
                                                                    numLayers,
-                                                                   fluxes_d,
+                                                                   fluxesDown_d,
+                                                                   fluxesUp_d,
                                                                    T_d,
                                                                    TSURF,
                                                                    out_d,
@@ -1966,8 +1980,13 @@ int device_launch(int *nStreams,
                             cudaMemcpyDeviceToHost));
     printf("..done\n");
 
-    HANDLE_ERROR(cudaMemcpy(fluxes,
-                            fluxes_d,
+    HANDLE_ERROR(cudaMemcpy(fluxesDown,
+                            fluxesDown_d,
+                            (numLayers+1)*nF*sizeof(REAL_t),
+                            cudaMemcpyDeviceToHost));
+
+    HANDLE_ERROR(cudaMemcpy(fluxesUp,
+                            fluxesUp_d,
                             (numLayers+1)*nF*sizeof(REAL_t),
                             cudaMemcpyDeviceToHost));
 
@@ -1978,7 +1997,8 @@ int device_launch(int *nStreams,
                       Z_d,
                       PS_d);
     HANDLE_ERROR(cudaFree(out_d));
-    HANDLE_ERROR(cudaFree(fluxes_d));
+    HANDLE_ERROR(cudaFree(fluxesDown_d));
+    HANDLE_ERROR(cudaFree(fluxesUp_d));
 
     return EXIT_SUCCESS;
 }
@@ -2000,7 +2020,8 @@ int device_launch(int* nStreams,
                   int time,
                   int lat,
                   int lon,
-                  REAL_t * const fluxes)
+                  REAL_t * const fluxesDown,
+                  REAL_t * const fluxesUp)
 {
     /*Prevent compiler warnings.*/
     (void) nStreams;
@@ -2016,7 +2037,8 @@ int device_launch(int* nStreams,
     (void) time;
     (void) lat;
     (void) lon;
-    (void) fluxes;
+    (void) fluxesDown;
+    (void) fluxesUp;
 
     printf("\n\nYou've not compiled with NVCC, device_launch does"
                " nothing...\n\n");
@@ -2276,7 +2298,7 @@ int main(int argc,
 
     /*Initialize the output file.*/
     int ncid;
-    int varid[9];
+    int varid[11];
     char *OUTPUT_FNAME = NULL;
     unsigned int compute_lat_beg = 0;
     unsigned int compute_lat_end = atmosData.nlat;
@@ -2515,17 +2537,14 @@ int main(int argc,
     /*Compute the spectra.*/
     unsigned int lon;
     REAL_t *out = NULL;
-    REAL_t *fluxes = NULL;
-    REAL_t *fluxes_accumulated = NULL;
-/*
+    REAL_t *fluxesDown = NULL;
+    REAL_t *fluxesUp = NULL;
+    REAL_t *fluxesDown_accumulated = NULL;
+    REAL_t *fluxesUp_accumulated = NULL;
+
     for (time=arguments.t;time<=arguments.T;++time)
-*/
-    for (time=0;time<=0;++time)
     {
-/*
         for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
-*/
-        for (lat=0;lat<1;++lat)
         {
             for (lon=compute_lon_beg;lon<compute_lon_end;++lon)
             {
@@ -2535,10 +2554,14 @@ int main(int argc,
                     {
                         out = (REAL_t*)calloc(nF*numLayers,
                                               sizeof(REAL_t));
-                        fluxes = (REAL_t*)calloc(nF*(numLayers+1),
-                                                 sizeof(REAL_t));
-                        fluxes_accumulated = (REAL_t*)calloc((numLayers+1),
-                                                             sizeof(REAL_t));
+                        fluxesDown = (REAL_t*)calloc(nF*(numLayers+1),
+                                                     sizeof(REAL_t));
+                        fluxesUp = (REAL_t*)calloc(nF*(numLayers+1),
+                                                   sizeof(REAL_t));
+                        fluxesDown_accumulated = (REAL_t*)calloc((numLayers+1),
+                                                                 sizeof(REAL_t));
+                        fluxesUp_accumulated = (REAL_t*)calloc((numLayers+1),
+                                                               sizeof(REAL_t));
                     }
 
                     /*Calculate line spectra on the host.*/
@@ -2558,7 +2581,8 @@ int main(int argc,
                                 CF_h,
                                 T0_h,
                                 T0F_h,
-                                fluxes);
+                                fluxesDown,
+                                fluxesUp);
                 }
                 else if (launchType == 1)
                 {
@@ -2568,10 +2592,16 @@ int main(int argc,
                         HANDLE_ERROR(cudaHostAlloc(&out,
                                                    nF*numLayers*sizeof(REAL_t),
                                                    cudaHostAllocDefault));
-                        HANDLE_ERROR(cudaHostAlloc(&fluxes,
+                        HANDLE_ERROR(cudaHostAlloc(&fluxesDown,
                                                    nF*(numLayers+1)*sizeof(REAL_t),
                                                    cudaHostAllocDefault));
-                        HANDLE_ERROR(cudaHostAlloc(&fluxes_accumulated,
+                        HANDLE_ERROR(cudaHostAlloc(&fluxesUp,
+                                                   nF*(numLayers+1)*sizeof(REAL_t),
+                                                   cudaHostAllocDefault));
+                        HANDLE_ERROR(cudaHostAlloc(&fluxesDown_accumulated,
+                                                   (numLayers+1)*sizeof(REAL_t),
+                                                   cudaHostAllocDefault));
+                        HANDLE_ERROR(cudaHostAlloc(&fluxesUp_accumulated,
                                                    (numLayers+1)*sizeof(REAL_t),
                                                    cudaHostAllocDefault));
                     }
@@ -2593,7 +2623,8 @@ int main(int argc,
                                   CF_d,
                                   T0_d,
                                   T0F_d,
-                                  fluxes);
+                                  fluxesDown,
+                                  fluxesUp);
 #else
                     fprintf(stderr,
                             "Error(main): requested cuda launch type (%d),"
@@ -2614,8 +2645,13 @@ int main(int argc,
                 /*Sum the fluxes. Should this be a kernel?*/
                 sum_fluxes(nF,
                            numLayers+1,
-                           fluxes,
-                           fluxes_accumulated,
+                           fluxesDown,
+                           fluxesDown_accumulated,
+                           arguments.res);
+                sum_fluxes(nF,
+                           numLayers+1,
+                           fluxesUp,
+                           fluxesUp_accumulated,
                            arguments.res);
 
                 /*Write out the output file.*/
@@ -2637,15 +2673,14 @@ int main(int argc,
                                                 numLayers,
                                                 nF,
                                                 out,
-                                                fluxes,
-                                                fluxes_accumulated);
+                                                fluxesDown,
+                                                fluxesUp,
+                                                fluxesDown_accumulated,
+                                                fluxesUp_accumulated);
 
                 memset(out,
                        0,
                        nF*numLayers*sizeof(REAL_t));
-                memset(fluxes,
-                       0,
-                       nF*(numLayers+1)*sizeof(REAL_t));
             }
         }
     }
@@ -2698,15 +2733,19 @@ int main(int argc,
     {
 #ifdef __NVCC__
         cudaFreeHost(out);
-        cudaFreeHost(fluxes);
-        cudaFreeHost(fluxes_accumulated);
+        cudaFreeHost(fluxesDown);
+        cudaFreeHost(fluxesUp);
+        cudaFreeHost(fluxesDown_accumulated);
+        cudaFreeHost(fluxesUp_accumulated);
 #endif
     }
     else
     {
         free(out);
-        free(fluxes);
-        free(fluxes_accumulated);
+        free(fluxesDown);
+        free(fluxesUp);
+        free(fluxesDown_accumulated);
+        free(fluxesUp_accumulated);
     }
 
     if (arguments.ctm == 1)
