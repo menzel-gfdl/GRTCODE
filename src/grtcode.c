@@ -1783,8 +1783,6 @@ int device_launch(int *nStreams,
     REAL_t *fluxesUp_d;
     REAL_t *TLEV_d;
 
-    /*Initialize TIPS.*/
-    initTIPS_d();
     initStreams(numMols,
                 streams,
                 nStreams);
@@ -2571,6 +2569,13 @@ int main(int argc,
     omp_set_num_threads(256);
 #endif
 
+    /*Initialize TIPS.*/
+#ifdef __NVCC__
+    initTIPS_d();
+#else
+    initTIPS();
+#endif
+
     /*Compute the spectra.*/
     unsigned int lon;
     REAL_t *out = NULL;
@@ -2579,15 +2584,15 @@ int main(int argc,
     REAL_t *fluxesDown_accumulated = NULL;
     REAL_t *fluxesUp_accumulated = NULL;
 
-/*
     for (time=arguments.t;time<=arguments.T;++time)
-*/
-    for (time=0;time<=0;++time)
-    {
 /*
-        for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
+    for (time=0;time<=0;++time)
 */
+    {
+        for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
+/*
         for (lat=0;lat<1;++lat)
+*/
         {
             for (lon=compute_lon_beg;lon<compute_lon_end;++lon)
             {
