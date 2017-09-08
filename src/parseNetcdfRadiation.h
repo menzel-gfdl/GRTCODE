@@ -45,6 +45,8 @@ typedef struct radiationInputFields_t
     float *TEMP;   /*Layer Temperatures (K).*/
     float *DELTAZ; /*Layer thicknesses (m).*/
     float *TSURF; /*Surface temperature (K).*/
+    float *TLEV; /*Level temperatures (K).*/
+    float *EMIS; /*Surface emissivity.*/
     size_t nlat;   /*Number of latitude grid points.*/
     size_t nlon;   /*Number of longitude grid points.*/
     size_t npfull; /*Number of pressure layers.*/
@@ -64,6 +66,8 @@ typedef struct radiationOutputFields_t
     REAL_t *DELTAZ; /*Layer thicknesses (cm).*/
     REAL_t *PS;     /*Layer parital pressures (atm).*/
     REAL_t *TSURF; /*Surface temperature (K).*/
+    REAL_t *TLEV; /*Level temperatures (K).*/
+    REAL_t *EMIS; /*Surface emissivity.*/
     size_t nlat;    /*Number of latitude grid points.*/
     size_t nlon;    /*Number of longitude grid points.*/
     size_t npfull;  /*Number of pressure layers.*/

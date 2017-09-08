@@ -910,6 +910,10 @@ int host_launch(unsigned int const numMols,
     REAL_t *PS = &(atmosData->PS[idx*NUM_MOL]);
     REAL_t TSURF = atmosData->TSURF[time*atmosData->nlat*atmosData->nlon +
                                     lat*atmosData->nlon + lon];
+    REAL_t *TLEV = &(atmosData->TLEV[time*atmosData->nlat*atmosData->nlon*atmosData->nphalf +
+                                     lat*atmosData->nlon*atmosData->nphalf +
+                                     lon*atmosData->nphalf]);
+    REAL_t EMIS = atmosData->EMIS[lat];
 
     /*Set the flags used to malloc/free arrays in a RefLinePtr_t structure.
       {(unsigned int)-1,1,0} = host cuda malloc default, host=True, device=false.*/
@@ -984,7 +988,9 @@ int host_launch(unsigned int const numMols,
                TSURF,
                out,
                loWn,
-               resolution);
+               resolution,
+               EMIS,
+               TLEV);
 
     return EXIT_SUCCESS;
 }
@@ -1030,11 +1036,13 @@ int device_atmos_init(unsigned int const numLayers,
                       REAL_t const * const N_h,
                       REAL_t const * const Z_h,
                       REAL_t const * const Ps_h,
+                      REAL_t const * const TLEV_h,
                       REAL_t **T_d,
                       REAL_t **P_d,
                       REAL_t **N_d,
                       REAL_t **Z_d,
-                      REAL_t **Ps_d)
+                      REAL_t **Ps_d,
+                      REAL_t **TLEV_d)
 {
     printf("\nInitializing atmosphere on device:\n");
 
@@ -1048,12 +1056,10 @@ int device_atmos_init(unsigned int const numLayers,
                             numMols*numLayers*sizeof(REAL_t)));
     HANDLE_ERROR(cudaMalloc(Z_d,
                             numLayers*sizeof(REAL_t)));
-/*
-    HANDLE_ERROR(cudaMalloc(Ps_d,
-                            (numLayers+1)*numMols*sizeof(REAL_t)));
-*/
     HANDLE_ERROR(cudaMalloc(Ps_d,
                             (numLayers)*numMols*sizeof(REAL_t)));
+    HANDLE_ERROR(cudaMalloc(TLEV_d,
+                            (numLayers+1)*sizeof(REAL_t)));
     printf(".done!\n");
 
     /*Copy data from the host to the device.*/
@@ -1088,6 +1094,12 @@ int device_atmos_init(unsigned int const numLayers,
                             numLayers*NUM_MOL*sizeof(REAL_t),
                             cudaMemcpyHostToDevice));
     printf(".done!\n");
+    printf("\tMemcpy.. TLEV_h -> TLEV_d");
+    HANDLE_ERROR(cudaMemcpy(*TLEV_d,
+                            TLEV_h,
+                            (numLayers+1)*sizeof(REAL_t),
+                            cudaMemcpyHostToDevice));
+    printf(".done!\n");
 
     printf("Initializing atmosphere on device successful.\n\n");
 
@@ -1117,7 +1129,8 @@ int device_atmos_free(REAL_t *T_d,
                       REAL_t *P_d,
                       REAL_t *N_d,
                       REAL_t *Z_d,
-                      REAL_t *Ps_d)
+                      REAL_t *Ps_d,
+                      REAL_t *TLEV_d)
 {
     /*Free arrays.*/
     HANDLE_ERROR(cudaFree(T_d));
@@ -1125,6 +1138,7 @@ int device_atmos_free(REAL_t *T_d,
     HANDLE_ERROR(cudaFree(N_d));
     HANDLE_ERROR(cudaFree(Z_d));
     HANDLE_ERROR(cudaFree(Ps_d));
+    HANDLE_ERROR(cudaFree(TLEV_d));
 
     return EXIT_SUCCESS;
 }
@@ -1767,6 +1781,7 @@ int device_launch(int *nStreams,
     REAL_t *out_d;
     REAL_t *fluxesDown_d;
     REAL_t *fluxesUp_d;
+    REAL_t *TLEV_d;
 
     /*Initialize TIPS.*/
     initTIPS_d();
@@ -1787,6 +1802,11 @@ int device_launch(int *nStreams,
     REAL_t *PS = &(atmosData->PS[idx*NUM_MOL]);
     REAL_t TSURF = atmosData->TSURF[time*atmosData->nlat*atmosData->nlon +
                                     lat*atmosData->nlon + lon];
+    REAL_t *TLEV = &(atmosData->TLEV[time*atmosData->nlat*atmosData->nlon*atmosData->nphalf +
+                                     lat*atmosData->nlon*atmosData->nphalf +
+                                     lon*atmosData->nphalf]);
+    REAL_t EMIS = atmosData->EMIS[lat];
+
 
     /*Print out values for debugging.  Delete this later.*/
 /*
@@ -1820,11 +1840,13 @@ int device_launch(int *nStreams,
                       N,
                       DELTAZ,
                       PS,
+                      TLEV,
                       &T_d,
                       &P_d,
                       &N_d,
                       &Z_d,
-                      &PS_d);
+                      &PS_d,
+                      &TLEV_d);
 
     /*Malloc the out_d array and set its values to all zeros by memcpying
       out_h to out_d.  For this to work correctly, out_h should be all zeros.*/
@@ -1969,7 +1991,21 @@ int device_launch(int *nStreams,
                                                                    TSURF,
                                                                    out_d,
                                                                    loWn,
-                                                                   resolution);
+                                                                   resolution,
+                                                                   EMIS,
+                                                                   TLEV_d);
+
+/*
+    calcFlux<<<(unsigned int)dimGrid,(unsigned int)dimBlock,0,0>>>(nF,
+                                                                     numLayers,
+                                                                     fluxesDown_d,
+                                                                     fluxesUp_d,
+                                                                     T_d,
+                                                                     TSURF,
+                                                                     out_d,
+                                                                     loWn,
+                                                                     resolution);
+*/
     printf("..done!\n");
 
     /*Memcpy the optical depths from the device back to the host.*/
@@ -1995,7 +2031,8 @@ int device_launch(int *nStreams,
                       P_d,
                       N_d,
                       Z_d,
-                      PS_d);
+                      PS_d,
+                      TLEV_d);
     HANDLE_ERROR(cudaFree(out_d));
     HANDLE_ERROR(cudaFree(fluxesDown_d));
     HANDLE_ERROR(cudaFree(fluxesUp_d));
@@ -2542,9 +2579,15 @@ int main(int argc,
     REAL_t *fluxesDown_accumulated = NULL;
     REAL_t *fluxesUp_accumulated = NULL;
 
+/*
     for (time=arguments.t;time<=arguments.T;++time)
+*/
+    for (time=0;time<=0;++time)
     {
+/*
         for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
+*/
+        for (lat=0;lat<1;++lat)
         {
             for (lon=compute_lon_beg;lon<compute_lon_end;++lon)
             {

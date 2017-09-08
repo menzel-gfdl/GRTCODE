@@ -48,7 +48,7 @@ void openOpticalDepthOutput(int * const ncid,
 
     /*Create the file.  The NC_CLOBBER parameter tells netCDF to overwrite
       this file, if it already exists. */
-    if ((retval = nc_create(FNAME,NC_CLOBBER,ncid)))
+    if ((retval = nc_create(FNAME,NC_NETCDF4 | NC_CLOBBER,ncid)))
     {
         NCERR(retval);
     }
