@@ -63,39 +63,26 @@ def copy_file(fileName,
         raise ValueError("cp " + fileName + " " + destDir + " failed and " +
                              "returned code " + str(tmp.returncode) + ".\n")
 
-def run_executable(executable,
-                   args=None):
+def run_executable(args):
     """
     Run the inputted executable with the inputted arguments.
     """
 
     #Check input types."
-    if not isinstance(executable,str):
-        raise TypeError("inputted executable (" + repr(executable) +
+    if not isinstance(args,list):
+        raise TypeError("inputted command (" + repr(args) +
+                            ") must be a list.\n")
+
+    for arg in args:
+        if not isinstance(arg,str):
+            raise TypeError("inputted argument (" + repr(arg) +
                             ") must be a string.\n")
 
-    if args:
-        if not isinstance(args,list) and not isinstance(args,set):
-            raise TypeError("inputted arguments must be a list or set.\n")
-        for arg in args:
-            if not isinstance(arg,str):
-                raise TypeError("inputted argument (" + repr(args) +
-                                    ") must be a string.\n")
-
-    #Remove duplicates from args.
-    if args:
-        tmpSet = set(args)
-
     #Run the executable.
-    execArgs = []
-    execArgs.append(executable)
-    if args:
-        for arg in tmpSet:
-            execArgs.append(arg)
-    tmp = subprocess.Popen(execArgs)
+    tmp = subprocess.Popen(args)
     tmp.wait()
     if tmp.returncode != 0:
-        execString = " ".join(map(str,execArgs))
+        execString = " ".join(map(str,args))
         raise ValueError(execString + " failed and returned code " +
                              str(tmp.returncode) + ".\n")
 

@@ -21,6 +21,11 @@ if __name__ == "__main__":
                       dest="testName",
                       action="store",
                       type="string")
+    parser.add_option("-s",
+                      "--skipbuild",
+                      dest="skipbuild",
+                      action="store_true",
+                      default=False)
     options,args = parser.parse_args()
 
     #Check inputs.
@@ -37,17 +42,25 @@ if __name__ == "__main__":
     testObject.show()
 
     #Run the test using GRTcode.
-    grt_output_file, grt_timing = run_grtcode(testObject.params_dict["architecture"],
-                                              testObject.params_dict["mols"].split(),
-                                              testObject.params_dict["atmos_input_file"],
-                                              testObject.params_dict["atmos_input_file_type"],
-                                              "../",
-                                              testObject.params_dict["lineshape"],
-                                              testObject.params_dict["low_freq"],
-                                              testObject.params_dict["high_freq"],
-                                              testObject.params_dict["resolution"],
-                                              testObject.params_dict["lines"].split(),
-                                              skipBuild=False)
+    grt_output_file, grt_timing = run_grtcode(testObject,
+                                              "..",
+                                              skip_build=options.skipbuild)
+
+    #Write out timing results.
+    num_columns = (testObject.params_dict["lat_end"] - \
+                  testObject.params_dict["lat_begin"] + 1)* \
+                  (testObject.params_dict["lon_end"] - \
+                  testObject.params_dict["lon_begin"] + 1)* \
+                  (testObject.params_dict["time_end"] - \
+                  testObject.params_dict["time_begin"] + 1)
+    with open("grtcode.timings","a") as f:
+        f.write(testObject.params_dict["platform"] + "," +
+                testObject.params_dict["architecture"] + "," +
+                str(num_columns) + "," +
+                str(testObject.params_dict["resolution"]) + "," +
+                str(grt_timing) + "\n")
+
+    stdout.write("\nOutput file located at: " + grt_output_file + "\n")
     stdout.write("\nGRTcode runtime (s): " + str(grt_timing) + "\n")
     exit()
 

@@ -169,6 +169,36 @@ static struct argp_option options[] =
          " in the input file.",
      -3},
 
+    {"minlon",
+     'x',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "minimum longitude index (lower bound, inclusive), defaults 0",
+     -3},
+
+    {"maxlon",
+     'X',
+     "VAL",
+     OPTION_ARG_OPTIONAL, 
+     "maximum longitude index (upper bound, inclusive), defaults to"
+         " maximum longitude index in the input file.",
+     -3},
+
+    {"minlat",
+     'y',
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "minimum latitude index (lower bound, inclusive), defaults 0",
+     -3},
+
+    {"maxlat",
+     'Y',
+     "VAL",
+     OPTION_ARG_OPTIONAL, 
+     "maximum latitude index (upper bound, inclusive), defaults to"
+         " maximum latitude index in the input file.",
+     -3},
+
     {"res",
      'r',
      "VAL",
@@ -273,6 +303,10 @@ struct arguments
     int mpi;                      /*Flag for using mpi.*/
     int t;                        /*Starting time (seconds?), inclusive.*/
     int T;                        /*Ending time (seconds?), inclusive.*/
+    int x; /*Starting longitude index, inclusive.*/
+    int X; /*Ending longitude index, inclusive.*/
+    int y; /*Starting latitude index, inclusive.*/
+    int Y; /*Ending longitude index, inclusive.*/
     int w;                        /*Wavenumber lower bound (cm?), inclusive.*/
     int W;                        /*Wavenumber upper bound (cm?), inclusive.*/
     int ctm;                      /*Flag for including continuum.*/
@@ -379,6 +413,18 @@ static error_t parse_opt(int key,
             break;
         case 'T':
             arguments->T = atoi(arg);
+            break;
+        case 'x':
+            arguments->x = atoi(arg);
+            break;
+        case 'X':
+            arguments->X = atoi(arg);
+            break;
+        case 'y':
+            arguments->y = atoi(arg);
+            break;
+        case 'Y':
+            arguments->Y = atoi(arg);
             break;
         case 'r':
             arguments->res = atof(arg);
@@ -2148,6 +2194,10 @@ int main(int argc,
     arguments.W = 3000;
     arguments.t = 0;
     arguments.T = -1;
+    arguments.x = 0;
+    arguments.X = -1;
+    arguments.y = 0;
+    arguments.Y = -1;
     arguments.res = 1.0;
     arguments.h2o = 0;
     arguments.co2 = 0;
@@ -2426,6 +2476,68 @@ int main(int argc,
     }
     int time = arguments.T - arguments.t + 1;
 
+    /*Check longitude bounds.*/
+    if (arguments.X < 0)
+    {
+        arguments.X = atmosData.nlon - 1;
+    }
+    else if ((size_t)arguments.X > atmosData.nlon-1)
+    {
+        fprintf(stderr,
+                "Upper longitude bound %d excepts the maximum longitude"
+                    " index (%zu) in the input file.\n",
+                arguments.X,
+                atmosData.nlon-1);
+        exit(EXIT_FAILURE);
+    }
+    if (arguments.x < 0)
+    {
+        fprintf(stderr,
+                "Lower longitude bound %d must be >= 0.\n",
+                arguments.x);
+        exit(EXIT_FAILURE);
+    }
+    else if (arguments.x > arguments.X)
+    {
+        fprintf(stderr,
+                "Lower longitude bound %d cannot be > upper longitude"
+                    " bound %d.\n",
+                arguments.x,
+                arguments.X);
+        exit(EXIT_FAILURE);
+    }
+
+    /*Check latitude bounds.*/
+    if (arguments.Y < 0)
+    {
+        arguments.Y = atmosData.nlat - 1;
+    }
+    else if ((size_t)arguments.Y > atmosData.nlat-1)
+    {
+        fprintf(stderr,
+                "Upper latitude bound %d excepts the maximum latitude"
+                    " index (%zu) in the input file.\n",
+                arguments.Y,
+                atmosData.nlat-1);
+        exit(EXIT_FAILURE);
+    }
+    if (arguments.y < 0)
+    {
+        fprintf(stderr,
+                "Lower latitude bound %d must be >= 0.\n",
+                arguments.y);
+        exit(EXIT_FAILURE);
+    }
+    else if (arguments.y > arguments.Y)
+    {
+        fprintf(stderr,
+                "Lower latitude bound %d cannot be > upper latitude"
+                    " bound %d.\n",
+                arguments.y,
+                arguments.Y);
+        exit(EXIT_FAILURE);
+    }
+
     /*Setup HITRAN lines.*/
     RefLinePtrs_t HitLines[nMols];
     RefLine_flags_t flags= {((unsigned int) -1),1,0}; /*(host cuda malloc default,
@@ -2585,16 +2697,10 @@ int main(int argc,
     REAL_t *fluxesUp_accumulated = NULL;
 
     for (time=arguments.t;time<=arguments.T;++time)
-/*
-    for (time=0;time<=0;++time)
-*/
     {
-        for (lat=compute_lat_beg;lat<compute_lat_end;++lat)
-/*
-        for (lat=0;lat<1;++lat)
-*/
+        for (lat=arguments.y;lat<=arguments.Y;++lat)
         {
-            for (lon=compute_lon_beg;lon<compute_lon_end;++lon)
+            for (lon=arguments.x;lon<=arguments.X;++lon)
             {
                 if (launchType == 0)
                 {
