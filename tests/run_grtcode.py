@@ -22,8 +22,8 @@ exec_name = {"voigt" : "grtcode.x",
 #Dictionary used for running make on the correct makefile.
 makefile_name = {"gpu_devbox_gpu" : "Makefile",
                  "theta_cpu_openmp" : "Makefile.theta",
-                 "gaea.c3_cpu_openmp" : "Makefile.gaea.c3",
-                 "gaea.c4_cpu_openmp" : "Makefile.gaea.c4"}
+                 "gaea.c3_cpu_openmp" : "Makefile.gaea",
+                 "gaea.c4_cpu_openmp" : "Makefile.gaea"}
 
 #Dictionaries used for running the grtcode executable.
 gfdl_ppmv_flag = {"h2o" : "-1a",
@@ -105,9 +105,9 @@ def run_grtcode(params,
     if params.params_dict["platform"] == "gpu_devbox":
         args = []
     elif params.params_dict["platform"] == "gaea.c3":
-        args = ["aprun","-n","1","-d","32"]
+        args = ["aprun","-n","1","-d","32","-cc","depth"]
     elif params.params_dict["platform"] == "gaea.c4":
-        args = ["aprun","-n","1","-d","36"]
+        args = ["aprun","-n","1","-d","36","-cc","depth"]
     elif params.params_dict["platform"] == "theta":
         args = ["aprun","-n","1","-d","256","-j","4","-cc","depth"]
 

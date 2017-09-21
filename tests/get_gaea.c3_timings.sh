@@ -1,8 +1,9 @@
 #!/bin/bash
 
 #Set platform and architecture
-declare platform="gpu_devbox"
-declare architecture="gpu"
+declare platform="gaea.c3"
+declare architecture="cpu_openmp"
+export OMP_NUM_THREADS=32
 
 #Create a log file.
 declare timestamp=$(date +"%Y.%m.%d-%H.%M.%S")
@@ -38,10 +39,22 @@ function run_tests {
     done
 }
 
+#Set environment.
+source /opt/cray/pe/modules/default/init/bash
+source $MODULESHOME/init/bash
+module use -a /ncrc/home2/fms/local/modulefiles
+module unload PrgEnv-pgi PrgEnv-intel PrgEnv-gnu PrgEnv-cray
+module unload cray-netcdf cray-hdf5 fre
+module load PrgEnv-intel/6.0.3
+module swap intel intel/16.0.3.210
+module load fre/bronx-12
+module load cray-hdf5/1.8.16
+
 #Run tests.
 declare build="0"
 
 printf "Running grtcode at $timestamp on $platform ($HOSTNAME) using $architecture\n\n" &>> $logfile
+printf "Using $OMP_NUM_THREADS OpenMP threads.\n" &>> $logfile
 
 run_tests "1"
 run_tests "0.1"

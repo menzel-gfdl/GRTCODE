@@ -1,5 +1,5 @@
-@test = rfmip_gpu_10col_r1
-architecture = gpu
+@test = rfmip_cpu_openmp_10col_r0.1
+architecture = cpu_openmp
 atmos_input_file = multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc
 atmos_input_file_type = rfmip
 continuum = yes
@@ -13,14 +13,14 @@ lon_end = 0
 low_freq = 1
 mols = h2o co2 o3 n2o co ch4 o2
 output_file = out.rfmip.nc
-platform = gpu_devbox
-resolution = 0.01
+platform = gaea.c4
+resolution = 0.1
 time_begin = 0
 time_end = 9
 @endtest
 
-@test = rfmip_gpu_25col_r1
-architecture = gpu
+@test = rfmip_cpu_openmp_25col_r0.1
+architecture = cpu_openmp
 atmos_input_file = multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc
 atmos_input_file_type = rfmip
 continuum = yes
@@ -34,14 +34,14 @@ lon_end = 0
 low_freq = 1
 mols = h2o co2 o3 n2o co ch4 o2
 output_file = out.rfmip.nc
-platform = gpu_devbox
-resolution = 0.01
+platform = gaea.c4
+resolution = 0.1
 time_begin = 0
 time_end = 4
 @endtest
 
-@test = rfmip_gpu_50col_r1
-architecture = gpu
+@test = rfmip_cpu_openmp_50col_r0.1
+architecture = cpu_openmp
 atmos_input_file = multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc
 atmos_input_file_type = rfmip
 continuum = yes
@@ -55,14 +55,14 @@ lon_end = 0
 low_freq = 1
 mols = h2o co2 o3 n2o co ch4 o2
 output_file = out.rfmip.nc
-platform = gpu_devbox
-resolution = 0.01
+platform = gaea.c4
+resolution = 0.1
 time_begin = 0
 time_end = 4
 @endtest
 
-@test = rfmip_gpu_75col_r1
-architecture = gpu
+@test = rfmip_cpu_openmp_75col_r0.1
+architecture = cpu_openmp
 atmos_input_file = multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc
 atmos_input_file_type = rfmip
 continuum = yes
@@ -76,14 +76,14 @@ lon_end = 0
 low_freq = 1
 mols = h2o co2 o3 n2o co ch4 o2
 output_file = out.rfmip.nc
-platform = gpu_devbox
-resolution = 0.01
+platform = gaea.c4
+resolution = 0.1
 time_begin = 0
 time_end = 4
 @endtest
 
-@test = rfmip_gpu_100col_r1
-architecture = gpu
+@test = rfmip_cpu_openmp_100col_r0.1
+architecture = cpu_openmp
 atmos_input_file = multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc
 atmos_input_file_type = rfmip
 continuum = yes
@@ -97,8 +97,8 @@ lon_end = 0
 low_freq = 1
 mols = h2o co2 o3 n2o co ch4 o2
 output_file = out.rfmip.nc
-platform = gpu_devbox
-resolution = 0.01
+platform = gaea.c4
+resolution = 0.1
 time_begin = 0
 time_end = 4
 @endtest

@@ -2677,8 +2677,10 @@ int main(int argc,
 #endif
 
 #ifdef _OPENMP
-    /*Set openmp number of threads.*/
-    omp_set_num_threads(256);
+    /*Print out the number of OpenMP threads that will be used.*/
+    fprintf(stdout,
+            "\nUsing %d OpenMP threads.\n",
+            omp_get_max_threads());
 #endif
 
     /*Initialize TIPS.*/

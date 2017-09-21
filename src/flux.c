@@ -220,11 +220,13 @@ void sum_fluxes(unsigned int const nF,
 {
     REAL_t const MToCm = 100;
     REAL_t const resm = res*MToCm; /*Wavenumber resolution (1/m).*/
+    unsigned int i;
+    unsigned int j;
 
-    for (unsigned int i=0;i<numLevels;++i)
+    for (i=0;i<numLevels;++i)
     {
         fluxes_accumulated[i] = 0;
-        for (unsigned int j=0;j<nF-1;++j)
+        for (j=0;j<nF-1;++j)
         {
             REAL_t a = fluxes[i*nF+j];
             REAL_t b = fluxes[i*nF+j+1] - a;

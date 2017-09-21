@@ -23,6 +23,7 @@ tests/hitbin
 tests/mypar.bin.par
 run/verification/rfm_layer_test/run/mypar.bin
 run/RESULTS/foo
+tests/logs/grtcode.out.*
 
 #Symlinks
 run/verification/rfm_layer_test/run/HITRAN2012.bin
