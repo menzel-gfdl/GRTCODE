@@ -54,6 +54,7 @@ int readRfmipFieldsFromFile(char fname[],
     float g = 9.80665; /*(m/s^2)*/
     float R = 8.3144598; /*(m^3*Pa)/(K*mol)*/
     float M = 0.02897; /*kg/mol*/
+    float Mkg = M/6.0221409E23; /*kg*/
 
     /*Open the inputted file. */
     if ((retval = nc_open(fname,
@@ -142,6 +143,7 @@ int readRfmipFieldsFromFile(char fname[],
     in->TSURF = NULL;
     in->TLEV = NULL;
     in->EMIS = NULL;
+    in->N = NULL;
 
     /*Malloc space for the radiation input fields.*/
     in->RH2O = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*(in->npfull)*sizeof(float));
@@ -157,13 +159,14 @@ int readRfmipFieldsFromFile(char fname[],
     in->TSURF = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*sizeof(float));
     in->TLEV = (float *)malloc((in->ntime)*(in->nlat)*(in->nlon)*(in->nphalf)*sizeof(float));
     in->EMIS = (float *)malloc((in->nlat)*(in->nlon)*sizeof(float));
+    in->N = (float *)malloc((in->nlat)*(in->nlon)*(in->npfull)*sizeof(float));
 
     /*Make sure that the mallocs succeeded.*/
     if (in->RH2O == NULL || in->RCO2 == NULL || in->QO3 == NULL ||
             in->RN2O == NULL || in->RCO == NULL || in->RCH4 == NULL ||
             in->RO2 == NULL || in->PRESSM == NULL || in->TEMP == NULL ||
             in->DELTAZ == NULL || in->TSURF == NULL || in->TLEV == NULL ||
-            in->EMIS == NULL)
+            in->EMIS == NULL || in->N == NULL)
     {
         fprintf(stderr,
                 "Error(radiationInputFieldsMalloc): malloc failed for the"
@@ -269,20 +272,6 @@ int readRfmipFieldsFromFile(char fname[],
         NCERR(retval);
     }
 
-    /*Read in the layer pressure (pa) values.*/
-    if ((retval = nc_inq_varid(ncid,
-                               "pres_layer",
-                               &varid)))
-    {
-        NCERR(retval);
-    }
-    if ((retval = nc_get_var_float(ncid,
-                                   varid,
-                                   in->PRESSM)))
-    {
-        NCERR(retval);
-    }
-
     /*Read in the layer temperature (K) values.*/
     if ((retval = nc_inq_varid(ncid,
                                "temp_layer",
@@ -297,9 +286,7 @@ int readRfmipFieldsFromFile(char fname[],
         NCERR(retval);
     }
 
-    /*Calculate the layer thicknesses (m).*/
-
-    /*First read in all the pressure level (Pa) values.*/
+    /*Read in all the pressure level (Pa) values.*/
     float *plevs = (float *)malloc((in->nlat)*(in->nphalf)*sizeof(float));
     if (plevs == NULL)
     {
@@ -319,6 +306,25 @@ int readRfmipFieldsFromFile(char fname[],
                                    plevs)))
     {
         NCERR(retval);
+    }
+
+    /*Calculate the average layer pressures (pa) and the number density
+      [1/(m*m)] integrated across the layer, assuming that the layer is
+      in hydrostatic equilibrium.*/
+    for (i=0;i<in->nlat;i++)
+    {
+        for (j=0;j<in->npfull;j++)
+        {
+            zoffset = i*(in->npfull) + j;
+            loffset = i*(in->nphalf) + j;
+            in->PRESSM[zoffset] = 0.5*(plevs[loffset] + plevs[loffset+1]);
+            dp = plevs[loffset+1] - plevs[loffset];
+            if (dp < 0)
+            {
+                dp *= -1.;
+            }
+            in->N[zoffset] = dp/(Mkg*g);
+        }
     }
 
     /*Next calculate the layer thicknesses (m).  Assume a hydrostatic
@@ -486,6 +492,7 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
                   pressure (PRESSM) = Pa         pressure (P)  = atm
                   temperature (TEMP) = K         temperature (T) = K
                   deltaz (DELTAZ) = m            deltaz (DELTAZ) = cm
+                  molecules/Area (N) = m^-2      molecules/area (N) = cm^-2
                                                  partial pressure (PS) = atm
                 */
                 out->P[offset] = ((REAL_t)(in->PRESSM[poffset]))*PaToAtm;
@@ -495,6 +502,33 @@ int setOutputFieldsFromRfmip(radiationInputFields_t *in,
                 out->DELTAZ[offset] = ((REAL_t)(in->DELTAZ[offset]))*MToCm;
 
                 xh2o = ((REAL_t)(in->RH2O[offset]));
+
+                out->N[h2o_offset] = ((xh2o*((REAL_t)(in->N[poffset])))/
+                                          (1.0 + xh2o))*1.e-4;
+
+                out->N[co2_offset] = ((((REAL_t)(in->RCO2[t]))*
+                                          ((REAL_t)(in->N[poffset])))/
+                                          (1.0 + xh2o))*1.e-4*1.e-6;
+
+                out->N[o3_offset] = ((((REAL_t)(in->QO3[offset]))*
+                                         ((REAL_t)(in->N[poffset])))/
+                                         (1.0 + xh2o))*1.e-4;
+
+                out->N[n2o_offset] = ((((REAL_t)(in->RN2O[t]))*
+                                          ((REAL_t)(in->N[poffset])))/
+                                          (1.0 + xh2o))*1.e-4*1.e-9;
+
+                out->N[co_offset] = ((((REAL_t)(in->RCO[t]))*
+                                         ((REAL_t)(in->N[poffset])))/
+                                         (1.0 + xh2o))*1.e-4;
+
+                out->N[ch4_offset] = ((((REAL_t)(in->RCH4[t]))*
+                                          ((REAL_t)(in->N[poffset])))/
+                                          (1.0 + xh2o))*1.e-4*1.e-9;
+
+                out->N[o2_offset] = ((((REAL_t)(in->RO2[t]))*
+                                         ((REAL_t)(in->N[poffset])))/
+                                         (1.0 + xh2o))*1.e-4;
 
                 out->PS[h2o_offset] = ((xh2o*((REAL_t)(in->PRESSM[poffset])))/
                                           (1.0 + xh2o))*PaToAtm;

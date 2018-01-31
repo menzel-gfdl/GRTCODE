@@ -1337,7 +1337,6 @@ int device_optics_perMol(cudaStream_t stream,
                          const float* const n,
                          const float* const d,
                          REAL_t* const TauU_d,
-                         REAL_t* const pathLength_d,
                          const REAL_t* const PS_d,
                          RefLinePtrs_t* const Lines_d,
                          OpticsBufPtrs_t* const OptBuf_d)
@@ -1711,7 +1710,6 @@ int device_optics_perMol(cudaStream_t stream,
                                                                                 Gam_d,
                                                                                 PShift_d,
                                                                                 S_d,
-                                                                                pathLength_d,
                                                                                 TauU_d,
                                                                                 out_d);
 #ifdef FORCE_KERNEL_CHECK
@@ -1960,7 +1958,6 @@ int device_launch(int *nStreams,
                                      L[mol].n,
                                      L[mol].d,
                                      &(N_d[(L[mol].mol-1)*atmosData->npfull]),
-                                     Z_d,
                                      &(PS_d[(L[mol].mol-1)*atmosData->npfull]),
                                      &(LinesBuf_d[s]),
                                      &(OpticsBuf_d[s]));
@@ -2555,10 +2552,12 @@ int main(int argc,
           partial pressure is not taken from the input NetCDF file, calculate
           the partial pressure from the concentrations inputted on the
           command line.*/
+/*
         checkMolConfig(&arguments,
                        HitLines[mol].mol,
                        &atmosData,
                        time);
+*/
     }
 
     REAL_t *CS_h = NULL;

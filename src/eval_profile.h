@@ -19,7 +19,6 @@ __global__ void eval_profile(unsigned int const molId,
                              REAL_t const * const PShift,
                              REAL_t const * const S,
                              REAL_t const * const tauU_d,
-                             REAL_t const * const pathlength_d,
                              REAL_t * const out);
 #endif
 

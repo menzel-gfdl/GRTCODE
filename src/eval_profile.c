@@ -42,10 +42,8 @@
                                  [height][line].
       S            [in]      Array of corrected spectral line intensities (cm).
                                  This array is stored as [height][line].
-      tauU_d       [in]      Array of number densities (cm^-3).  This array
-                                 is stored as [height].
-      pathlength_d [in]      Array of path lengths (cm).  This array is stored
-                                 as [height].
+      tauU_d       [in]      Array of integrated number densities (cm^-2).
+                                 This array is stored as [height].
       out          [in,out]  Array of dimensionless optical depths.  This
                                  array is stored as [height][frequency].
 */
@@ -63,7 +61,6 @@ __global__ void eval_profile(unsigned int const molId,
                              REAL_t const * const PShift,
                              REAL_t const * const S,
                              REAL_t const * const tauU_d,
-                             REAL_t const * const pathlength_d,
                              REAL_t * const out)
 {
     unsigned int ltid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -77,7 +74,6 @@ __global__ void eval_profile(unsigned int const molId,
         const int fsteps = ceil((REAL_t)breadth/resolution);
         REAL_t snn;
         REAL_t tauu;
-        REAL_t len;
         REAL_t temp;
         REAL_t molarMass;
         LineShapeInputs_t in;
@@ -95,7 +91,6 @@ __global__ void eval_profile(unsigned int const molId,
             {
                 snn = S[loffset];
                 tauu = tauU_d[lyr];
-                len = pathlength_d[lyr];
                 temp = T[lyr];
                 molarMass = getMolarMass(molId);
 
@@ -135,7 +130,7 @@ __global__ void eval_profile(unsigned int const molId,
                         /*Atomics must be used for now because of a race on
                           load-alter-write out[ftid].*/
                         atomicAdd(&(out[lyr*nF+ftid]),
-                                  snn*tauu*len*line_shape);
+                                  snn*tauu*line_shape);
                     }
                 }
 
@@ -162,7 +157,7 @@ __global__ void eval_profile(unsigned int const molId,
                         /*Atomics must be used for now because of a race on
                           load-alter-write out[ftid].*/
                         atomicAdd(&(out[lyr*nF+ftid]),
-                                  snn*tauu*len*line_shape);
+                                  snn*tauu*line_shape);
                     }
                 }
             }
