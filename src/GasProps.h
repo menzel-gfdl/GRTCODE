@@ -1,25 +1,24 @@
-#ifndef SET_GASPROPS_H_
-#define SET_GASPROPS_H_
+#ifndef GASPROPS_H_
+#define GASPROPS_H_
 
-#include <stdint.h>
-#include <stdlib.h>
-#include "myreal.h"
+#include "floating_point_type.h"
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-/*Function prototypes.*/
 
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t getMolarMass(int const hitranMolId);
+fp_t getMolarMass(int const molId);
+
 
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t Q(uint8_t const molId,
-         REAL_t const T,
-         uint8_t const iso);
+fp_t Q(int const molId,
+       fp_t const T,
+       int const iso);
 
+
+#ifdef foo
 void setGlobalPartialPres(double const val,
                           REAL_t * const PS,
                           REAL_t const * const P,
@@ -45,5 +44,7 @@ void setGlobalNumberDensity(REAL_t * const N,
                             size_t const nlon,
                             size_t const nmol,
                             size_t const nlvl);
+#endif
+
 
 #endif

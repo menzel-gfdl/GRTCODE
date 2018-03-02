@@ -1,31 +1,31 @@
-#ifndef SET_EVAL_SNN_CORRECTION_H_
-#define SET_EVAL_SNN_CORRECTION_H_
+#ifndef EVAL_SNN_CORRECTION_H_
+#define EVAL_SNN_CORRECTION_H_
 
-#include <stdint.h>
-#include "myreal.h"
+#include "floating_point_type.h"
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-/*Function prototypes.*/
 
 #ifdef __NVCC__
-__global__ void eval_Snn_correction(unsigned int const numLayers,
+__global__ void eval_Snn_correction(int const numLayers,
                                     unsigned int const nL,
-                                    uint8_t const molId,
-                                    REAL_t const * const T,
-                                    uint8_t const * const iso,
-                                    REAL_t const * const Vnn,
+                                    int const molId,
+                                    fp_t const * const T,
+                                    int const * const iso,
+                                    fp_t const * const Vnn,
                                     float const * const En,
-                                    REAL_t const * const Snn_partial,
-                                    REAL_t * const S);
+                                    fp_t const * const Snn_partial,
+                                    fp_t * const S);
 #endif
 
-void eval_Snn_correction_h(unsigned int const numLayers,
+
+void eval_Snn_correction_h(int const numLayers,
                            unsigned int const nL,
-                           uint8_t const molId,
-                           REAL_t const * const T,
-                           uint8_t const * const iso,
-                           REAL_t const * const Vnn,
+                           int const molId,
+                           fp_t const * const T,
+                           int const * const iso,
+                           fp_t const * const Vnn,
                            float const * const En,
-                           REAL_t const * const Snn_partial,
-                           REAL_t * const S);
+                           fp_t const * const Snn_partial,
+                           fp_t * const S);
+
+
 #endif

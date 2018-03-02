@@ -1,39 +1,52 @@
-#ifndef SET_CONTINUUM_H_
-#define SET_CONTINUUM_H_
+#ifndef CONTINUUM_H_
+#define CONTINUUM_H_
 
-#include "myreal.h"
+#include "floating_point_type.h"
 
-void parseCKD(const char fname[],
-              REAL_t *AryPtr,
-              const int maxwavenum,
-              const int minw,
-              REAL_t const res);
+typedef struct ContinuumCoefs
+{
+    fp_t **coefs; /*Continuum coefficients (wavenumber) [1/cm].*/
+} ContinuumCoefs_t;
+
+
+int get_h2o_continuum_coefs(ContinuumCoefs_t *h2o,
+                            unsigned int const nws,
+                            int const w,
+                            double const res,
+                            int put_on_device);
+
+
+int free_continuum_coeffs(ContinuumCoefs_t *c,
+                          int const on_device);
+
 
 #ifdef __NVCC__
 __global__
 void calc_ctm_optdepth(unsigned int const nF,
-                       unsigned int const numLayers,
-                       REAL_t * const optdepth,
-                       REAL_t const * const CS,
-                       REAL_t const * const T,
-                       REAL_t const * const PS_H2O,
-                       REAL_t const * const Z,
-                       REAL_t const * const T0,
-                       REAL_t const * const CF,
-                       REAL_t const * const P,
-                       REAL_t const * const T0F);
+                       int const numLayers,
+                       fp_t * const optdepth,
+                       fp_t const * const CS,
+                       fp_t const * const T,
+                       fp_t const * const PS_H2O,
+                       fp_t const * const Z,
+                       fp_t const * const T0,
+                       fp_t const * const CF,
+                       fp_t const * const P,
+                       fp_t const * const T0F);
 #endif
 
+
 void calc_ctm_optdepth_h(unsigned int const nF,
-                         unsigned int const numLayers,
-                         REAL_t * const optdepth,
-                         REAL_t const * const CS,
-                         REAL_t const * const T,
-                         REAL_t const * const PS_H2O,
-                         REAL_t const * const Z,
-                         REAL_t const * const T0,
-                         REAL_t const * const CF,
-                         REAL_t const * const P,
-                         REAL_t const * const T0F);
+                         int const numLayers,
+                         fp_t * const optdepth,
+                         fp_t const * const CS,
+                         fp_t const * const T,
+                         fp_t const * const PS_H2O,
+                         fp_t const * const Z,
+                         fp_t const * const T0,
+                         fp_t const * const CF,
+                         fp_t const * const P,
+                         fp_t const * const T0F);
+
 
 #endif

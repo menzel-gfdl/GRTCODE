@@ -1,9 +1,9 @@
+#include "floating_point_type.h"
 #include "GasProps.h"
 #include "GaussianFuncs.h"
 #include "IdaVoigtFuncs.h"
 #include "line_shape.h"
 #include "LorentzFuncs.h"
-#include "myreal.h"
 #include "omp.h"
 #include "RfmVoigtFuncs.h"
 
@@ -13,7 +13,7 @@
 #include <math.h>
 #endif
 
-/*---------------------------------------------------------------------------*/
+
 /*Compute the dimensionless optical depth values at each desired frequency.
 
   Arguments:
@@ -42,57 +42,47 @@
                                  [height][line].
       S            [in]      Array of corrected spectral line intensities (cm).
                                  This array is stored as [height][line].
-      tauU_d       [in]      Array of integrated number densities (cm^-2).
+      N            [in]      Array of integrated number densities (cm^-2).
                                  This array is stored as [height].
-      out          [in,out]  Array of dimensionless optical depths.  This
+      tau          [in,out]  Array of dimensionless optical depths.  This
                                  array is stored as [height][frequency].
 */
-
 #ifdef __NVCC__
-__global__ void eval_profile(unsigned int const molId,
+__global__ void eval_profile(int const molId,
                              unsigned int const nL,
-                             int const nF,
-                             REAL_t const loWn,
-                             REAL_t const resolution,
-                             unsigned int const numLayers,
-                             unsigned int const breadth,
-                             REAL_t const * const T,
-                             REAL_t const * const Gam,
-                             REAL_t const * const PShift,
-                             REAL_t const * const S,
-                             REAL_t const * const tauU_d,
-                             REAL_t * const out)
+                             unsigned int const nF,
+                             fp_t const loWn,
+                             fp_t const resolution,
+                             int const numLayers,
+                             int const breadth,
+                             fp_t const * const T,
+                             fp_t const * const Gam,
+                             fp_t const * const PShift,
+                             fp_t const * const S,
+                             fp_t const * const N,
+                             fp_t * const tau)
 {
     unsigned int ltid = blockIdx.x * blockDim.x + threadIdx.x;
-
     if (ltid < nL)
     {
-        int ftid;
-        int fcenterid;
-        unsigned int lyr;
-        unsigned int loffset;
-        const int fsteps = ceil((REAL_t)breadth/resolution);
-        REAL_t snn;
-        REAL_t tauu;
-        REAL_t temp;
-        REAL_t molarMass;
-        LineShapeInputs_t in;
-        REAL_t line_shape;
+        int const fsteps = ceil((fp_t)breadth/resolution);
 
 #pragma unroll
+        int lyr;
         for (lyr=0;lyr<numLayers;++lyr)
         {
-            loffset = lyr*nL + ltid;
+            unsigned int loffset = lyr*nL + ltid;
+            LineShapeInputs_t in;
             in.lineCenter = PShift[loffset];
+            int fcenterid = (2*((in.lineCenter-loWn)/resolution)+1)/2;
 
             /*Find index of nearest frequency bin to line.*/
-            fcenterid = (2*((in.lineCenter-loWn)/resolution)+1)/2;
             if (fcenterid >= 0 && fcenterid < nF)
             {
-                snn = S[loffset];
-                tauu = tauU_d[lyr];
-                temp = T[lyr];
-                molarMass = getMolarMass(molId);
+                fp_t snn = S[loffset];
+                fp_t n = N[lyr];
+                fp_t temp = T[lyr];
+                fp_t molarMass = getMolarMass(molId);
 
                 /*Set the necessary values for the line shape input
                   structure.*/
@@ -107,97 +97,85 @@ __global__ void eval_profile(unsigned int const molId,
                 in.eta = -1;
 #endif
 
-                /*Calculate the optical depth values from the left edge of
-                  the line to the line center.*/
+                int ftid;
 #pragma unroll
                 for (ftid=fcenterid-((int)fsteps);ftid<=fcenterid;++ftid)
                 {
+                    /*Calculate the optical depth values from the left edge
+                      of the line to the line center.*/
                     if (ftid >= 0)
                     {
-                        in.freq = ((REAL_t)ftid)*resolution + loWn;
+                        in.freq = ((fp_t)ftid)*resolution + loWn;
 
                         /*Calculate the value of the line shape function.*/
 #if defined(GAUSSIAN)
-                        line_shape = gaussian_line_shape(in);
+                        fp_t line_shape = gaussian_line_shape(in);
 #elif defined(LORENTZ)
-                        line_shape = lorentz_line_shape(in);
+                        fp_t line_shape = lorentz_line_shape(in);
 #elif defined(IDA_VOIGT)
-                        line_shape = ida_voigt_line_shape(in);
+                        fp_t line_shape = ida_voigt_line_shape(in);
 #else
-                        line_shape = rfm_voigt_line_shape(in);
+                        fp_t line_shape = rfm_voigt_line_shape(in);
 #endif
 
                         /*Atomics must be used for now because of a race on
                           load-alter-write out[ftid].*/
-                        atomicAdd(&(out[lyr*nF+ftid]),
-                                  snn*tauu*line_shape);
+                        atomicAdd(&(tau[lyr*nF+ftid]),
+                                  snn*n*line_shape);
                     }
                 }
 
-                /*Calculate the optical depth values from the right edge of
-                  the line to the line center.*/
 #pragma unroll
                 for (ftid=fcenterid+((int)fsteps);ftid>fcenterid;--ftid)
                 {
+                    /*Calculate the optical depth values from the right edge
+                      of the line to the line center.*/
                     if (ftid < nF)
                     {
-                        in.freq = ((REAL_t)ftid)*resolution + loWn;
+                        in.freq = ((fp_t)ftid)*resolution + loWn;
 
                         /*Calculate the value of the line shape function.*/
 #if defined(GAUSSIAN)
-                        line_shape = gaussian_line_shape(in);
+                        fp_t line_shape = gaussian_line_shape(in);
 #elif defined(LORENTZ)
-                        line_shape = lorentz_line_shape(in);
+                        fp_t line_shape = lorentz_line_shape(in);
 #elif defined(IDA_VOIGT)
-                        line_shape = ida_voigt_line_shape(in);
+                        fp_t line_shape = ida_voigt_line_shape(in);
 #else
-                        line_shape = rfm_voigt_line_shape(in);
+                        fp_t line_shape = rfm_voigt_line_shape(in);
 #endif
 
                         /*Atomics must be used for now because of a race on
                           load-alter-write out[ftid].*/
-                        atomicAdd(&(out[lyr*nF+ftid]),
-                                  snn*tauu*line_shape);
+                        atomicAdd(&(tau[lyr*nF+ftid]),
+                                  snn*n*line_shape);
                     }
                 }
             }
         }
     }
-
     return;
 }
-
 #endif
 
-void eval_profile_h(unsigned int const molId,
+
+void eval_profile_h(int const molId,
                     unsigned int const nL,
-                    int const nF,
-                    REAL_t const loWn,
-                    REAL_t const resolution,
-                    unsigned int const numLayers,
-                    unsigned int const breadth,
-                    REAL_t const * const T,
-                    REAL_t const * const Gam,
-                    REAL_t const * const PShift,
-                    REAL_t const * const S,
-                    REAL_t const * const tauU_d,
-                    REAL_t const * const pathlength_d,
-                    REAL_t * const out)
+                    unsigned int const nF,
+                    fp_t const loWn,
+                    fp_t const resolution,
+                    int const numLayers,
+                    int const breadth,
+                    fp_t const * const T,
+                    fp_t const * const Gam,
+                    fp_t const * const PShift,
+                    fp_t const * const S,
+                    fp_t const * const N,
+                    fp_t * const tau)
 {
-    /*CPU specific code.*/
+    int const fsteps = ceil((fp_t)breadth/resolution);
+    int lyr;
     unsigned int ltid;
-    int ftid;
-    int fcenterid;
-    unsigned int lyr;
-    unsigned int loffset;
-    const int fsteps = ceil((REAL_t)breadth/resolution);
-    REAL_t snn;
-    REAL_t tauu;
-    REAL_t len;
-    REAL_t temp;
-    REAL_t molarMass;
-    LineShapeInputs_t in;
-    REAL_t line_shape;
 
 #pragma omp parallel for schedule(static) \
                          collapse(2) \
@@ -215,18 +193,18 @@ void eval_profile_h(unsigned int const molId,
     {
         for (ltid=0;ltid<nL;++ltid)
         {
-            tauu = tauU_d[lyr];
-            len = pathlength_d[lyr];
-            temp = T[lyr];
-            loffset = lyr*nL + ltid;
+            fp_t n = N[lyr];
+            fp_t temp = T[lyr];
+            unsigned int loffset = lyr*nL + ltid;
+            LineShapeInputs_t in;
             in.lineCenter = PShift[loffset];
 
             /*Find index of nearest frequency bin to line.*/
-            fcenterid = (2*((in.lineCenter-loWn)/resolution)+1)/2;
+            int fcenterid = (2*((in.lineCenter-loWn)/resolution)+1)/2;
             if (fcenterid >= 0 && fcenterid < nF)
             {
-                snn = S[loffset];
-                molarMass = getMolarMass(molId);
+                fp_t snn = S[loffset];
+                fp_t molarMass = getMolarMass(molId);
 
                 /*Set the necessary values for the line shape input
                   structure.*/
@@ -243,25 +221,26 @@ void eval_profile_h(unsigned int const molId,
 
                 /*Calculate the optical depth values from the left edge of
                   the line to the line center.*/
+                int ftid;
                 for (ftid=fcenterid-((int)fsteps);ftid<=fcenterid;++ftid)
                 {
                     if (ftid >= 0)
                     {
-                        in.freq = ((REAL_t)ftid)*resolution + loWn;
+                        in.freq = ((fp_t)ftid)*resolution + loWn;
 
                         /*Calculate the value of the line shape function.*/
 #if defined(GAUSSIAN)
-                        line_shape = gaussian_line_shape(in);
+                        fp_t line_shape = gaussian_line_shape(in);
 #elif defined(LORENTZ)
-                        line_shape = lorentz_line_shape(in);
+                        fp_t line_shape = lorentz_line_shape(in);
 #elif defined(IDA_VOIGT)
-                        line_shape = ida_voigt_line_shape(in);
+                        fp_t line_shape = ida_voigt_line_shape(in);
 #else
-                        line_shape = rfm_voigt_line_shape(in);
+                        fp_t line_shape = rfm_voigt_line_shape(in);
 #endif
 
 #pragma omp atomic update
-                        out[lyr*nF+ftid] += snn*tauu*len*line_shape;
+                        tau[lyr*nF+ftid] += snn*n*line_shape;
                     }
                 }
 
@@ -271,21 +250,21 @@ void eval_profile_h(unsigned int const molId,
                 {
                     if (ftid < nF)
                     {
-                        in.freq = ((REAL_t)ftid)*resolution + loWn;
+                        in.freq = ((fp_t)ftid)*resolution + loWn;
 
                         /*Calculate the value of the line shape function.*/
 #if defined(GAUSSIAN)
-                        line_shape = gaussian_line_shape(in);
+                        fp_t line_shape = gaussian_line_shape(in);
 #elif defined(LORENTZ)
-                        line_shape = lorentz_line_shape(in);
+                        fp_t line_shape = lorentz_line_shape(in);
 #elif defined(IDA_VOIGT)
-                        line_shape = ida_voigt_line_shape(in);
+                        fp_t line_shape = ida_voigt_line_shape(in);
 #else
-                        line_shape = rfm_voigt_line_shape(in);
+                        fp_t line_shape = rfm_voigt_line_shape(in);
 #endif
 
 #pragma omp atomic update
-                        out[lyr*nF+ftid] += snn*tauu*len*line_shape;
+                        tau[lyr*nF+ftid] += snn*n*line_shape;
                     }
                 }
             }

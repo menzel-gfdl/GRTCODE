@@ -1,6 +1,7 @@
-#ifndef SET_CUDAHELPERS_H_
-#define SET_CUDAHELPERS_H_
+#ifndef CUDAHELPERS_H_
+#define CUDAHELPERS_H_
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 

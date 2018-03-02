@@ -1,14 +1,14 @@
 #include <math.h>
+#include "floating_point_type.h"
 #include "HitranConstants.h"
 #include "line_shape.h"
 #include "LorentzFuncs.h"
-#include "myreal.h"
 
 #ifndef M_1_PI
 #define M_1_PI 0.31830988618379067154
 #endif
 
-/*---------------------------------------------------------------------------*/
+
 /*Calculate the normalized line shape function assuming a Lorentz profile.
   See equation A14 from:
 
@@ -25,16 +25,14 @@
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t lorentz_line_shape(LineShapeInputs_t const vals)
+fp_t lorentz_line_shape(LineShapeInputs_t const vals)
 {
-    /*Local variables*/
-    REAL_t const gam2 = vals.lorHWHM*vals.lorHWHM;
-    REAL_t const del = vals.freq - vals.lineCenter;
-
-    return ((REAL_t)M_1_PI)*(vals.lorHWHM/(gam2+(del*del)));
+    fp_t const gam2 = vals.lorHWHM*vals.lorHWHM;
+    fp_t const del = vals.freq - vals.lineCenter;
+    return ((fp_t)M_1_PI)*(vals.lorHWHM/(gam2+(del*del)));
 }
 
-/*---------------------------------------------------------------------------*/
+
 /*Calculate the pressure broadened line half-width.  See equation A12 from:
 
   Rothman, L. S. et. al (1998). J. Quant. Spectrosc. Radiat. Transfer. 60,
@@ -55,18 +53,18 @@ REAL_t lorentz_line_shape(LineShapeInputs_t const vals)
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t lorentz_hwhm(REAL_t const P,
-                    REAL_t const T,
-                    float const Yself,
-                    float const Yair,
-                    float const n,
-                    REAL_t const Ps)
+fp_t lorentz_hwhm(fp_t const P,
+                  fp_t const T,
+                  float const Yself,
+                  float const Yair,
+                  float const n,
+                  fp_t const Ps)
 {
-    return pow((((REAL_t)TREF)/T),(REAL_t)n)*
-               ((((REAL_t)Yair)*(P-Ps)) + (((REAL_t)Yself)*Ps));
+    return pow((((fp_t)TREF)/T),(fp_t)n)*
+               ((((fp_t)Yair)*(P-Ps)) + (((fp_t)Yself)*Ps));
 }
 
-/*---------------------------------------------------------------------------*/
+
 /*Calculate the pressure broadened line full-width.  See equation A12 from:
 
   Arguments:
@@ -84,14 +82,12 @@ REAL_t lorentz_hwhm(REAL_t const P,
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t lorentz_fwhm(REAL_t const P,
-                    REAL_t const T,
-                    float const Yself,
-                    float const Yair,
-                    float const n,
-                    REAL_t const Ps)
+fp_t lorentz_fwhm(fp_t const P,
+                  fp_t const T,
+                  float const Yself,
+                  float const Yair,
+                  float const n,
+                  fp_t const Ps)
 {
     return 2.0*lorentz_hwhm(P,T,Yself,Yair,n,Ps);
 }
-
-/*---------------------------------------------------------------------------*/

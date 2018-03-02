@@ -2,94 +2,86 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "continuum.h"
-#include "myreal.h"
+#include "debug.h"
+#include "floating_point_type.h"
 #include "omp.h"
+#include "utils.h"
+
+#ifdef __NVCC__
+#include "cudaHelpers.cuh"
+#endif
 
 static const int MAXCHARSPERLINE=128;
 
-/*---------------------------------------------------------------------------*/
-/*Parse the coefficients out of the ascii file and interpolate.*/
-void parseCKD(const char fname[],
-              REAL_t *AryPtr,
-              const int maxwavenum,
-              const int minw,
-              REAL_t const res)
+
+enum continuum_consts
 {
-    if (AryPtr == NULL)
-    {
-        fprintf(stderr,
-                "Please first malloc AryPtr.  Aborting\n");
-            exit(EXIT_FAILURE);
-    }
+    CS = 0,
+    CF,
+    T0,
+    T0F,
+    NUM_COEF
+};
+
+
+static int parse_CKD(char const * const fname,
+                     fp_t *AryPtr,
+                     int const maxwavenum,
+                     int const minw,
+                     fp_t const res)
+{
+    not_null(fname);
+    not_null(AryPtr);
 
     /*Open the file.*/
-    FILE *F = fopen(fname,
-                    "r");
-    if (F == NULL)
-    {
-        fprintf(stderr,
-                "Open %s Failed.  Aborting\n",
-                fname);
-        exit(EXIT_FAILURE);
-    }
+    log_mesg("Reading in continuum coefficients from file %s.",
+             fname);
+    FILE *f = NULL;
+    open_file(f,
+              fname,
+              "r");
 
     /*Count the number of lines in the file.*/
     unsigned int line_count = 0;
     char line[MAXCHARSPERLINE];
-    while (fgets(line,MAXCHARSPERLINE,F) != NULL)
+    while (fgets(line,MAXCHARSPERLINE,f) != NULL)
     {
         line_count++;
     }
 
     /*Read in the data.*/
-    int *wavenums = (int *)malloc(line_count*sizeof(int));
-    REAL_t *buf = (REAL_t *)malloc(line_count*sizeof(REAL_t));
-    if (wavenums == NULL || buf == NULL)
-    {
-        fprintf(stderr,
-                "malloc of %zu bytes for wavenums or buf failed.",
-                line_count*sizeof(REAL_t));
-    }
-
+    int *wavenums = NULL;
+    malloc_ptr(wavenums,line_count);
+    fp_t *buf = NULL;
+    malloc_ptr(buf,line_count);
     int count = 0;
     double v0;
     double v1;
-    rewind(F);
-    while (fgets(line,MAXCHARSPERLINE,F) != NULL)
+    rewind(f);
+    while (fgets(line,MAXCHARSPERLINE,f) != NULL)
     {
         sscanf(line,
                "%lf %lf",
                &v0,
                &v1);
         wavenums[count] = (int)v0;
-        buf[count] = (REAL_t)v1;
+        buf[count] = (fp_t)v1;
         count++;
     }
 
     /*Close the file.*/
-    count = fclose(F);
+    count = fclose(f);
     if (count != 0)
     {
-        fprintf(stderr,
-                "Attempt to close file %s previously opened with handle"
-                    " at %p failed with %d\n\tAborting.\n",
-                fname,
-                F,
-                count);
-        exit(EXIT_FAILURE);
+        fatal("Attempt to close file %s failed with return code %d.",
+              fname,
+              count);
     }
 
     /*Interpolate and store the values.*/
-    REAL_t w;
-    int left;
-    int right;
-    int mid;
-    int match;
-    REAL_t m;
-    REAL_t b;
     for (count=0;count<maxwavenum;count++)
     {
-        w = minw + count*res;
+        fp_t w = minw + count*res;
         if (w < wavenums[0])
         {
             AryPtr[count] = buf[0];
@@ -101,9 +93,10 @@ void parseCKD(const char fname[],
         else
         {
             /*Binary search.*/
-            left = 0;
-            right = line_count-1;
-            match = 0;
+            int left = 0;
+            int right = line_count-1;
+            int match = 0;
+            int mid;
             while (1)
             {
                 mid = (right+left)/2;
@@ -120,59 +113,153 @@ void parseCKD(const char fname[],
                 {
                     left = mid;
                 }
-
                 if (right - left == 1)
                 {
                     break;
                 }
                 else if (right-left == 0)
                 {
-                    fprintf(stderr,
-                            "wave number %e not contained in input file.",
-                            w);
-                    exit(EXIT_FAILURE);
+                    fatal("wave number %e not contained in input file %s.",
+                          w,
+                          fname);
                 }
             }
-
             if (match)
             {
                 AryPtr[count] = buf[mid];
             }
             else
             {
-                m = (buf[right]-buf[left])/(wavenums[right]-wavenums[left]);
-                b = buf[right] - m*wavenums[right];
+                /*Linear interpolation.*/
+                fp_t m = (buf[right]-buf[left])/
+                         (wavenums[right]-wavenums[left]);
+                fp_t b = buf[right] - m*wavenums[right];
                 AryPtr[count] = w*m + b;
             }
         }
     }
-
-    /*Clean up.*/
     free(buf);
     free(wavenums);
+    return SUCCESS;
 }
 
-/*---------------------------------------------------------------------------*/
+
+int get_h2o_continuum_coefs(ContinuumCoefs_t *h2o,
+                            unsigned int const nws,
+                            int const w,
+                            double const res,
+                            int put_on_device)
+{
+    not_null(h2o);
+
+    /*Set file names.*/
+    char **h2o_coef_files = NULL;
+    malloc_ptr(h2o_coef_files,NUM_COEF);
+    int fname_len = 64;
+    int i;
+    for (i=0;i<NUM_COEF;++i)
+    {
+        malloc_ptr(h2o_coef_files[i],fname_len);
+    }
+    snprintf(h2o_coef_files[CS],
+             fname_len,
+             "INPUT/continuum/296MTCKD25_S.ccf");
+    snprintf(h2o_coef_files[CF],
+             fname_len,
+             "INPUT/continuum/296MTCKD25_F.ccf");
+    snprintf(h2o_coef_files[T0],
+             fname_len,
+             "INPUT/continuum/CKDS.ppp");
+    snprintf(h2o_coef_files[T0F],
+             fname_len,
+             "INPUT/continuum/CKDF.ppp");
+
+    /*Read in the coefficients.*/
+    malloc_ptr(h2o->coefs,NUM_COEF);
+    for (i=0;i<NUM_COEF;++i)
+    {
+        fp_t *buf = NULL;
+        malloc_ptr(buf,
+                   nws);
+        check(parse_CKD(h2o_coef_files[i],
+                        buf,
+                        nws,
+                        w,
+                        res));
+        if (put_on_device)
+        {
+            using_gpu();
+#ifdef __NVCC__
+            HANDLE_ERROR(cudaMalloc(h2o->coefs[i],
+                                    sizeof(*(h2o->coefs[i]))*nws));
+            HANDLE_ERROR(cudaMemcpy(h2o->coefs[i],
+                                    buf,
+                                    nws*sizeof(*buf),
+                                    cudaMemcpyHostToDevice));
+#endif
+            free(buf);
+        }
+        else
+        {
+            h2o->coefs[i] = buf;
+        }
+    }
+
+    /*Clean up.*/
+    for (i=0;i<NUM_COEF;++i)
+    {
+        free(h2o_coef_files[i]);
+    }
+    free(h2o_coef_files);
+    return SUCCESS;
+}
+
+
+int free_continuum_coeffs(ContinuumCoefs_t *c,
+                          int const on_device)
+{
+    not_null(c);
+    int i;
+    for (i=0;i<NUM_COEF;++i)
+    {
+        if (on_device)
+        {
+            using_gpu();
+#ifdef __NVCC__
+            HANDLE_ERROR(cudaFree(c->coefs[i]));
+#endif
+        }
+        else
+        {
+            free(c->coefs[i]);
+        }
+    }
+    free(c->coefs);
+    c->coefs = NULL;
+    return SUCCESS;
+}
+
+
 #ifdef __NVCC__
 __global__
 void calc_ctm_optdepth(unsigned int const nF,
-                       unsigned int const numLayers,
-                       REAL_t * const optdepth,
-                       REAL_t const * const CS,
-                       REAL_t const * const T,
-                       REAL_t const * const PS_H2O,
-                       REAL_t const * const Z,
-                       REAL_t const * const T0,
-                       REAL_t const * const CF,
-                       REAL_t const * const P,
-                       REAL_t const * const T0F)
+                       int const numLayers,
+                       fp_t * const optdepth,
+                       fp_t const * const CS,
+                       fp_t const * const T,
+                       fp_t const * const PS_H2O,
+                       fp_t const * const Z,
+                       fp_t const * const T0,
+                       fp_t const * const CF,
+                       fp_t const * const P,
+                       fp_t const * const T0F)
 {
     unsigned int tid = blockIdx.x*blockDim.x + threadIdx.x;
-    unsigned int lyr;
-    REAL_t const tref = 296.0;
-    REAL_t const kB = 1.3806E-19;
-    REAL_t const AtmToPa = 101325;
-    REAL_t const CmToM = 0.01;
+    int lyr;
+    fp_t const tref = 296.0;
+    fp_t const kB = 1.3806E-19;
+    fp_t const AtmToPa = 101325;
+    fp_t const CmToM = 0.01;
 
     if (tid < nF)
     {
@@ -189,30 +276,29 @@ void calc_ctm_optdepth(unsigned int const nF,
                                         (T[lyr]*kB);
         }
     }
-
     return;
 }
 #endif
 
-/*---------------------------------------------------------------------------*/
+
 void calc_ctm_optdepth_h(unsigned int const nF,
-                         unsigned int const numLayers,
-                         REAL_t * const optdepth,
-                         REAL_t const * const CS,
-                         REAL_t const * const T,
-                         REAL_t const * const PS_H2O,
-                         REAL_t const * const Z,
-                         REAL_t const * const T0,
-                         REAL_t const * const CF,
-                         REAL_t const * const P,
-                         REAL_t const * const T0F)
+                         int const numLayers,
+                         fp_t * const optdepth,
+                         fp_t const * const CS,
+                         fp_t const * const T,
+                         fp_t const * const PS_H2O,
+                         fp_t const * const Z,
+                         fp_t const * const T0,
+                         fp_t const * const CF,
+                         fp_t const * const P,
+                         fp_t const * const T0F)
 {
     unsigned int tid;
-    unsigned int lyr;
-    REAL_t const tref = 296.0;
-    REAL_t const kB = 1.3806E-19;
-    REAL_t const AtmToPa = 101325;
-    REAL_t const CmToM = 0.01;
+    int lyr;
+    fp_t const tref = 296.0;
+    fp_t const kB = 1.3806E-19;
+    fp_t const AtmToPa = 101325;
+    fp_t const CmToM = 0.01;
 
 #pragma omp parallel for collapse(2) \
                          schedule(static) \
@@ -235,6 +321,5 @@ void calc_ctm_optdepth_h(unsigned int const nF,
                                         (T[lyr]*kB);
         }
     }
-
     return;
 }

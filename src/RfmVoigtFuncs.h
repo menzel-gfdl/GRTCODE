@@ -1,16 +1,14 @@
-#ifndef SET_RFMVOIGTFUNCS_H_
-#define SET_RFMVOIGTFUNCS_H_
+#ifndef RFMVOIGTFUNCS_H_
+#define RFMVOIGTFUNCS_H_
 
+#include "floating_point_type.h"
 #include "line_shape.h"
-#include "myreal.h"
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-/*Function prototypes.*/
 
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t rfm_voigt_line_shape(LineShapeInputs_t const vals);
+fp_t rfm_voigt_line_shape(LineShapeInputs_t const vals);
+
 
 #endif
-

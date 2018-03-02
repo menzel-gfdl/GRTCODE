@@ -1,10 +1,10 @@
 #include <math.h>
+#include "floating_point_type.h"
 #include "GasProps.h"
 #include "HitranConstants.h"
-#include "LineShapeUtils.h"
-#include "myreal.h"
+#include "line_shape_utils.h"
 
-/*---------------------------------------------------------------------------*/
+
 /*Calculate the pressure-shift correction of the line position.  See
   equation A13 from:
 
@@ -23,14 +23,14 @@
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t pressureShiftCorrection(REAL_t const Vnn,
-                               float const d,
-                               REAL_t const P)
+fp_t pressureShiftCorrection(fp_t const Vnn,
+                             float const d,
+                             fp_t const P)
 {
-    return (Vnn + ((REAL_t)d)*P);
+    return (Vnn + ((fp_t)d)*P);
 }
 
-/*---------------------------------------------------------------------------*/
+
 /*Part of the temperature correction of the line intensity.  Includes all
   terms dependent on the reference temperature.  See equation A11 from:
 
@@ -51,17 +51,17 @@ REAL_t pressureShiftCorrection(REAL_t const Vnn,
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t Snn_partialCorrection(uint8_t const molId,
-                             uint8_t const iso,
-                             REAL_t const Vnn,
-                             float const En,
-                             REAL_t const Snn_ref)
+fp_t Snn_partialCorrection(int const molId,
+                           int const iso,
+                           fp_t const Vnn,
+                           float const En,
+                           fp_t const Snn_ref)
 {
     return (Snn_ref*Q(molId,TREF,iso))/
                (exp(-c2*En/TREF)*(1-exp(-c2*(Vnn/TREF))));
 }
 
-/*---------------------------------------------------------------------------*/
+
 /*Part of the temperature correction of the line intensity due to the current
   temperature.  See equation A11 from:
 
@@ -81,16 +81,13 @@ REAL_t Snn_partialCorrection(uint8_t const molId,
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t Snn_Tcorrection(uint8_t const molId,
-                       REAL_t const T,
-                       uint8_t const iso,
-                       REAL_t const Vnn,
-                       float const En,
-                       REAL_t const Snn_partial)
+fp_t Snn_Tcorrection(int const molId,
+                     fp_t const T,
+                     int const iso,
+                     fp_t const Vnn,
+                     float const En,
+                     fp_t const Snn_partial)
 {
-    return (Snn_partial/Q(molId,T,iso))*(((REAL_t)1)-exp(-c2*Vnn/T))*
+    return (Snn_partial/Q(molId,T,iso))*(((fp_t)1)-exp(-c2*Vnn/T))*
                exp(-c2*En/T);
 }
-
-/*---------------------------------------------------------------------------*/
-

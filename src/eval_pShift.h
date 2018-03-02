@@ -1,24 +1,25 @@
-#ifndef SET_EVAL_PSHIFT_H_
-#define SET_EVAL_PSHIFT_H_
+#ifndef EVAL_PSHIFT_H_
+#define EVAL_PSHIFT_H_
 
-#include "myreal.h"
+#include "floating_point_type.h"
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-/*Function prototypes.*/
 
 #ifdef __NVCC__
-__global__ void eval_pShift(unsigned int const numLayers,
+__global__ void eval_pShift(int const numLayers,
                             unsigned int const nL,
-                            REAL_t const * const P,
-                            REAL_t const * const Vnn,
+                            fp_t const * const P,
+                            fp_t const * const Vnn,
                             float const * const d,
-                            REAL_t * const PShift);
+                            fp_t * const PShift);
 #endif
 
-void eval_pShift_h(unsigned int const numLayers,
+
+void eval_pShift_h(int const numLayers,
                    unsigned int const nL,
-                   REAL_t const * const P,
-                   REAL_t const * const Vnn,
+                   fp_t const * const P,
+                   fp_t const * const Vnn,
                    float const * const d,
-                   REAL_t * const PShift);
+                   fp_t * const PShift);
+
+
 #endif

@@ -1,9 +1,9 @@
 #include "eval_gamma.h"
+#include "floating_point_type.h"
 #include "LorentzFuncs.h"
-#include "myreal.h"
 #include "omp.h"
 
-/*---------------------------------------------------------------------------*/
+
 /*Compute the pressure broadened line halfwidth for each transition.
 
   Arguments:
@@ -28,22 +28,20 @@
       Gam       [in,out]  Array of pressure broadened line halfwidths (cm^-1).
                               This array is stored as [height][line].
 */
-
 #ifdef __NVCC__
-__global__ void eval_gamma(unsigned int const numLayers,
-                           unsigned int const nL,
-                           REAL_t const * const P,
-                           REAL_t const * const T,
-                           REAL_t const * const Ps,
-                           float const * const Yself,
-                           float const * const Yair,
-                           float const * const n,
-                           REAL_t * const Gam)
+__global__
+void eval_gamma(int const numLayers,
+                unsigned int const nL,
+                fp_t const * const P,
+                fp_t const * const T,
+                fp_t const * const Ps,
+                float const * const Yself,
+                float const * const Yair,
+                float const * const n,
+                fp_t * const Gam)
 {
-    /*Local variables*/
-    unsigned int lyr;
+    int lyr;
     unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-
     if (ltid < nL)
     {
 #pragma unroll
@@ -57,24 +55,23 @@ __global__ void eval_gamma(unsigned int const numLayers,
                                             Ps[lyr]);
         }
     }
-
     return;
 }
 
 #endif
 
-void eval_gamma_h(unsigned int const numLayers,
+
+void eval_gamma_h(int const numLayers,
                   unsigned int const nL,
-                  REAL_t const * const P,
-                  REAL_t const * const T,
-                  REAL_t const * const Ps,
+                  fp_t const * const P,
+                  fp_t const * const T,
+                  fp_t const * const Ps,
                   float const * const Yself,
                   float const * const Yair,
                   float const * const n,
-                  REAL_t * const Gam)
+                  fp_t * const Gam)
 {
-    /*Local variables*/
-    unsigned int lyr;
+    int lyr;
     unsigned int ltid;
 
 #pragma omp parallel for schedule(static) \
@@ -97,6 +94,5 @@ void eval_gamma_h(unsigned int const numLayers,
                                             Ps[lyr]);
         }
     }
-
     return;
 }

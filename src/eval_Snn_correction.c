@@ -1,10 +1,9 @@
-#include <stdint.h>
 #include "eval_Snn_correction.h"
-#include "LineShapeUtils.h"
-#include "myreal.h"
+#include "floating_point_type.h"
+#include "line_shape_utils.h"
 #include "omp.h"
 
-/*---------------------------------------------------------------------------*/
+
 /*Compute the temperature correction of the line intensities for each
   transition.
 
@@ -28,22 +27,19 @@
       S           [in,out]  Array of corrected spectral line intensities (cm).
                                 This array is stored as [height][line].
 */
-
 #ifdef __NVCC__
-__global__ void eval_Snn_correction(unsigned int const numLayers,
+__global__ void eval_Snn_correction(int const numLayers,
                                     unsigned int const nL,
-                                    uint8_t const molId,
-                                    REAL_t const * const T,
-                                    uint8_t const * const iso,
-                                    REAL_t const * const Vnn,
+                                    int const molId,
+                                    fp_t const * const T,
+                                    int const * const iso,
+                                    fp_t const * const Vnn,
                                     float const * const En,
-                                    REAL_t const * const Snn_partial,
-                                    REAL_t * const S)
+                                    fp_t const * const Snn_partial,
+                                    fp_t * const S)
 {
-    /*Local variables*/
-    unsigned int lyr;
+    int lyr;
     unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-
     if (ltid < nL)
     {
 #pragma unroll
@@ -57,24 +53,22 @@ __global__ void eval_Snn_correction(unsigned int const numLayers,
                                              Snn_partial[ltid]);
         }
     }
-
     return;
 }
-
 #endif
 
-void eval_Snn_correction_h(unsigned int const numLayers,
+
+void eval_Snn_correction_h(int const numLayers,
                            unsigned int const nL,
-                           uint8_t const molId,
-                           REAL_t const * const T,
-                           uint8_t const * const iso,
-                           REAL_t const * const Vnn,
+                           int const molId,
+                           fp_t const * const T,
+                           int const * const iso,
+                           fp_t const * const Vnn,
                            float const * const En,
-                           REAL_t const * const Snn_partial,
-                           REAL_t * const S)
+                           fp_t const * const Snn_partial,
+                           fp_t * const S)
 {
-    /*Local variables*/
-    unsigned int lyr;
+    int lyr;
     unsigned int ltid;
 
 #pragma omp parallel for schedule(static) \
@@ -97,6 +91,5 @@ void eval_Snn_correction_h(unsigned int const numLayers,
                                              Snn_partial[ltid]);
         }
     }
-
     return;
 }

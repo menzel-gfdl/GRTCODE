@@ -1,7 +1,11 @@
 #include <math.h>
+#include "floating_point_type.h"
 #include "line_shape.h"
-#include "myreal.h"
 #include "RfmVoigtFuncs.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 /*pi^(-1/2).*/
 #ifdef RSQRPI
@@ -17,7 +21,7 @@
 #define SQRLN2 0.832554611
 #endif
 
-/*---------------------------------------------------------------------------*/
+
 /*Calculate the Voigt line shape function using the Humlicek algorithm, as
   implemented in the Reference Forward Model (RFM).
 
@@ -30,14 +34,13 @@
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t rfm_voigt_line_shape(LineShapeInputs_t const vals)
+fp_t rfm_voigt_line_shape(LineShapeInputs_t const vals)
 {
-    /*Local variables*/
-    REAL_t const DWNO = vals.freq;
-    REAL_t const WNOADJ = vals.lineCenter;
-    REAL_t const WIDADJ = vals.lorHWHM;
-    REAL_t const DOPADJ = vals.gauHWHM;
-    REAL_t K;
+    fp_t const DWNO = vals.freq;
+    fp_t const WNOADJ = vals.lineCenter;
+    fp_t const WIDADJ = vals.lorHWHM;
+    fp_t const DOPADJ = vals.gauHWHM;
+    fp_t K;
     const float Y0 = 1.5;
     const float Y0PY0 = Y0 + Y0; 
     const float Y0Q = Y0*Y0;
@@ -256,5 +259,3 @@ REAL_t rfm_voigt_line_shape(LineShapeInputs_t const vals)
 
     return K;
 }
-
-/*---------------------------------------------------------------------------*/

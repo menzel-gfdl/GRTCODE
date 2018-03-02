@@ -1,15 +1,14 @@
-#include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include "myreal.h"
+#include "debug.h"
+#include "floating_point_type.h"
+#include "molecules.h"
 #include "TIPS_2011.h"
 
-/*---------------------------------------------------------------------------*/
-/*Return the molar mass of the molecule specified by the inputted molecule
+
+/*Return the molar mass of the molecule specified by the input molecule
   id.
 
   Arguments:
-      hitranMolId [in]  Molecule id from the HITRAN database.
+      molId [in]  Molecule id.
 
   Return:
       Mass of the molecule (g/mol).
@@ -17,67 +16,43 @@
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t getMolarMass(int const hitranMolId)
+fp_t getMolarMass(int const molId)
 {
-    /*Local variables*/
-    REAL_t res; /*Molar mass of the molecule.*/
-
-    /*Get the molar mass of the inputted molecule.*/
-    switch(hitranMolId)
+    fp_t res; /*Molar mass of the molecule.*/
+    switch(molId)
     {
-        case 1:
-            /*h2o*/
+        case H2O:
             res = 18.01528;
             break;
-        case 2:
-            /*co2*/
+        case CO2:
             res = 44.01;
             break;
-        case 3:
-            /*o3*/
+        case O3:
             res = 48.;
             break;
-        case 4:
-            /*n2o*/
+        case N2O:
             res = 44.013;
             break;
-        case 5:
-            /*co*/
+        case CO:
             res = 28.01;
             break;
-        case 6:
-            /*ch4*/
+        case CH4:
             res = 16.04;
             break;
-        case 7:
-            /*o2*/
+        case O2:
             res = 32.;
             break;
         default:
-            /*Molecule not implemented.*/
-/*
-#if !defined(__CUDA_ARCH__)
-            fprintf(stderr,
-                    "Error, the molecular with (0-based) molId=%d is not"
-                        " implemented in getMolarMass, something is probably"
-                        " very very wrong. Aborting\n.",
-                    hitranMolId);
-            exit(EXIT_FAILURE);
-#else
-*/
-            assert(0);
-/*
-#endif
-*/
+            kernel_err("the molecular with molId=%d is not implemented.",
+                       molId);
             break;
     }
-
     return res;
 }
 
-/*---------------------------------------------------------------------------*/
-/*Calculate the total internal partition function for the inputted molecule
-  using the method located in TIPS_2011.cu.
+
+/*Calculate the total internal partition function for the input molecule
+  using the method located in TIPS_2011.c.
 
   Arguments:
       moldId [in]  A molecule id.
@@ -90,25 +65,24 @@ REAL_t getMolarMass(int const hitranMolId)
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t Q(uint8_t const molId,
-         REAL_t const T,
-         uint8_t const iso)
+fp_t Q(int const molId,
+       fp_t const T,
+       int const iso)
 {
-    /*Local variables*/
     float gsi; /*State independent nuclear degeneracy factor.*/
-    REAL_t Qt; /*Total internal partition function.*/
-
-    /*Calculate the total internal parition function.*/
+    fp_t Qt; /*Total internal partition function.*/
     QT(molId,
        T,
        iso,
        &gsi,
        &Qt);
-
     return Qt;
 }
 
-/*---------------------------------------------------------------------------*/
+
+
+#ifdef foo
+
 /*For a given molecule, set the partial pressure at each time, latitude,
   longitude, and height.
 
@@ -268,5 +242,4 @@ void setGlobalNumberDensity(REAL_t * const N,
 
     return;
 }
-
-/*---------------------------------------------------------------------------*/
+#endif

@@ -1,35 +1,35 @@
-#ifndef SET_LORENTZFUNCS_H_
-#define SET_LORENTZFUNCS_H_
+#ifndef LORENTZFUNCS_H_
+#define LORENTZFUNCS_H_
 
+#include "floating_point_type.h"
 #include "line_shape.h"
-#include "myreal.h"
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-/*Function prototypes.*/
 
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t lorentz_line_shape(LineShapeInputs_t const vals);
+fp_t lorentz_line_shape(LineShapeInputs_t const vals);
 
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t lorentz_hwhm(REAL_t const P,
-                    REAL_t const T,
-                    float const Yself,
-                    float const Yair,
-                    float const n,
-                    REAL_t const Ps);
+fp_t lorentz_hwhm(fp_t const P,
+                  fp_t const T,
+                  float const Yself,
+                  float const Yair,
+                  float const n,
+                  fp_t const Ps);
+
 
 #ifdef __NVCC__
 __host__ __device__
 #endif
-REAL_t lorentz_fwhm(REAL_t const P,
-                    REAL_t const T,
-                    float const Yself,
-                    float const Yair,
-                    float const n,
-                    REAL_t const Ps);
+fp_t lorentz_fwhm(fp_t const P,
+                  fp_t const T,
+                  float const Yself,
+                  float const Yair,
+                  float const n,
+                  fp_t const Ps);
+
 
 #endif

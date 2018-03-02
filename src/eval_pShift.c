@@ -1,9 +1,9 @@
 #include "eval_pShift.h"
-#include "LineShapeUtils.h"
-#include "myreal.h"
+#include "floating_point_type.h"
+#include "line_shape_utils.h"
 #include "omp.h"
 
-/*---------------------------------------------------------------------------*/
+
 /*Compute the pressure-shift correction of the line position for each
   transition.
 
@@ -23,19 +23,16 @@
                               positions (cm^-1).  This array is stored as
                               [height][line].
 */
-
 #ifdef __NVCC__
-__global__ void eval_pShift(unsigned int const numLayers,
+__global__ void eval_pShift(int const numLayers,
                             unsigned int const nL,
-                            REAL_t const * const P,
-                            REAL_t const * const Vnn,
+                            fp_t const * const P,
+                            fp_t const * const Vnn,
                             float const * const d,
-                            REAL_t * const PShift)
+                            fp_t * const PShift)
 {
-    /*Local variables*/
-    unsigned int lyr;
+    int lyr;
     unsigned int ltid = blockIdx.x*blockDim.x + threadIdx.x;
-
     if (ltid < nL)
     {
 #pragma unroll
@@ -46,21 +43,19 @@ __global__ void eval_pShift(unsigned int const numLayers,
                                                           P[lyr]);
         }
     }
-
     return;
 }
-
 #endif
 
-void eval_pShift_h(unsigned int const numLayers,
+
+void eval_pShift_h(int const numLayers,
                    unsigned int const nL,
-                   REAL_t const * const P,
-                   REAL_t const * const Vnn,
+                   fp_t const * const P,
+                   fp_t const * const Vnn,
                    float const * const d,
-                   REAL_t * const PShift)
+                   fp_t * const PShift)
 {
-    /*Local variables*/
-    unsigned int lyr;
+    int lyr;
     unsigned int ltid;
 
 #pragma omp parallel for schedule(static) \
@@ -79,6 +74,5 @@ void eval_pShift_h(unsigned int const numLayers,
                                                           P[lyr]);
         }
     }
-
     return;
 }
