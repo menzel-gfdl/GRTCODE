@@ -14,16 +14,6 @@
 static const int MAXCHARSPERLINE=128;
 
 
-enum continuum_consts
-{
-    CS = 0,
-    CF,
-    T0,
-    T0F,
-    NUM_COEF
-};
-
-
 static int parse_CKD(char const * const fname,
                      fp_t *AryPtr,
                      int const maxwavenum,
@@ -247,33 +237,27 @@ void calc_ctm_optdepth(unsigned int const nF,
                        fp_t * const optdepth,
                        fp_t const * const CS,
                        fp_t const * const T,
-                       fp_t const * const PS_H2O,
-                       fp_t const * const Z,
+                       fp_t const * const Ps,
+                       fp_t const * const N,
                        fp_t const * const T0,
                        fp_t const * const CF,
                        fp_t const * const P,
                        fp_t const * const T0F)
 {
     unsigned int tid = blockIdx.x*blockDim.x + threadIdx.x;
-    int lyr;
-    fp_t const tref = 296.0;
-    fp_t const kB = 1.3806E-19;
-    fp_t const AtmToPa = 101325;
-    fp_t const CmToM = 0.01;
 
     if (tid < nF)
     {
+        fp_t const tref = 296.0;
+        int lyr;
+
 #pragma unroll
         for (lyr=0;lyr<numLayers;++lyr)
         {
-            optdepth[lyr*nF+tid] += (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        PS_H2O[lyr]*AtmToPa*Z[lyr]*CmToM*
-                                        exp(T0[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB) +
-                                        (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        (P[lyr]-PS_H2O[lyr])*AtmToPa*Z[lyr]*CmToM*
-                                        exp(T0F[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB);
+            optdepth[lyr*nF+tid] += N[lyr]*(tref/T[lyr])*((CS[tid]*Ps[lyr]*
+                                    exp(T0[tid]*(tref-T[lyr]))) +
+                                    (CF[tid]*(P[lyr]-Ps[lyr])*
+                                    exp(T0F[tid]*(tref-T[lyr]))));
         }
     }
     return;
@@ -286,8 +270,8 @@ void calc_ctm_optdepth_h(unsigned int const nF,
                          fp_t * const optdepth,
                          fp_t const * const CS,
                          fp_t const * const T,
-                         fp_t const * const PS_H2O,
-                         fp_t const * const Z,
+                         fp_t const * const Ps,
+                         fp_t const * const N,
                          fp_t const * const T0,
                          fp_t const * const CF,
                          fp_t const * const P,
@@ -296,29 +280,22 @@ void calc_ctm_optdepth_h(unsigned int const nF,
     unsigned int tid;
     int lyr;
     fp_t const tref = 296.0;
-    fp_t const kB = 1.3806E-19;
-    fp_t const AtmToPa = 101325;
-    fp_t const CmToM = 0.01;
 
 #pragma omp parallel for collapse(2) \
                          schedule(static) \
                          default(none) \
                          private(lyr,tid) \
                          shared(numLayers,nF,optdepth,CS,tref, \
-                                T,PS_H2O, \
+                                T,Ps, \
                                 Z,T0,kB,AtmToPa,CmToM,CF,P,T0F)
     for (lyr=0;lyr<numLayers;++lyr)
     {
         for (tid=0;tid<nF;++tid)
         {
-            optdepth[lyr*nF+tid] += (CS[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        PS_H2O[lyr]*AtmToPa*Z[lyr]*CmToM*
-                                        exp(T0[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB) +
-                                        (CF[tid]*(tref/T[lyr])*PS_H2O[lyr]*
-                                        (P[lyr]-PS_H2O[lyr])*AtmToPa*Z[lyr]*CmToM*
-                                        exp(T0F[tid]*(tref-T[lyr])))/
-                                        (T[lyr]*kB);
+            optdepth[lyr*nF+tid] += N[lyr]*(tref/T[lyr])*((CS[tid]*Ps[lyr]*
+                                    exp(T0[tid]*(tref-T[lyr]))) +
+                                    (CF[tid]*(P[lyr]-Ps[lyr])*
+                                    exp(T0F[tid]*(tref-T[lyr]))));
         }
     }
     return;

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "constants.h"
+#include "continuum.h"
 #include "debug.h"
 #include "eval_gamma.h"
 #include "eval_profile.h"
@@ -12,6 +13,7 @@
 #include "launch.h"
 #include "lw_flux.h"
 #include "model_fields.h"
+#include "molecules.h"
 #include "parseHITRANfile.h"
 #include "pre_eval_Snn.h"
 #include "utils.h"
@@ -159,6 +161,7 @@ int launch_host(WorkVars_t * const vars,
                 double const res,
                 int const breadth,
                 int const continuum,
+                ContinuumCoefs_t * const h2o_continuum,
                 OutputFields_t * const output_data)
 {
     not_null(vars);
@@ -314,28 +317,27 @@ int launch_host(WorkVars_t * const vars,
                        vars->S,
                        vars->N,
                        vars->tau);
-    }
 
-    if (continuum)
-    {
-        /*Calculate the water vapor continuum optical depths.*/
-/*
-        log_mesg("Launching kernel calc_ctm_optdetph_h at point (%d,%d,%d).",
-                 time,
-                 lon,
-                 lat);
-        calc_ctm_optdepth_h(nF,
-                            numLayers,
-                            out,
-                            CS_h,
-                            T,
-                            &(PS[H2O*atmosData->npfull]),
-                            DELTAZ,
-                            T0_h,
-                            CF_h,
-                            P,
-                            T0F_h);
-*/
+        if (vars->LINES->mol == H2O && continuum)
+        {
+            /*Calculate the water vapor continuum optical depths.*/
+            log_mesg("Launching kernel calc_ctm_optdetph_h at point"
+                         " (%d,%d,%d).",
+                     time,
+                     lon,
+                     lat);
+            calc_ctm_optdepth_h(nws,
+                                nlayers,
+                                vars->tau,
+                                h2o_continuum->coefs[CS],
+                                vars->Tavg,
+                                vars->Psavg,
+                                vars->N,
+                                h2o_continuum->coefs[T0],
+                                h2o_continuum->coefs[CF],
+                                vars->Pavg,
+                                h2o_continuum->coefs[T0F]);
+        }
     }
 
     /*Calculate the longwave fluxes.*/

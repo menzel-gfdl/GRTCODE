@@ -253,6 +253,7 @@ int main(int argc,
                                       arguments.res,
                                       arguments.wingBreadth,
                                       arguments.ctm,
+                                      &h2o_continuum,
                                       &out));
                 }
                 else if(launchType == DEVICE_LAUNCH)

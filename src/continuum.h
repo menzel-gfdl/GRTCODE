@@ -3,6 +3,17 @@
 
 #include "floating_point_type.h"
 
+
+enum continuum_consts
+{
+    CS = 0,
+    CF,
+    T0,
+    T0F,
+    NUM_COEF
+};
+
+
 typedef struct ContinuumCoefs
 {
     fp_t **coefs; /*Continuum coefficients (wavenumber) [1/cm].*/
@@ -27,8 +38,8 @@ void calc_ctm_optdepth(unsigned int const nF,
                        fp_t * const optdepth,
                        fp_t const * const CS,
                        fp_t const * const T,
-                       fp_t const * const PS_H2O,
-                       fp_t const * const Z,
+                       fp_t const * const Ps,
+                       fp_t const * const N,
                        fp_t const * const T0,
                        fp_t const * const CF,
                        fp_t const * const P,
@@ -41,8 +52,8 @@ void calc_ctm_optdepth_h(unsigned int const nF,
                          fp_t * const optdepth,
                          fp_t const * const CS,
                          fp_t const * const T,
-                         fp_t const * const PS_H2O,
-                         fp_t const * const Z,
+                         fp_t const * const Ps,
+                         fp_t const * const N,
                          fp_t const * const T0,
                          fp_t const * const CF,
                          fp_t const * const P,

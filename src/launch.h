@@ -1,6 +1,7 @@
 #ifndef LAUNCH_H_
 #define LAUNCH_H_
 
+#include "continuum.h"
 #include "floating_point_type.h"
 #include "model_fields.h"
 #include "parseHITRANfile.h"
@@ -54,6 +55,7 @@ int launch_host(WorkVars_t * const vars,
                 double const res,
                 int const breadth,
                 int const continuum,
+                ContinuumCoefs_t * const h2o_continuum,
                 OutputFields_t * const output_data);
 
 
