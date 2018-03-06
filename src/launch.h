@@ -36,11 +36,11 @@ int alloc_work_vars(WorkVars_t *vars,
                     int const nlevels,
                     int const nlines,
                     int const nws,
-                    int const launch_type);
+                    int const put_on_device);
 
 
 int free_work_vars(WorkVars_t *vars,
-                   int const launch_type);
+                   int const on_device);
 
 
 int launch_host(WorkVars_t * const vars,
@@ -57,6 +57,25 @@ int launch_host(WorkVars_t * const vars,
                 int const continuum,
                 ContinuumCoefs_t * const h2o_continuum,
                 OutputFields_t * const output_data);
+
+
+#ifdef __NVCC__
+int launch_device(WorkVars_t * const vars,
+                  req_model_fields_t * const input_data,
+                  int const time,
+                  int const lon,
+                  int const lat,
+                  int const nmols,
+                  line_params_t ** const line_params,
+                  unsigned int const nws,
+                  fp_t const w,
+                  double const res,
+                  int const breadth,
+                  int const continuum,
+                  ContinuumCoefs_t * const h2o_continuum,
+                  OutputFields_t * const output_data);
+
+#endif
 
 
 #endif

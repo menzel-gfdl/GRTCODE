@@ -66,9 +66,8 @@ __global__ void eval_profile(int const molId,
     if (ltid < nL)
     {
         int const fsteps = ceil((fp_t)breadth/resolution);
-
-#pragma unroll
         int lyr;
+#pragma unroll
         for (lyr=0;lyr<numLayers;++lyr)
         {
             unsigned int loffset = lyr*nL + ltid;
@@ -200,8 +199,8 @@ void eval_profile_h(int const molId,
             in.lineCenter = PShift[loffset];
 
             /*Find index of nearest frequency bin to line.*/
-            int fcenterid = (2*((in.lineCenter-loWn)/resolution)+1)/2;
-            if (fcenterid >= 0 && fcenterid < nF)
+            unsigned int fcenterid = (2*((in.lineCenter-loWn)/resolution)+1)/2;
+            if (fcenterid < nF)
             {
                 fp_t snn = S[loffset];
                 fp_t molarMass = getMolarMass(molId);
@@ -222,7 +221,7 @@ void eval_profile_h(int const molId,
                 /*Calculate the optical depth values from the left edge of
                   the line to the line center.*/
                 int ftid;
-                for (ftid=fcenterid-((int)fsteps);ftid<=fcenterid;++ftid)
+                for (ftid=fcenterid-((int)fsteps);ftid<=(int)fcenterid;++ftid)
                 {
                     if (ftid >= 0)
                     {
@@ -246,9 +245,9 @@ void eval_profile_h(int const molId,
 
                 /*Calculate the optical depth values from the right edge of
                   the line to the line center.*/
-                for (ftid=fcenterid+((int)fsteps);ftid>fcenterid;--ftid)
+                for (ftid=fcenterid+((int)fsteps);ftid>(int)fcenterid;--ftid)
                 {
-                    if (ftid < nF)
+                    if (ftid < (int)nF)
                     {
                         in.freq = ((fp_t)ftid)*resolution + loWn;
 

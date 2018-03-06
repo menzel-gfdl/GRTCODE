@@ -5,6 +5,7 @@
 
 
 #ifdef __NVCC__
+__global__
 void get_avg_TP(int const nLayer,
                 fp_t const * const P,
                 fp_t const * const T,

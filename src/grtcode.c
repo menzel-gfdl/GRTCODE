@@ -94,7 +94,7 @@ int main(int argc,
 
     /*Read in HITRAN line data.*/
     int const nMols = arguments.nHitFiles;
-    line_params_t **hitLines = malloc(sizeof(*hitLines)*nMols);
+    line_params_t **hitLines = (line_params_t **)malloc(sizeof(*hitLines)*nMols);
     not_null(hitLines);
     line_flags_t flags = {((unsigned int) -1),1,0};
     int mol;
@@ -209,7 +209,8 @@ int main(int argc,
     OutputFields_t out;
     check(alloc_output_fields(&out,
                               nF,
-                              inputData.nlevel));
+                              inputData.nlevel,
+                              (launchType == DEVICE_LAUNCH)));
 
     /*Allocate/set pointers to buffers needed by the computation.*/
     WorkVars_t bufs;
@@ -217,7 +218,7 @@ int main(int argc,
                           inputData.nlevel,
                           MAX_NUM_LINES,
                           nF,
-                          launchType));
+                          (launchType == DEVICE_LAUNCH)));
 
     /*Initialize output file.*/
     int outfile_ncid;
@@ -258,6 +259,23 @@ int main(int argc,
                 }
                 else if(launchType == DEVICE_LAUNCH)
                 {
+                    using_gpu();
+#ifdef __NVCC__
+                    check(launch_device(&bufs,
+                                        &inputData,
+                                        time,
+                                        lon,
+                                        lat,
+                                        nMols,
+                                        hitLines,
+                                        nF,
+                                        (fp_t)arguments.w,
+                                        arguments.res,
+                                        arguments.wingBreadth,
+                                        arguments.ctm,
+                                        &h2o_continuum,
+                                        &out));
+#endif
                 }
                 else
                 {
@@ -290,10 +308,11 @@ int main(int argc,
 
     /*Free/nullify pointers to buffers needed by the computation.*/
     check(free_work_vars(&bufs,
-                         launchType));
+                         (launchType == DEVICE_LAUNCH)));
 
     /*Free memory storing the data that was output from the run.*/
-    check(free_output_fields(&out));
+    check(free_output_fields(&out,
+                             (launchType == DEVICE_LAUNCH)));
 
     /*Free memory storing the continuum coefficients.*/
     if (arguments.ctm)

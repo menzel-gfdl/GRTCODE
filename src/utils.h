@@ -11,6 +11,16 @@
     if (p == NULL) {fatal("malloc of %zu bytes failed.",sizeof(*p)*s);}}
 
 
+#define malloc_int_ptr(p,s) \
+    {p=(int *)malloc(sizeof(*p)*s); \
+    if (p == NULL) {fatal("malloc of %zu bytes failed.",sizeof(*p)*s);}}
+
+
+#define malloc_fp_ptr(p,s) \
+    {p=(fp_t *)malloc(sizeof(*p)*s); \
+    if (p == NULL) {fatal("malloc of %zu bytes failed.",sizeof(*p)*s);}}
+
+
 #define open_file(f,n,a) \
     {f=fopen(n,a); if (f == NULL) {fatal("failed to open file %s.",n);}}
 

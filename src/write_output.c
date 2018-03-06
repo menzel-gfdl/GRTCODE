@@ -155,12 +155,12 @@ int write_data_column(int const ncid,
                                        lw_flux_down_varid,
                                        start,
                                        count,
-                                       lw_flux_down));
+                                       (float *)lw_flux_down));
         netcdf_check(nc_put_vara_float(ncid,
                                        lw_flux_up_varid,
                                        start,
                                        count,
-                                       lw_flux_up));
+                                       (float *)lw_flux_up));
         if (output_spectra)
         {
             not_null(tau);
@@ -169,7 +169,7 @@ int write_data_column(int const ncid,
                                            tau_varid,
                                            start,
                                            count,
-                                           tau));
+                                           (float *)tau));
         }
     }
     else if (type == NC_DOUBLE)
@@ -178,12 +178,12 @@ int write_data_column(int const ncid,
                                         lw_flux_down_varid,
                                         start,
                                         count,
-                                        lw_flux_down));
+                                        (double *)lw_flux_down));
         netcdf_check(nc_put_vara_double(ncid,
                                         lw_flux_up_varid,
                                         start,
                                         count,
-                                        lw_flux_up));
+                                        (double *)lw_flux_up));
         if (output_spectra)
         {
             not_null(tau);
@@ -192,7 +192,7 @@ int write_data_column(int const ncid,
                                             tau_varid,
                                             start,
                                             count,
-                                            tau));
+                                            (double *)tau));
         }
     }
     return SUCCESS;

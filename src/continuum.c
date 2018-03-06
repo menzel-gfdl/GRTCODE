@@ -41,9 +41,10 @@ static int parse_CKD(char const * const fname,
 
     /*Read in the data.*/
     int *wavenums = NULL;
-    malloc_ptr(wavenums,line_count);
+    wavenums = (int *)malloc(sizeof(*wavenums)*line_count);
+    not_null(wavenums);
     fp_t *buf = NULL;
-    malloc_ptr(buf,line_count);
+    malloc_fp_ptr(buf,line_count);
     int count = 0;
     double v0;
     double v1;
@@ -180,7 +181,7 @@ int get_h2o_continuum_coefs(ContinuumCoefs_t *h2o,
         {
             using_gpu();
 #ifdef __NVCC__
-            HANDLE_ERROR(cudaMalloc(h2o->coefs[i],
+            HANDLE_ERROR(cudaMalloc(&(h2o->coefs[i]),
                                     sizeof(*(h2o->coefs[i]))*nws));
             HANDLE_ERROR(cudaMemcpy(h2o->coefs[i],
                                     buf,

@@ -223,7 +223,7 @@ void integrate_fluxes(unsigned int const nF,
 {
     fp_t const MToCm = 100;
     fp_t const resm = res*MToCm; /*Wavenumber resolution (1/m).*/
-    unsigned int i;
+    int i;
     unsigned int j;
 
     for (i=0;i<numLevels;++i)
