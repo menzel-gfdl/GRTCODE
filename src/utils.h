@@ -6,19 +6,8 @@
 #include "floating_point_type.h"
 
 
-#define malloc_ptr(p,s) \
-    {p=malloc(sizeof(*p)*s); \
-    if (p == NULL) {fatal("malloc of %zu bytes failed.",sizeof(*p)*s);}}
-
-
-#define malloc_int_ptr(p,s) \
-    {p=(int *)malloc(sizeof(*p)*s); \
-    if (p == NULL) {fatal("malloc of %zu bytes failed.",sizeof(*p)*s);}}
-
-
-#define malloc_fp_ptr(p,s) \
-    {p=(fp_t *)malloc(sizeof(*p)*s); \
-    if (p == NULL) {fatal("malloc of %zu bytes failed.",sizeof(*p)*s);}}
+int malloc_ptr(void ** const p,
+               size_t const num_bytes);
 
 
 #define open_file(f,n,a) \

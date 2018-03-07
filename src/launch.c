@@ -57,6 +57,7 @@ int alloc_work_vars(WorkVars_t *vars,
                                 sizeof(*(vars->PSHIFT))*l));
         HANDLE_ERROR(cudaMalloc(&(vars->S),
                                 sizeof(*(vars->S))*l));
+        vars->LINES = NULL;
         check(alloc_line_params_device(&(vars->LINES),
                                        nlines));
         int const n = nlayers*nws;
@@ -73,18 +74,28 @@ int alloc_work_vars(WorkVars_t *vars,
         vars->P = NULL;
         vars->T = NULL;
         vars->x = NULL;
-        malloc_fp_ptr(vars->Pavg,nlayers);
-        malloc_fp_ptr(vars->Tavg,nlayers);
-        malloc_fp_ptr(vars->N,nlayers);
-        malloc_fp_ptr(vars->Psavg,nlayers);
-        malloc_fp_ptr(vars->GAMMA,l);
-        malloc_fp_ptr(vars->PSHIFT,l);
-        malloc_fp_ptr(vars->S,l);
+        check(malloc_ptr((void **)(&(vars->Pavg)),
+                         sizeof(*(vars->Pavg))*nlayers));
+        check(malloc_ptr((void **)(&(vars->Tavg)),
+                         sizeof(*(vars->Tavg))*nlayers));
+        check(malloc_ptr((void **)(&(vars->N)),
+                         sizeof(*(vars->N))*nlayers));
+        check(malloc_ptr((void **)(&(vars->Psavg)),
+                         sizeof(*(vars->Psavg))*nlayers));
+        check(malloc_ptr((void **)(&(vars->GAMMA)),
+                         sizeof(*(vars->GAMMA))*l));
+        check(malloc_ptr((void **)(&(vars->PSHIFT)),
+                         sizeof(*(vars->PSHIFT))*l));
+        check(malloc_ptr((void **)(&(vars->S)),
+                         sizeof(*(vars->S))*l));
         vars->LINES = NULL;
-        malloc_fp_ptr(vars->Snn_ref,nlines);
+        check(malloc_ptr((void **)(&(vars->Snn_ref)),
+                         sizeof(*(vars->Snn_ref))*nlines));
         vars->tau = NULL;
-        malloc_fp_ptr(vars->lw_flux_down_per_w,m);
-        malloc_fp_ptr(vars->lw_flux_up_per_w,m);
+        check(malloc_ptr((void **)(&(vars->lw_flux_down_per_w)),
+                         sizeof(*(vars->lw_flux_down_per_w))*m));
+        check(malloc_ptr((void **)(&(vars->lw_flux_up_per_w)),
+                         sizeof(*(vars->lw_flux_up_per_w))*m));
         vars->lw_flux_down = NULL;
         vars->lw_flux_up = NULL;
     }
@@ -100,20 +111,20 @@ int free_work_vars(WorkVars_t *vars,
     {
         using_gpu();
 #ifdef __NVCC__
-        HANDLE_ERROR(cudaFree(&(vars->P)));
-        HANDLE_ERROR(cudaFree(&(vars->T)));
-        HANDLE_ERROR(cudaFree(&(vars->x)));
-        HANDLE_ERROR(cudaFree(&(vars->Pavg)));
-        HANDLE_ERROR(cudaFree(&(vars->Tavg)));
-        HANDLE_ERROR(cudaFree(&(vars->N)));
-        HANDLE_ERROR(cudaFree(&(vars->Psavg)));
-        HANDLE_ERROR(cudaFree(&(vars->GAMMA)));
-        HANDLE_ERROR(cudaFree(&(vars->PSHIFT)));
-        HANDLE_ERROR(cudaFree(&(vars->S)));
+        HANDLE_ERROR(cudaFree(vars->P));
+        HANDLE_ERROR(cudaFree(vars->T));
+        HANDLE_ERROR(cudaFree(vars->x));
+        HANDLE_ERROR(cudaFree(vars->Pavg));
+        HANDLE_ERROR(cudaFree(vars->Tavg));
+        HANDLE_ERROR(cudaFree(vars->N));
+        HANDLE_ERROR(cudaFree(vars->Psavg));
+        HANDLE_ERROR(cudaFree(vars->GAMMA));
+        HANDLE_ERROR(cudaFree(vars->PSHIFT));
+        HANDLE_ERROR(cudaFree(vars->S));
         check(free_line_params_device(&(vars->LINES)));
-        HANDLE_ERROR(cudaFree(&(vars->tau)));
-        HANDLE_ERROR(cudaFree(&(vars->lw_flux_down_per_w)));
-        HANDLE_ERROR(cudaFree(&(vars->lw_flux_up_per_w)));
+        HANDLE_ERROR(cudaFree(vars->tau));
+        HANDLE_ERROR(cudaFree(vars->lw_flux_down_per_w));
+        HANDLE_ERROR(cudaFree(vars->lw_flux_up_per_w));
 #endif
     }
     else

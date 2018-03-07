@@ -41,10 +41,11 @@ static int parse_CKD(char const * const fname,
 
     /*Read in the data.*/
     int *wavenums = NULL;
-    wavenums = (int *)malloc(sizeof(*wavenums)*line_count);
-    not_null(wavenums);
+    check(malloc_ptr((void **)(&wavenums),
+                     sizeof(*wavenums)*line_count));
     fp_t *buf = NULL;
-    malloc_fp_ptr(buf,line_count);
+    check(malloc_ptr((void **)(&buf),
+                     sizeof(*buf)*line_count));
     int count = 0;
     double v0;
     double v1;
@@ -145,12 +146,14 @@ int get_h2o_continuum_coefs(ContinuumCoefs_t *h2o,
 
     /*Set file names.*/
     char **h2o_coef_files = NULL;
-    malloc_ptr(h2o_coef_files,NUM_COEF);
+    check(malloc_ptr((void **)(&h2o_coef_files),
+                     sizeof(*h2o_coef_files)*NUM_COEF));
     int fname_len = 64;
     int i;
     for (i=0;i<NUM_COEF;++i)
     {
-        malloc_ptr(h2o_coef_files[i],fname_len);
+        check(malloc_ptr((void **)(&(h2o_coef_files[i])),
+                         sizeof(*(h2o_coef_files[i]))*fname_len));
     }
     snprintf(h2o_coef_files[CS],
              fname_len,
@@ -166,12 +169,13 @@ int get_h2o_continuum_coefs(ContinuumCoefs_t *h2o,
              "INPUT/continuum/CKDF.ppp");
 
     /*Read in the coefficients.*/
-    malloc_ptr(h2o->coefs,NUM_COEF);
+    check(malloc_ptr((void **)(&(h2o->coefs)),
+                     sizeof(*(h2o->coefs))*NUM_COEF));
     for (i=0;i<NUM_COEF;++i)
     {
         fp_t *buf = NULL;
-        malloc_ptr(buf,
-                   nws);
+        check(malloc_ptr((void **)(&buf),
+                         sizeof(*buf)* nws));
         check(parse_CKD(h2o_coef_files[i],
                         buf,
                         nws,

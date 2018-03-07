@@ -7,6 +7,21 @@
 #include "utils.h"
 
 
+/*Helper function to perform a malloc, with error checks.*/
+int malloc_ptr(void ** const p,
+               size_t const num_bytes)
+{
+    not_null(p);
+    *p = malloc(num_bytes);
+    if (*p == NULL)
+    {
+        fatal("malloc of %zu bytes failed.",
+              num_bytes);
+    }
+    return SUCCESS;
+}
+
+
 /*Helper function for converting a string to an integer.*/
 int to_int(char *s,
            int *i)

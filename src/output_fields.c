@@ -9,13 +9,18 @@ int alloc_output_fields(OutputFields_t * const var,
                         int const device_launch)
 {
     not_null(var);
-    malloc_fp_ptr(var->tau,nlevels*nws);
-    malloc_fp_ptr(var->lw_flux_down,nlevels);
-    malloc_fp_ptr(var->lw_flux_up,nlevels);
+    check(malloc_ptr((void **)(&(var->tau)),
+                     sizeof(*(var->tau))*nlevels*nws));
+    check(malloc_ptr((void **)(&(var->lw_flux_down)),
+                     sizeof(*(var->lw_flux_down))*nlevels));
+    check(malloc_ptr((void **)(&(var->lw_flux_up)),
+                     sizeof(*(var->lw_flux_up))*nlevels));
     if (device_launch)
     {
-        malloc_fp_ptr(var->lw_flux_down_per_w,nws*nlevels);
-        malloc_fp_ptr(var->lw_flux_up_per_w,nws*nws);
+        check(malloc_ptr((void **)(&(var->lw_flux_down_per_w)),
+                         sizeof(*(var->lw_flux_down_per_w))*nws*nlevels));
+        check(malloc_ptr((void **)(&(var->lw_flux_up_per_w)),
+                         sizeof(*(var->lw_flux_up_per_w))*nws*nlevels));
     }
     return SUCCESS;
 }

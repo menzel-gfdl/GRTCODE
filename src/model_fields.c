@@ -3,6 +3,7 @@
 #include "model_fields.h"
 #include "utils.h"
 
+
 int init_req_model_fields(req_model_fields_t * const fields,
                           int const nt,
                           int const nlon,
@@ -17,16 +18,22 @@ int init_req_model_fields(req_model_fields_t * const fields,
     fields->nlevel = nlev;
     fields->nmol = nmol;
     int n = nt*nlon*nlat;
-    malloc_ptr(fields->TSURF,n);
-    malloc_ptr(fields->EMIS,n);
-    malloc_ptr(fields->x,nmol);
+    check(malloc_ptr((void **)(&(fields->TSURF)),
+                     sizeof(*(fields->TSURF))*n));
+    check(malloc_ptr((void **)(&(fields->EMIS)),
+                     sizeof(*(fields->EMIS))*n));
+    check(malloc_ptr((void **)(&(fields->x)),
+                     sizeof(*(fields->x))*nmol));
     n *= nlev;
-    malloc_ptr(fields->P,n);
-    malloc_ptr(fields->T,n);
+    check(malloc_ptr((void **)(&(fields->P)),
+                     sizeof(*(fields->P))*n));
+    check(malloc_ptr((void **)(&(fields->T)),
+                     sizeof(*(fields->T))*n));
     int i;
     for (i=0;i<nmol;++i)
     {
-        malloc_ptr(fields->x[i],n);
+        check(malloc_ptr((void **)(&(fields->x[i])),
+                         sizeof(*(fields->x[i]))*n));
     }
     return SUCCESS;
 }

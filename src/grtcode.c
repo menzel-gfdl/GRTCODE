@@ -94,8 +94,9 @@ int main(int argc,
 
     /*Read in HITRAN line data.*/
     int const nMols = arguments.nHitFiles;
-    line_params_t **hitLines = (line_params_t **)malloc(sizeof(*hitLines)*nMols);
-    not_null(hitLines);
+    line_params_t **hitLines = NULL;
+    check(malloc_ptr((void **)(&hitLines),
+                     sizeof(*hitLines)*nMols));
     line_flags_t flags = {((unsigned int) -1),1,0};
     int mol;
     for (mol=0;mol<nMols;++mol)
@@ -331,5 +332,7 @@ int main(int argc,
 
     /*Free memory storing input data.*/
     free_req_model_fields(&inputData);
+    log_mesg("Run completed successfully, returning code %d.",
+             SUCCESS);
     return SUCCESS;
 }

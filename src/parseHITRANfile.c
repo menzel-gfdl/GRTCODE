@@ -99,7 +99,8 @@ static int alloc_line_params_host(line_params_t **lineParams,
     is_null(*lineParams);
     unsigned int const cuFlags = flags.cumemset_host_flags;
     line_params_t *self = NULL;
-    malloc_ptr(self,1);
+    check(malloc_ptr((void **)(&(self)),
+                     sizeof(*self)));
     self->nLines = nLines;
     self->mol = -1;
     if (cuFlags != ((unsigned int)-1))
@@ -134,14 +135,22 @@ static int alloc_line_params_host(line_params_t **lineParams,
     }
     else
     {
-        malloc_ptr(self->iso,nLines) ;
-        malloc_ptr(self->Vnn,nLines);
-        malloc_ptr(self->Snn_ref,nLines);
-        malloc_ptr(self->Yair,nLines);
-        malloc_ptr(self->Yself,nLines);
-        malloc_ptr(self->En,nLines);
-        malloc_ptr(self->n,nLines);
-        malloc_ptr(self->d,nLines);
+        check(malloc_ptr((void **)(&(self->iso)),
+                         sizeof(*(self->iso))*nLines));
+        check(malloc_ptr((void **)(&(self->Vnn)),
+                         sizeof(*(self->Vnn))*nLines));
+        check(malloc_ptr((void **)(&(self->Snn_ref)),
+                         sizeof(*(self->Snn_ref))*nLines));
+        check(malloc_ptr((void **)(&(self->Yair)),
+                         sizeof(*(self->Yair))*nLines));
+        check(malloc_ptr((void **)(&(self->Yself)),
+                         sizeof(*(self->Yself))*nLines));
+        check(malloc_ptr((void **)(&(self->En)),
+                         sizeof(*(self->En))*nLines));
+        check(malloc_ptr((void **)(&(self->n)),
+                         sizeof(*(self->n))*nLines));
+        check(malloc_ptr((void **)(&(self->d)),
+                         sizeof(*(self->n))*nLines));
     }
     *lineParams = self;
     return SUCCESS;
@@ -190,28 +199,28 @@ static int realloc_line_params_host(line_params_t **lineParams,
 {
     not_null(lineParams);
     not_null(*lineParams);
-    line_params_t *old = *lineParams;
-    line_params_t *new = NULL;
-    check(alloc_line_params_host(&new,
-                                 old->nLines,
+    line_params_t *old_ptr = *lineParams;
+    line_params_t *new_ptr = NULL;
+    check(alloc_line_params_host(&new_ptr,
+                                 old_ptr->nLines,
                                  new_flags));
-    new->mol = old->mol;
-    new->nLines = old->nLines;
+    new_ptr->mol = old_ptr->mol;
+    new_ptr->nLines = old_ptr->nLines;
     unsigned int i;
-    for (i=0;i<old->nLines;++i)
+    for (i=0;i<old_ptr->nLines;++i)
     {
-        new->iso[i] = old->iso[i];
-        new->Vnn[i] = old->Vnn[i];
-        new->Snn_ref[i] = old->Snn_ref[i];
-        new->Yair[i] = old->Yair[i];
-        new->Yself[i] = old->Yself[i];
-        new->En[i] = old->En[i];
-        new->n[i] = old->n[i];
-        new->d[i] = old->d[i];
+        new_ptr->iso[i] = old_ptr->iso[i];
+        new_ptr->Vnn[i] = old_ptr->Vnn[i];
+        new_ptr->Snn_ref[i] = old_ptr->Snn_ref[i];
+        new_ptr->Yair[i] = old_ptr->Yair[i];
+        new_ptr->Yself[i] = old_ptr->Yself[i];
+        new_ptr->En[i] = old_ptr->En[i];
+        new_ptr->n[i] = old_ptr->n[i];
+        new_ptr->d[i] = old_ptr->d[i];
     }
-    check(free_line_params_host(&old,
+    check(free_line_params_host(&old_ptr,
                                 old_flags));
-    *lineParams = new;
+    *lineParams = new_ptr;
     return SUCCESS;
 }
 
@@ -279,7 +288,7 @@ int parse_hitran_file(line_params_t **lineParams,
 
     /*Count the number of lines in the file.*/
     size_t const maxLine = 163;
-    char* buf = calloc(maxLine,sizeof(*buf));
+    char* buf = (char *)calloc(maxLine,sizeof(*buf));
     not_null(buf);
     ssize_t ll = 0;
     size_t l = 0;
@@ -427,9 +436,10 @@ int alloc_line_params_device(line_params_t **lineParams,
                              unsigned int nLines)
 {
     not_null(lineParams);
-    is_null(lineParams);
+    is_null(*lineParams);
     line_params_t *self = NULL;
-    malloc_ptr(self,1);
+    check(malloc_ptr((void **)(&self),
+                     sizeof(*self)));
     self->nLines = nLines;
     self->mol = -1;
     HANDLE_ERROR(cudaMalloc(&(self->iso),

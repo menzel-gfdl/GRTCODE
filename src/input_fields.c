@@ -74,8 +74,9 @@ static int get_var(double **buf,
     }
 
     /*Make sure that the variable has its dimensions in the correct order.*/
-    int *v_dimids = malloc(sizeof(*v_dimids)*num_dims);
-    not_null(v_dimids);
+    int *v_dimids = NULL;
+    check(malloc_ptr((void **)(&v_dimids),
+                     sizeof(*v_dimids)*num_dims));
     netcdf_check(nc_inq_vardimid(ncid,
                                  varid,
                                  v_dimids));
@@ -108,7 +109,9 @@ static int get_var(double **buf,
     }
 
     /*Read in the data.*/
-    double *b = malloc(sizeof(*b)*n);
+    double *b = NULL;
+    check(malloc_ptr((void **)(&b),
+                     sizeof(*b)*n));
     not_null(b);
     netcdf_check(nc_get_var_double(ncid,
                                    varid,
@@ -200,7 +203,9 @@ int get_input_data(req_model_fields_t * const out,
                   dims,
                   4));
     dims[3] = layer;
-    in.x = malloc(sizeof(*(in.x))*nMols);
+    in.x = NULL;
+    check(malloc_ptr((void **)(&(in.x)),
+                     sizeof(*(in.x))*nMols));
     not_null(in.x);
     int i;
     for (i=0;i<nMols;++i)
