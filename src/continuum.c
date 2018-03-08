@@ -289,10 +289,7 @@ void calc_ctm_optdepth_h(unsigned int const nF,
 #pragma omp parallel for collapse(2) \
                          schedule(static) \
                          default(none) \
-                         private(lyr,tid) \
-                         shared(numLayers,nF,optdepth,CS,tref, \
-                                T,Ps, \
-                                Z,T0,kB,AtmToPa,CmToM,CF,P,T0F)
+                         private(lyr,tid)
     for (lyr=0;lyr<numLayers;++lyr)
     {
         for (tid=0;tid<nF;++tid)

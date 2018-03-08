@@ -12,6 +12,7 @@
 #include "TIPS_2011.h"
 #include "utils.h"
 #include "write_output.h"
+#include "omp.h"
 
 #ifdef __NVCC__
 #include "cudaHelpers.cuh"
@@ -288,12 +289,10 @@ int main(int argc,
                 }
 
                 /*Write out the column of output data.*/
-                int offset = time*inputData.nlon*inputData.nlat +
-                             lon*inputData.nlat + lat;
                 check(write_data_column(outfile_ncid,
-                                        &(out.lw_flux_down[offset]),
-                                        &(out.lw_flux_up[offset]),
-                                        &(out.tau[offset]),
+                                        out.lw_flux_down,
+                                        out.lw_flux_up,
+                                        out.tau,
                                         time,
                                         lon,
                                         lat,

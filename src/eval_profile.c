@@ -179,15 +179,7 @@ void eval_profile_h(int const molId,
 #pragma omp parallel for schedule(static) \
                          collapse(2) \
                          default(none) \
-                         private(ltid,loffset,in,fcenterid,snn, \
-                                 molarMass,ftid,line_shape, \
-                                 lyr,tauu,len,temp)
-/*
-                         shared(nL,numLayers,PShift,loWn, \
-                                resolution,nF,S, \
-                                tauU_d,pathlength_d,T,molId, \
-                                Gam,fsteps,out)
-*/
+                         private(lyr,ltid)
     for (lyr=0;lyr<numLayers;++lyr)
     {
         for (ltid=0;ltid<nL;++ltid)

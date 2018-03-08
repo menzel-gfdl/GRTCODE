@@ -55,9 +55,6 @@ void pre_eval_Snn_h(unsigned int const nL,
 #pragma omp parallel for schedule(static) \
                          default(none) \
                          private(ltid)
-/*
-                         shared(nL,Snn_ref,molId,iso,Vnn,En)
-*/
     for (ltid=0;ltid<nL;++ltid)
     {
         Snn_ref[ltid] = Snn_partialCorrection(molId,

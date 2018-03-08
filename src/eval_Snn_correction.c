@@ -75,10 +75,6 @@ void eval_Snn_correction_h(int const numLayers,
                          collapse(2) \
                          default(none) \
                          private(ltid,lyr)
-/*
-                         shared(nL,numLayers,S,molId,T,iso, \
-                                Vnn,En,Snn_partial)
-*/
     for (lyr=0;lyr<numLayers;++lyr)
     {
         for (ltid=0;ltid<nL;++ltid)

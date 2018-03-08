@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -g -Wall -Wextra -pedantic -std=c99
-#CFLAGS = -g -Wall -Wextra -Werror -pedantic -std=c99
+CFLAGS = -g -Wall -Wextra -pedantic -std=c99 -fopenmp
+#CFLAGS += -Werror
 OBJ = grtcode.o write_output.o launch.o lw_flux.o output_fields.o eval_profile.o RfmVoigtFuncs.o IdaVoigtFuncs.o GaussianFuncs.o eval_Snn_correction.o eval_pShift.o eval_gamma.o LorentzFuncs.o pre_eval_Snn.o line_shape_utils.o GasProps.o integrate_layer.o TIPS_2011.o continuum.o parseHITRANfile.o input_fields.o model_fields.o arguments.o molecules.o utils.o constants.o
 EXECUTABLE = grtcode.x
 

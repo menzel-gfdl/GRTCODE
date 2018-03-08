@@ -62,9 +62,6 @@ void eval_pShift_h(int const numLayers,
                          collapse(2) \
                          default(none) \
                          private(ltid,lyr)
-/*
-                         shared(nL,numLayers,PShift,Vnn,d,P)
-*/
     for (lyr=0;lyr<numLayers;++lyr)
     {
         for (ltid=0;ltid<nL;++ltid)
