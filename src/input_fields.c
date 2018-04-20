@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdlib.h>
 #include "constants.h"
 #include "debug.h"
@@ -8,6 +9,10 @@
 #include "netcdf.h"
 #include "utils.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 static char const *time_name = "time";
 static char const *lon_name = "longitude";
 static char const *lat_name = "latitude";
@@ -17,13 +22,20 @@ static char const *pressure_name = "pressure";
 static char const *temp_name = "temperature";
 static char const *surf_temp_name = "surface temperature";
 static char const *surf_emis_name = "surface emissivity";
+static char const *surf_dir_albedo_name = "surface direct albedo";
+static char const *surf_dif_albedo_name = "surface diffuse albedo";
+static char const *solar_zen_angle_name = "solar zenith angle";
 static char *in_mol_names[NUM_MOL];
+static double const DEFAULT_DIF_BEAM_ANG = 60.; /*Degrees*/
+static double const DEG_TO_RAD = 2.*M_PI/360.; /*[radian/degree]*/
+
 
 typedef struct dimension
 {
     int dimid;
     size_t length;
 } dim_t;
+
 
 static int get_dim(dim_t *d,
                    char const *name,
@@ -46,12 +58,14 @@ static int get_dim(dim_t *d,
     return SUCCESS;
 }
 
+
 static int get_var(double **buf,
                    char const *name,
                    int ncid,
                    dim_t *dims,
                    int num_dims)
 {
+    not_null(buf);
     not_null(name);
     not_null(dims);
     int varid;
@@ -119,6 +133,7 @@ static int get_var(double **buf,
     *buf = b;
     return SUCCESS;
 }
+
 
 int get_input_data(req_model_fields_t * const out,
                    char const * const input_file,
@@ -191,6 +206,28 @@ int get_input_data(req_model_fields_t * const out,
                   ncid,
                   dims,
                   3));
+    check(get_var(&(in.SFC_DIR_ALB),
+                  surf_dir_albedo_name,
+                  ncid,
+                  dims,
+                  3));
+    if (ERR == get_var(&(in.SFC_DIF_ALB),
+                       surf_dif_albedo_name,
+                       ncid,
+                       dims,
+                       3))
+    {
+        log_mesg("Error reading variable %s not found in input file %s."
+                     "  Assuming that the surface albedo for a diffuse beam"
+                     " equals the surface albedo for a direct beam.",
+                 surf_dif_albedo_name,
+                 input_file);
+        check(get_var(&(in.SFC_DIF_ALB),
+                      surf_dir_albedo_name,
+                      ncid,
+                      dims,
+                      3));
+    }
     dims[3] = level;
     check(get_var(&(in.P),
                   pressure_name,
@@ -203,6 +240,11 @@ int get_input_data(req_model_fields_t * const out,
                   dims,
                   4));
     dims[3] = layer;
+    check(get_var(&(in.SOL_ZEN_ANG),
+                  solar_zen_angle_name,
+                  ncid,
+                  dims,
+                  4));
     in.x = NULL;
     check(malloc_ptr((void **)(&(in.x)),
                      sizeof(*(in.x))*nMols));
@@ -230,10 +272,19 @@ int get_input_data(req_model_fields_t * const out,
     /*Convert the data from the file to that needed by the model.*/
     int n = time.length*lon.length*lat.length;
     int j;
+    out->COS_DIF_BEAM_ANG = (fp_t)(cos(DEFAULT_DIF_BEAM_ANG*DEG_TO_RAD));
     for (i=0;i<n;++i)
     {
         out->TSURF[i] = (fp_t)(in.TSURF[i]);
         out->EMIS[i] = (fp_t)(in.EMIS[i]);
+        out->SFC_DIR_ALB[i] = (fp_t)(in.SFC_DIR_ALB[i]);
+        out->SFC_DIF_ALB[i] = (fp_t)(in.SFC_DIF_ALB[i]);
+        for (j=0;j<(int)layer.length;++j)
+        {
+            int off = (int)(i*layer.length + j);
+            out->COS_SOL_ZEN_ANG[off] = (fp_t)(cos(in.SOL_ZEN_ANG[off]*
+                                                   DEG_TO_RAD));
+        }
         for (j=0;j<(int)level.length;++j)
         {
             int off = (int)(i*level.length + j);
@@ -275,6 +326,9 @@ int get_input_data(req_model_fields_t * const out,
     free(in.T);
     free(in.TSURF);
     free(in.EMIS);
+    free(in.SFC_DIR_ALB);
+    free(in.SFC_DIF_ALB);
+    free(in.SOL_ZEN_ANG);
     for (i=0;i<nMols;i++)
     {
         free(in.x[i]);

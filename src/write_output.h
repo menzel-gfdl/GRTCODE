@@ -19,6 +19,8 @@ int close_output_file(int const ncid);
 int write_data_column(int const ncid,
                       fp_t *lw_flux_down,
                       fp_t *lw_flux_up,
+                      fp_t *sw_flux_down,
+                      fp_t *sw_flux_up,
                       fp_t *tau,
                       int const time,
                       int const lon,

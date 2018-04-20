@@ -6,6 +6,7 @@
 #define minNhitfiles 1
 #define maxNhitfiles NUM_MOL
 
+
 struct arguments
 {
     char *atmosInputFile; /*Input atmosphere netCDF file.*/
@@ -21,7 +22,8 @@ struct arguments
     int Y; /*Ending longitude index, inclusive.*/
     int w; /*Wavenumber lower bound (1/cm), inclusive.*/
     int W; /*Wavenumber upper bound (1/cm), inclusive.*/
-    int ctm; /*Flag for including continuum.*/
+    int h2o_ctm; /*Flag for including the water vapor continuum.*/
+    int o3_ctm; /*Flag for including the ozone continuum.*/
     double res; /*Wavenumber resolution (1/cm).*/
     int wingBreadth; /*Wings cutoff (1/cm).*/
     double molConc[NUM_MOL]; /*Molecular concentrations (ppmv).  Each spot
@@ -31,8 +33,10 @@ struct arguments
     char *outputFile; /*Output netCDF file.*/
 };
 
+
 void parse_options(int argc,
                    char **argv,
                    struct arguments *arguments);
+
 
 #endif

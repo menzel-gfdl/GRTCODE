@@ -22,6 +22,12 @@ int init_req_model_fields(req_model_fields_t * const fields,
                      sizeof(*(fields->TSURF))*n));
     check(malloc_ptr((void **)(&(fields->EMIS)),
                      sizeof(*(fields->EMIS))*n));
+    check(malloc_ptr((void **)(&(fields->SFC_DIR_ALB)),
+                     sizeof(*(fields->SFC_DIR_ALB))*n));
+    check(malloc_ptr((void **)(&(fields->SFC_DIF_ALB)),
+                     sizeof(*(fields->SFC_DIF_ALB))*n));
+    check(malloc_ptr((void **)(&(fields->COS_SOL_ZEN_ANG)),
+                     sizeof(*(fields->COS_SOL_ZEN_ANG))*n*(nlev-1)));
     check(malloc_ptr((void **)(&(fields->x)),
                      sizeof(*(fields->x))*nmol));
     n *= nlev;
@@ -45,6 +51,9 @@ int free_req_model_fields(req_model_fields_t * const fields)
     free(fields->T);
     free(fields->TSURF);
     free(fields->EMIS);
+    free(fields->SFC_DIR_ALB);
+    free(fields->SFC_DIF_ALB);
+    free(fields->COS_SOL_ZEN_ANG);
     int i;
     for (i=0;i<fields->nmol;++i)
     {

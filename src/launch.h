@@ -5,8 +5,9 @@
 #include "floating_point_type.h"
 #include "model_fields.h"
 #include "parseHITRANfile.h"
+#include "o3_continuum.h"
 #include "output_fields.h"
-
+#include "solar_flux.h"
 
 typedef struct WorkVars
 {
@@ -14,10 +15,12 @@ typedef struct WorkVars
     fp_t *T;
     fp_t *TSURF;
     fp_t *EMIS;
+    fp_t *MU_DIR;
     fp_t *x;
     fp_t *Pavg;
     fp_t *Tavg;
     fp_t *N;
+    fp_t *Ns;
     fp_t *Psavg;
     fp_t *GAMMA;
     fp_t *PSHIFT;
@@ -29,6 +32,10 @@ typedef struct WorkVars
     fp_t *lw_flux_up_per_w;
     fp_t *lw_flux_down;
     fp_t *lw_flux_up;
+    fp_t *sw_flux_down_per_w;
+    fp_t *sw_flux_up_per_w;
+    fp_t *sw_flux_down;
+    fp_t *sw_flux_up;
 } WorkVars_t;
 
 
@@ -45,6 +52,7 @@ int free_work_vars(WorkVars_t *vars,
 
 int launch_host(WorkVars_t * const vars,
                 req_model_fields_t * const input_data,
+                SolarFlux_t const * const solar_flux,
                 int const time,
                 int const lon,
                 int const lat,
@@ -56,6 +64,8 @@ int launch_host(WorkVars_t * const vars,
                 int const breadth,
                 int const continuum,
                 ContinuumCoefs_t * const h2o_continuum,
+                int const o3_ctm,
+                OzoneContinuumCoefs_t const * const o3_continuum,
                 OutputFields_t * const output_data);
 
 

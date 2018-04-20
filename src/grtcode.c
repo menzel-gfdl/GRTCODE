@@ -8,7 +8,9 @@
 #include "launch.h"
 #include "model_fields.h"
 #include "molecules.h"
+#include "o3_continuum.h"
 #include "parseHITRANfile.h"
+#include "solar_flux.h"
 #include "TIPS_2011.h"
 #include "utils.h"
 #include "write_output.h"
@@ -25,7 +27,8 @@ int main(int argc,
     struct arguments arguments;
     arguments.atmosInputFile = NULL;
     arguments.wingBreadth = 25;
-    arguments.ctm = 0;
+    arguments.h2o_ctm = 0;
+    arguments.o3_ctm = 0;
     arguments.device = DEFAULT_DEVICE;
     arguments.host = 0;
     arguments.outputFile = "defaultoutfile.nc";
@@ -178,8 +181,18 @@ int main(int argc,
                              &arguments.Y,
                              inputData.nlat-1));
 
+    /*Read in the solar flux values.*/
+    SolarFlux_t solar_flux;
+    check(get_solar_flux("INPUT/solar_flux.csv",
+                         &solar_flux,
+                         nF,
+                         arguments.w,
+                         arguments.res,
+                         (launchType == DEVICE_LAUNCH)));
+
+    /*Read in the water vapor continuum coefficients.*/
     ContinuumCoefs_t h2o_continuum;
-    if (arguments.ctm)
+    if (arguments.h2o_ctm)
     {
         /*Read in continuum coefficients and optionally put them on the
           device.*/
@@ -188,6 +201,20 @@ int main(int argc,
                                       arguments.w,
                                       arguments.res,
                                       (launchType == DEVICE_LAUNCH)));
+    }
+
+    /*Read in the ozone continuum coefficients.*/
+    OzoneContinuumCoefs_t o3_continuum;
+    if (arguments.o3_ctm)
+    {
+        /*Read in the ozone continuum coefficients.*/
+        check(get_ozone_continuum_coefs("INPUT/ozone_continuum/"
+                                            "ozone_continuum.csv",
+                                        &o3_continuum,
+                                        nF,
+                                        arguments.w,
+                                        arguments.res,
+                                        (launchType == DEVICE_LAUNCH)));
     }
 
 #ifdef __NVCC__
@@ -246,6 +273,7 @@ int main(int argc,
                 {
                     check(launch_host(&bufs,
                                       &inputData,
+                                      &solar_flux,
                                       time,
                                       lon,
                                       lat,
@@ -255,8 +283,10 @@ int main(int argc,
                                       (fp_t)arguments.w,
                                       arguments.res,
                                       arguments.wingBreadth,
-                                      arguments.ctm,
+                                      arguments.h2o_ctm,
                                       &h2o_continuum,
+                                      arguments.o3_ctm,
+                                      &o3_continuum,
                                       &out));
                 }
                 else if(launchType == DEVICE_LAUNCH)
@@ -274,7 +304,7 @@ int main(int argc,
                                         (fp_t)arguments.w,
                                         arguments.res,
                                         arguments.wingBreadth,
-                                        arguments.ctm,
+                                        arguments.h2o_ctm,
                                         &h2o_continuum,
                                         &out));
 #endif
@@ -292,6 +322,8 @@ int main(int argc,
                 check(write_data_column(outfile_ncid,
                                         out.lw_flux_down,
                                         out.lw_flux_up,
+                                        out.sw_flux_down,
+                                        out.sw_flux_up,
                                         out.tau,
                                         time,
                                         lon,
@@ -314,12 +346,23 @@ int main(int argc,
     check(free_output_fields(&out,
                              (launchType == DEVICE_LAUNCH)));
 
+    /*Free memory storing the ozone continuum coefficients.*/
+    if (arguments.o3_ctm)
+    {
+        check(free_ozone_continuum_coefs(&o3_continuum,
+                                         (launchType == DEVICE_LAUNCH)));
+    }
+
     /*Free memory storing the continuum coefficients.*/
-    if (arguments.ctm)
+    if (arguments.h2o_ctm)
     {
         check(free_continuum_coeffs(&h2o_continuum,
                                     (launchType == DEVICE_LAUNCH)));
     }
+
+    /*Free memory storing the input solar flux values.*/
+    check(free_solar_flux(&solar_flux,
+                          (launchType == DEVICE_LAUNCH)));
 
     /*Free memory storing HITRAN line parameters.*/
     for (mol=0;mol<nMols;++mol)

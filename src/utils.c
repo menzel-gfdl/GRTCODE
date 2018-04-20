@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <float.h>
 #include <limits.h>
 #include <stdlib.h>
 #include "constants.h"
@@ -95,6 +96,36 @@ int to_double(char *s,
 }
 
 
+/*Helper function for converting a double to fp_t.*/
+int to_fp_t(double const d,
+            fp_t *f)
+{
+    not_null(f);
+    if (sizeof(fp_t) == sizeof(double))
+    {
+        *f = d;
+    }
+    else if (sizeof(fp_t) == sizeof(float))
+    {
+        if (d >= -1.*FLT_MAX && d <= FLT_MAX)
+        {
+            *f = (fp_t)d;
+        }
+        else
+        {
+            fatal("input double value %le cannot be represented as a float.",
+                  d);
+        }
+    }
+    else
+    {
+        fatal("fp_t (size=%lu) must be represent either float or double.",
+              sizeof(fp_t));
+    }
+    return SUCCESS;
+}
+
+
 /*Interpolate values to get new values.*/
 int linear_interp(double *in,
                   int in_size,
@@ -171,6 +202,79 @@ int check_launch_mode(int const launch_type)
               launch_type,
               HOST_LAUNCH,
               DEVICE_LAUNCH);
+    }
+    return SUCCESS;
+}
+
+
+int get_sorted_bounds(fp_t const val,
+                      fp_t const * const array,
+                      int const array_size,
+                      int * const left,
+                      int * const right)
+{
+    not_null(array);
+    not_null(left);
+    not_null(right);
+    if (array_size <= 0)
+    {
+        fatal("input array size (%d) must be >= 1.",
+              array_size);
+    }
+
+    if (val < array[0])
+    {
+        *left = -1;
+        *right = 0;
+    }
+    else if (val > array[array_size-1])
+    {
+        *left = array_size - 1;
+        *right = -1;
+    }
+    else
+    {
+        /*Since the input array is sorted, use a binary search.*/
+        *left = 0;
+        *right = array_size - 1;
+        if (val == array[*left])
+        {
+            *right = *left;
+        }
+        else if (val == array[*right])
+        {
+            *left = *right;
+        }
+        else
+        {
+            while (1)
+            {
+                int mid = (*right + *left)/2;
+                if (val == array[mid])
+                {
+                    *left = mid;
+                    *right = mid;
+                    break;
+                }
+                else if (val < array[mid])
+                {
+                    *right = mid;
+                }
+                else
+                {
+                    *left = mid;
+                }
+                if (*right - *left == 1)
+                {
+                    break;
+                }
+                else if (*right - *left == 0)
+                {
+                    fatal("This branch should never occur (val=%e).",
+                          val);
+                }
+            }
+        }
     }
     return SUCCESS;
 }

@@ -22,6 +22,10 @@ int to_double(char *s,
               double *d);
 
 
+int to_fp_t(double const d,
+            fp_t *f);
+
+
 int linear_interp(double *in,
                   int in_size,
                   fp_t *out,
@@ -35,6 +39,13 @@ int input_bounds_check(int lower,
 
 
 int check_launch_mode(int const launch_type);
+
+
+int get_sorted_bounds(fp_t const val,
+                      fp_t const * const array,
+                      int const array_size,
+                      int * const left,
+                      int * const right);
 
 
 #endif

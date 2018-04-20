@@ -14,8 +14,11 @@
 #include "lw_flux.h"
 #include "model_fields.h"
 #include "molecules.h"
+#include "o3_continuum.h"
 #include "parseHITRANfile.h"
 #include "pre_eval_Snn.h"
+#include "solar_flux.h"
+#include "sw_flux.h"
 #include "utils.h"
 
 #ifdef __NVCC__
@@ -41,6 +44,8 @@ int alloc_work_vars(WorkVars_t *vars,
                                 sizeof(*(vars->P))*nlevels));
         HANDLE_ERROR(cudaMalloc(&(vars->T),
                                 sizeof(*(vars->T))*nlevels));
+        HANDLE_ERROR(cudaMalloc(&(vars->MU_DIR),
+                                sizeof(*(vars->MU_DIR))*(nlevels-1)));
         HANDLE_ERROR(cudaMalloc(&(vars->x),
                                 sizeof(*(vars->x))*nlevels));
         HANDLE_ERROR(cudaMalloc(&(vars->Pavg),
@@ -49,6 +54,8 @@ int alloc_work_vars(WorkVars_t *vars,
                                 sizeof(*(vars->Tavg))*nlayers));
         HANDLE_ERROR(cudaMalloc(&(vars->N),
                                 sizeof(*(vars->N))*nlayers));
+        HANDLE_ERROR(cudaMalloc(&(vars->Ns),
+                                sizeof(*(vars->Ns))*nlayers));
         HANDLE_ERROR(cudaMalloc(&(vars->Psavg),
                                 sizeof(*(vars->Psavg))*nlayers));
         HANDLE_ERROR(cudaMalloc(&(vars->GAMMA),
@@ -67,12 +74,17 @@ int alloc_work_vars(WorkVars_t *vars,
                                 sizeof(*(vars->lw_flux_down_per_w))*m));
         HANDLE_ERROR(cudaMalloc(&(vars->lw_flux_up_per_w),
                                 sizeof(*(vars->lw_flux_up_per_w))*m));
+        HANDLE_ERROR(cudaMalloc(&(vars->sw_flux_down_per_w),
+                                sizeof(*(vars->sw_flux_down_per_w))*m));
+        HANDLE_ERROR(cudaMalloc(&(vars->sw_flux_up_per_w),
+                                sizeof(*(vars->sw_flux_up_per_w))*m));
 #endif
     }
     else
     {
         vars->P = NULL;
         vars->T = NULL;
+        vars->MU_DIR = NULL;
         vars->x = NULL;
         check(malloc_ptr((void **)(&(vars->Pavg)),
                          sizeof(*(vars->Pavg))*nlayers));
@@ -80,6 +92,8 @@ int alloc_work_vars(WorkVars_t *vars,
                          sizeof(*(vars->Tavg))*nlayers));
         check(malloc_ptr((void **)(&(vars->N)),
                          sizeof(*(vars->N))*nlayers));
+        check(malloc_ptr((void **)(&(vars->Ns)),
+                         sizeof(*(vars->Ns))*nlayers));
         check(malloc_ptr((void **)(&(vars->Psavg)),
                          sizeof(*(vars->Psavg))*nlayers));
         check(malloc_ptr((void **)(&(vars->GAMMA)),
@@ -98,6 +112,12 @@ int alloc_work_vars(WorkVars_t *vars,
                          sizeof(*(vars->lw_flux_up_per_w))*m));
         vars->lw_flux_down = NULL;
         vars->lw_flux_up = NULL;
+        check(malloc_ptr((void **)(&(vars->sw_flux_down_per_w)),
+                         sizeof(*(vars->sw_flux_down_per_w))*m));
+        check(malloc_ptr((void **)(&(vars->sw_flux_up_per_w)),
+                         sizeof(*(vars->sw_flux_up_per_w))*m));
+        vars->sw_flux_down = NULL;
+        vars->sw_flux_up = NULL;
     }
     return SUCCESS;
 }
@@ -113,10 +133,12 @@ int free_work_vars(WorkVars_t *vars,
 #ifdef __NVCC__
         HANDLE_ERROR(cudaFree(vars->P));
         HANDLE_ERROR(cudaFree(vars->T));
+        HANDLE_ERROR(cudaFree(vars->MU_DIR));
         HANDLE_ERROR(cudaFree(vars->x));
         HANDLE_ERROR(cudaFree(vars->Pavg));
         HANDLE_ERROR(cudaFree(vars->Tavg));
         HANDLE_ERROR(cudaFree(vars->N));
+        HANDLE_ERROR(cudaFree(vars->Ns));
         HANDLE_ERROR(cudaFree(vars->Psavg));
         HANDLE_ERROR(cudaFree(vars->GAMMA));
         HANDLE_ERROR(cudaFree(vars->PSHIFT));
@@ -125,6 +147,8 @@ int free_work_vars(WorkVars_t *vars,
         HANDLE_ERROR(cudaFree(vars->tau));
         HANDLE_ERROR(cudaFree(vars->lw_flux_down_per_w));
         HANDLE_ERROR(cudaFree(vars->lw_flux_up_per_w));
+        HANDLE_ERROR(cudaFree(vars->sw_flux_down_per_w));
+        HANDLE_ERROR(cudaFree(vars->sw_flux_up_per_w));
 #endif
     }
     else
@@ -132,6 +156,7 @@ int free_work_vars(WorkVars_t *vars,
         free(vars->Pavg);
         free(vars->Tavg);
         free(vars->N);
+        free(vars->Ns);
         free(vars->Psavg);
         free(vars->GAMMA);
         free(vars->PSHIFT);
@@ -139,6 +164,8 @@ int free_work_vars(WorkVars_t *vars,
         free(vars->Snn_ref);
         free(vars->lw_flux_down_per_w);
         free(vars->lw_flux_up_per_w);
+        free(vars->sw_flux_down_per_w);
+        free(vars->sw_flux_up_per_w);
     }
     return SUCCESS;
 }
@@ -146,6 +173,7 @@ int free_work_vars(WorkVars_t *vars,
 
 int launch_host(WorkVars_t * const vars,
                 req_model_fields_t * const input_data,
+                SolarFlux_t const * const solar_flux,
                 int const time,
                 int const lon,
                 int const lat,
@@ -157,6 +185,8 @@ int launch_host(WorkVars_t * const vars,
                 int const breadth,
                 int const continuum,
                 ContinuumCoefs_t * const h2o_continuum,
+                int const o3_ctm,
+                OzoneContinuumCoefs_t const * const o3_continuum,
                 OutputFields_t * const output_data)
 {
     not_null(vars);
@@ -168,6 +198,8 @@ int launch_host(WorkVars_t * const vars,
     vars->tau = output_data->tau;
     vars->lw_flux_down = output_data->lw_flux_down;
     vars->lw_flux_up = output_data->lw_flux_up;
+    vars->sw_flux_down = output_data->sw_flux_down;
+    vars->sw_flux_up = output_data->sw_flux_up;
 
     /*Zero out buffers used to accumulate results.*/
     int nlevels = input_data->nlevel;
@@ -181,26 +213,46 @@ int launch_host(WorkVars_t * const vars,
     memset(vars->lw_flux_up,
            0,
            sizeof(*(vars->lw_flux_up))*nlevels);
+    memset(vars->sw_flux_down,
+           0,
+           sizeof(*(vars->sw_flux_down))*nlevels);
+    memset(vars->sw_flux_up,
+           0,
+           sizeof(*(vars->sw_flux_up))*nlevels);
 
     /*Point to the correct column of input data.*/
     unsigned int offset = time*input_data->nlon*input_data->nlat +
                           lon*input_data->nlat + lat;
     fp_t const TSURF = input_data->TSURF[offset];
     fp_t const EMIS = input_data->EMIS[offset];
+    fp_t const SFC_DIR_ALB = input_data->SFC_DIR_ALB[offset];
+    fp_t const SFC_DIF_ALB = input_data->SFC_DIF_ALB[offset];
+    fp_t const MU_DIF = input_data->COS_DIF_BEAM_ANG;
+    vars->MU_DIR = &(input_data->COS_SOL_ZEN_ANG[offset*nlayers]);
     offset *= nlevels;
     vars->P = &(input_data->P[offset]);
     vars->T = &(input_data->T[offset]);
 
-    /*Calculate integrated average layer quantities.*/
-    log_mesg("Launching kernel get_avg_TP_h at point (%d,%d,%d).",
+    /*Calculate the total number density of air moleucles integrated across
+      each layer.*/
+    log_mesg("Launching kernel integrated_N at point (%d,%d,%d).",
              time,
              lon,
              lat);
-    get_avg_TP_h(nlayers,
+    integrated_N(nlayers,
                  vars->P,
-                 vars->T,
-                 vars->Pavg,
-                 vars->Tavg);
+                 vars->N);
+
+    /*Calculate integrated average layer quantities.*/
+    log_mesg("Launching kernel Curtis_Godson_PT at point (%d,%d,%d).",
+             time,
+             lon,
+             lat);
+    Curtis_Godson_PT(nlayers,
+                     vars->P,
+                     vars->T,
+                     vars->Pavg,
+                     vars->Tavg);
 
     /*Loop over the molecules and calculate the optical depths.*/
     int mol;
@@ -232,17 +284,18 @@ int launch_host(WorkVars_t * const vars,
 
         /*Calculate the integrated average layer partial pressure.*/
         vars->x = &((input_data->x[mol])[offset]);
-        log_mesg("Launching kernel get_avg_NPs_h at point (%d,%d,%d)"
+        log_mesg("Launching kernel Curtis_Godson_PsNs at point (%d,%d,%d)"
                      " for molecule %d.",
                  time,
                  lon,
                  lat,
                  mol);
-        get_avg_NPs_h(nlayers,
-                      vars->x,
-                      vars->P,
-                      vars->N,
-                      vars->Psavg);
+        Curtis_Godson_PsNs(nlayers,
+                           vars->P,
+                           vars->x,
+                           vars->N,
+                           vars->Psavg,
+                           vars->Ns);
 
         /*Calcluate the lorentz half-width at half-max (HWHM).*/
         log_mesg("Launching kernel eval_gamma_h at point (%d,%d,%d)"
@@ -301,7 +354,6 @@ int launch_host(WorkVars_t * const vars,
                  lon,
                  lat,
                  mol);
-
         eval_profile_h(mol_id,
                        nlines,
                        nws,
@@ -313,10 +365,10 @@ int launch_host(WorkVars_t * const vars,
                        vars->GAMMA,
                        vars->PSHIFT,
                        vars->S,
-                       vars->N,
+                       vars->Ns,
                        vars->tau);
 
-        if (mol_id == H2O && continuum)
+        if (continuum && mol_id == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
             log_mesg("Launching kernel calc_ctm_optdetph_h at point"
@@ -330,11 +382,25 @@ int launch_host(WorkVars_t * const vars,
                                 h2o_continuum->coefs[CS],
                                 vars->Tavg,
                                 vars->Psavg,
-                                vars->N,
+                                vars->Ns,
                                 h2o_continuum->coefs[T0],
                                 h2o_continuum->coefs[CF],
                                 vars->Pavg,
                                 h2o_continuum->coefs[T0F]);
+        }
+        else if (o3_ctm && mol_id == O3)
+        {
+            /*Calculate the ozone continuum optical depths.*/
+            log_mesg("Launching kernel calc_ozone_ctm_optdetph_h at point"
+                         " (%d,%d,%d).",
+                     time,
+                     lon,
+                     lat);
+            calc_ozone_ctm_optdepth_h(nws,
+                                      nlayers,
+                                      o3_continuum->cross_section,
+                                      vars->Ns,
+                                      vars->tau);
         }
     }
 
@@ -356,8 +422,8 @@ int launch_host(WorkVars_t * const vars,
                    vars->T);
 
     /*Integrate the fluxes over wavenumber.*/
-    log_mesg("Integrating downward fluxes across wavenumbers at point"
-                 " (%d,%d,%d).",
+    log_mesg("Integrating downward longwave fluxes across wavenumbers at"
+                 " point (%d,%d,%d).",
              time,
              lon,
              lat);
@@ -366,7 +432,7 @@ int launch_host(WorkVars_t * const vars,
                      vars->lw_flux_down_per_w,
                      vars->lw_flux_down,
                      res);
-    log_mesg("Integrating upward fluxes across wavenumbers at point"
+    log_mesg("Integrating upward longwave fluxes across wavenumbers at point"
                  " (%d,%d,%d).",
              time,
              lon,
@@ -375,6 +441,47 @@ int launch_host(WorkVars_t * const vars,
                      nlevels,
                      vars->lw_flux_up_per_w,
                      vars->lw_flux_up,
+                     res);
+
+    /*Calculate the shortwave fluxes.*/
+    log_mesg("Launching kernel calc_sw_flux at point (%d,%d,%d)",
+             time,
+             lon,
+             lat);
+    calc_sw_flux(nlevels,
+                 nws,
+                 w,
+                 res,
+                 vars->N,
+                 vars->MU_DIR,
+                 MU_DIF,
+                 vars->tau,
+                 SFC_DIR_ALB,
+                 SFC_DIF_ALB,
+                 solar_flux->incident_sw_flux,
+                 vars->sw_flux_up_per_w,
+                 vars->sw_flux_down_per_w);
+
+    /*Integrate the fluxes over wavenumber.*/
+    log_mesg("Integrating downward shortwave fluxes across wavenumbers at"
+                 " point (%d,%d,%d).",
+             time,
+             lon,
+             lat);
+    integrate_fluxes(nws,
+                     nlevels,
+                     vars->sw_flux_down_per_w,
+                     vars->sw_flux_down,
+                     res);
+    log_mesg("Integrating upward shortwave fluxes across wavenumbers at"
+                 " point (%d,%d,%d).",
+             time,
+             lon,
+             lat);
+    integrate_fluxes(nws,
+                     nlevels,
+                     vars->sw_flux_up_per_w,
+                     vars->sw_flux_up,
                      res);
     return SUCCESS;
 }

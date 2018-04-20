@@ -15,12 +15,20 @@ int alloc_output_fields(OutputFields_t * const var,
                      sizeof(*(var->lw_flux_down))*nlevels));
     check(malloc_ptr((void **)(&(var->lw_flux_up)),
                      sizeof(*(var->lw_flux_up))*nlevels));
+    check(malloc_ptr((void **)(&(var->sw_flux_down)),
+                     sizeof(*(var->sw_flux_down))*nlevels));
+    check(malloc_ptr((void **)(&(var->sw_flux_up)),
+                     sizeof(*(var->sw_flux_up))*nlevels));
     if (device_launch)
     {
         check(malloc_ptr((void **)(&(var->lw_flux_down_per_w)),
                          sizeof(*(var->lw_flux_down_per_w))*nws*nlevels));
         check(malloc_ptr((void **)(&(var->lw_flux_up_per_w)),
                          sizeof(*(var->lw_flux_up_per_w))*nws*nlevels));
+        check(malloc_ptr((void **)(&(var->sw_flux_down_per_w)),
+                         sizeof(*(var->sw_flux_down_per_w))*nws*nlevels));
+        check(malloc_ptr((void **)(&(var->sw_flux_up_per_w)),
+                         sizeof(*(var->sw_flux_up_per_w))*nws*nlevels));
     }
     return SUCCESS;
 }
@@ -33,10 +41,14 @@ int free_output_fields(OutputFields_t * const var,
     free(var->tau);
     free(var->lw_flux_down);
     free(var->lw_flux_up);
+    free(var->sw_flux_down);
+    free(var->sw_flux_up);
     if (device_launch)
     {
         free(var->lw_flux_down_per_w);
         free(var->lw_flux_up_per_w);
+        free(var->sw_flux_down_per_w);
+        free(var->sw_flux_up_per_w);
     }
     return SUCCESS;
 }

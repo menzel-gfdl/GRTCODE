@@ -11,6 +11,8 @@ static char * level_name = "level";
 static char * w_name = "wavenumber";
 static char * lw_flux_down_name = "lw_flux_down";
 static char * lw_flux_up_name = "lw_flux_up";
+static char * sw_flux_down_name = "sw_flux_down";
+static char * sw_flux_up_name = "sw_flux_up";
 static char * tau_name = "optical_depth";
 static int t_dimid;
 static int lon_dimid;
@@ -19,6 +21,8 @@ static int layer_dimid;
 static int level_dimid;
 static int lw_flux_down_varid;
 static int lw_flux_up_varid;
+static int sw_flux_down_varid;
+static int sw_flux_up_varid;
 static int w_dimid;
 static int tau_varid;
 static nc_type type;
@@ -104,6 +108,20 @@ int init_output_file(char const * const filename,
                             dimids,
                             &lw_flux_up_varid));
 
+    netcdf_check(nc_def_var(*ncid,
+                            sw_flux_down_name,
+                            type,
+                            4,
+                            dimids,
+                            &sw_flux_down_varid));
+
+    netcdf_check(nc_def_var(*ncid,
+                            sw_flux_up_name,
+                            type,
+                            4,
+                            dimids,
+                            &sw_flux_up_varid));
+
     if (output_spectra)
     {
         netcdf_check(nc_def_dim(*ncid,
@@ -137,6 +155,8 @@ int close_output_file(int const ncid)
 int write_data_column(int const ncid,
                       fp_t *lw_flux_down,
                       fp_t *lw_flux_up,
+                      fp_t *sw_flux_down,
+                      fp_t *sw_flux_up,
                       fp_t *tau,
                       int const time,
                       int const lon,
@@ -147,6 +167,8 @@ int write_data_column(int const ncid,
 {
     not_null(lw_flux_down);
     not_null(lw_flux_up);
+    not_null(sw_flux_down);
+    not_null(sw_flux_up);
     size_t start[5] = {time,lon,lat,0,0};
     size_t count[5] = {1,1,1,nlevels,nws};
     if (type == NC_FLOAT)
@@ -161,6 +183,16 @@ int write_data_column(int const ncid,
                                        start,
                                        count,
                                        (float *)lw_flux_up));
+        netcdf_check(nc_put_vara_float(ncid,
+                                       sw_flux_down_varid,
+                                       start,
+                                       count,
+                                       (float *)sw_flux_down));
+        netcdf_check(nc_put_vara_float(ncid,
+                                       sw_flux_up_varid,
+                                       start,
+                                       count,
+                                       (float *)sw_flux_up));
         if (output_spectra)
         {
             not_null(tau);
@@ -184,6 +216,16 @@ int write_data_column(int const ncid,
                                         start,
                                         count,
                                         (double *)lw_flux_up));
+        netcdf_check(nc_put_vara_double(ncid,
+                                        sw_flux_down_varid,
+                                        start,
+                                        count,
+                                        (double *)sw_flux_down));
+        netcdf_check(nc_put_vara_double(ncid,
+                                        sw_flux_up_varid,
+                                        start,
+                                        count,
+                                        (double *)sw_flux_up));
         if (output_spectra)
         {
             not_null(tau);

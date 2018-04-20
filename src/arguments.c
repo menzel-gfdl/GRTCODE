@@ -18,6 +18,7 @@ static char args_doc[] = "-aINPUT.nc -oOUT.nc"
                          " [molecule concentration specifications]"
                          " HITFILES";
 
+
 enum arg_group_types
 {
     LAUNCH_GROUP,
@@ -25,6 +26,7 @@ enum arg_group_types
     BOUNDS_GROUP,
     PPMV_GROUP
 };
+
 
 static struct argp_option options[] =
 {
@@ -195,15 +197,23 @@ static struct argp_option options[] =
          "(oxygen concentration/10^6).",
      PPMV_GROUP},
 
-    {"ctm",
-     'C',
+    {"h2octm",
+     -1,
      0,
      0,
      "Enables the water vapor continuum.",
      PPMV_GROUP},
 
+    {"o3ctm",
+     -2,
+     0,
+     0,
+     "Enables the ozone continuum.",
+     PPMV_GROUP},
+
     {0}
 };
+
 
 /*Helper parsing function for molecular concentrations.*/
 static int parse_mol_conc(char *arg,
@@ -235,7 +245,9 @@ static int parse_mol_conc(char *arg,
     return SUCCESS;
 }
 
+
 #define check_usage(e) {if (e != SUCCESS) {argp_usage(state);}}
+
 
 static error_t parse_opt(int key,
                          char *arg,
@@ -253,9 +265,6 @@ static error_t parse_opt(int key,
         case 'c':
             check_usage(to_int(arg,
                                &(arguments->wingBreadth)));
-            break;
-        case 'C':
-            arguments->ctm = 1;
             break;
         case 'd':
             check_usage(to_int(arg,
@@ -331,6 +340,12 @@ static error_t parse_opt(int key,
             check_usage(parse_mol_conc(arg,
                                        &(arguments->molConc[O2])));
             break;
+        case -1:
+            arguments->h2o_ctm = 1;
+            break;
+        case -2:
+            arguments->o3_ctm = 1;
+            break;
         case ARGP_KEY_ARG:
             if (state->arg_num >= maxNargs)
             {
@@ -359,7 +374,9 @@ static error_t parse_opt(int key,
     return 0;
 }
 
+
 static struct argp argp = {options,parse_opt,args_doc,doc,NULL,NULL,NULL};
+
 
 void parse_options(int argc,
                    char **argv,
