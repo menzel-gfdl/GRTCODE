@@ -232,8 +232,8 @@ void integrate_fluxes(unsigned int const nF,
         for (j=0;j<nF-1;++j)
         {
             fp_t a = fluxes[i*nF+j];
-            fp_t b = fluxes[i*nF+j+1] - a;
-            fluxes_accumulated[i] += resm*(a+0.5*b);
+            fp_t b = fluxes[i*nF+j+1];
+            fluxes_accumulated[i] += resm*0.5*(a+b);
         }
     }
     return;

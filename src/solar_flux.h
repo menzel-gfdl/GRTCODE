@@ -7,6 +7,7 @@
 typedef struct SolarFlux
 {
     fp_t *incident_sw_flux; /*Incident solar flux [W/m] per wavenumber.*/
+    fp_t total_sw_flux; /*Solar flux [W/m^2] integrated over wavenumber.*/
 } SolarFlux_t;
 
 

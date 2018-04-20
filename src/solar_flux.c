@@ -26,13 +26,26 @@ int get_solar_flux(char const * const filepath,
     fp_t *coefs[CSV_NUM_COEFS];
     log_mesg("Reading in solar flux values from file %s.",
              filepath);
+    fp_t *data = NULL;
+    int data_size;
     check(get_coefs(filepath,
                     coefs,
                     CSV_NUM_COEFS,
                     nws,
                     w0,
-                    res));
+                    res,
+                    &data,
+                    &data_size));
     sf->incident_sw_flux = coefs[FLUX];
+
+    sf->total_sw_flux = 0.;
+    int s = data_size/(CSV_NUM_COEFS + 1);
+    int i;
+    for (i=0;i<s;++i)
+    {
+        sf->total_sw_flux += data[(FLUX+1)*s + i];
+    }
+
     if (put_on_device)
     {
         using_gpu();

@@ -6,7 +6,9 @@
 
 typedef struct OutputFields
 {
-    fp_t *tau; /**<Optical depth (mechanisms,layer,wavenumber).*/
+    fp_t *tau_gas; /**<Optical depth due to molecular lines and the
+                       continuum (layer,wavenumber).*/
+    fp_t *tau_scatter; /**Optical depth due to scattering.*/
     fp_t *lw_flux_down; /**<Longwave downward fluxes (level) [J/(m^2 s)].*/
     fp_t *lw_flux_up; /**<Longwave upward fluxes (level) [J/(m^2 s)].*/
     fp_t *lw_flux_down_per_w; /**<Longwave downward fluxes per wavenumber

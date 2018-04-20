@@ -15,8 +15,11 @@ int get_coefs(char const * const filepath, /*Path to csv file.*/
                                                     the input file.*/
               int const first_grid_point, /*Value of the model grid at the
                                             first grid point.*/
-              double const grid_spacing) /*Spacing between model grid points
+              double const grid_spacing, /*Spacing between model grid points,
                                            (assumed to be uniform).*/
+              fp_t ** data_ptr, /*Pointer that will point to the raw
+                                  read-in data (if not null.)*/
+              int *data_size) /*Size of the raw read-in data.*/
 {
     not_null(coefs);
 
@@ -42,7 +45,9 @@ int get_coefs(char const * const filepath, /*Path to csv file.*/
 
     /*Convert the read in data from strings to floating point.*/
     int num_non_header_lines = num_lines - 1;
-    fp_t fbuf[num_cols*num_non_header_lines];
+    fp_t *fbuf = NULL;
+    check(malloc_ptr((void **)(&fbuf),
+                     sizeof(*fbuf)*(num_cols*num_non_header_lines)));
     int i;
     for (i=0;i<num_cols;++i)
     {
@@ -101,6 +106,17 @@ int get_coefs(char const * const filepath, /*Path to csv file.*/
                 c[j] = w*m + b;
             }
         }
+    }
+
+    if (data_ptr == NULL)
+    {
+        free(fbuf);
+    }
+    else
+    {
+        not_null(data_size);
+        *data_ptr = fbuf;
+        *data_size = num_cols*num_non_header_lines;
     }
     return SUCCESS;
 }

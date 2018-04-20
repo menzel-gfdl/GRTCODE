@@ -27,7 +27,9 @@ int init_req_model_fields(req_model_fields_t * const fields,
     check(malloc_ptr((void **)(&(fields->SFC_DIF_ALB)),
                      sizeof(*(fields->SFC_DIF_ALB))*n));
     check(malloc_ptr((void **)(&(fields->COS_SOL_ZEN_ANG)),
-                     sizeof(*(fields->COS_SOL_ZEN_ANG))*n*(nlev-1)));
+                     sizeof(*(fields->COS_SOL_ZEN_ANG))*n));
+    check(malloc_ptr((void **)(&(fields->TOTAL_SOL_FLUX)),
+                     sizeof(*(fields->TOTAL_SOL_FLUX))*n));
     check(malloc_ptr((void **)(&(fields->x)),
                      sizeof(*(fields->x))*nmol));
     n *= nlev;

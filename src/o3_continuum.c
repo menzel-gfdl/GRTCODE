@@ -32,7 +32,9 @@ int get_ozone_continuum_coefs(char const * const filepath,
                     CSV_NUM_COEFS,
                     nws,
                     w0,
-                    res));
+                    res,
+                    NULL,
+                    NULL));
     cc->cross_section = coefs[CROSS_SECTION];
     if (put_on_device)
     {

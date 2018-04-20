@@ -17,9 +17,9 @@ typedef struct req_model_fields
     fp_t *EMIS; /*Surface emissivity (t,lon,lat).*/
     fp_t *SFC_DIR_ALB; /*Surface albedo for the direct beam (t,lon,lat).*/
     fp_t *SFC_DIF_ALB; /*Surface albedo for the diffuse beam (t,lon,lat).*/
-    fp_t *COS_SOL_ZEN_ANG; /*Cosine of the Solar zenith angle
-                             (t,lon,lat,lay).*/
+    fp_t *COS_SOL_ZEN_ANG; /*Cosine of the Solar zenith angle (t,lon,lat).*/
     fp_t COS_DIF_BEAM_ANG; /*Cosine of the angle for the diffuse beam.*/
+    fp_t *TOTAL_SOL_FLUX; /*Total solar flux [W/m^2] (t,lon,lat).*/
     fp_t **x; /*molecular abundances at layer interfaces (t,lon,lat,lev).*/
 } req_model_fields_t;
 

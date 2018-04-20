@@ -13,8 +13,11 @@ int get_coefs(char const * const filepath, /*Path to csv file.*/
                                                     the input file.*/
               int const first_grid_point, /*Value of the model grid at the
                                             first grid point.*/
-              double const grid_spacing); /*Spacing between model grid points
-                                            (assumed to be uniform).*/
+              double const grid_spacing, /*Spacing between model grid points,
+                                           (assumed to be uniform).*/
+              fp_t ** data_ptr, /*Pointer that will point to the raw
+                                  read-in data (if not null.)*/
+              int *data_size); /*Size of the raw read-in data.*/
 
 
 #endif

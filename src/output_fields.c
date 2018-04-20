@@ -9,8 +9,11 @@ int alloc_output_fields(OutputFields_t * const var,
                         int const device_launch)
 {
     not_null(var);
-    check(malloc_ptr((void **)(&(var->tau)),
-                     sizeof(*(var->tau))*nlevels*nws));
+    int nlayers = nlevels - 1;
+    check(malloc_ptr((void **)(&(var->tau_gas)),
+                     sizeof(*(var->tau_gas))*nlayers*nws));
+    check(malloc_ptr((void **)(&(var->tau_scatter)),
+                     sizeof(*(var->tau_scatter))*nlayers*nws));
     check(malloc_ptr((void **)(&(var->lw_flux_down)),
                      sizeof(*(var->lw_flux_down))*nlevels));
     check(malloc_ptr((void **)(&(var->lw_flux_up)),
@@ -38,7 +41,8 @@ int free_output_fields(OutputFields_t * const var,
                        int const device_launch)
 {
     not_null(var);
-    free(var->tau);
+    free(var->tau_gas);
+    free(var->tau_scatter);
     free(var->lw_flux_down);
     free(var->lw_flux_up);
     free(var->sw_flux_down);

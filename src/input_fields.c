@@ -25,6 +25,7 @@ static char const *surf_emis_name = "surface emissivity";
 static char const *surf_dir_albedo_name = "surface direct albedo";
 static char const *surf_dif_albedo_name = "surface diffuse albedo";
 static char const *solar_zen_angle_name = "solar zenith angle";
+static char const *total_solar_flux_name = "total solar flux";
 static char *in_mol_names[NUM_MOL];
 static double const DEFAULT_DIF_BEAM_ANG = 60.; /*Degrees*/
 static double const DEG_TO_RAD = 2.*M_PI/360.; /*[radian/degree]*/
@@ -206,6 +207,16 @@ int get_input_data(req_model_fields_t * const out,
                   ncid,
                   dims,
                   3));
+    check(get_var(&(in.SOL_ZEN_ANG),
+                  solar_zen_angle_name,
+                  ncid,
+                  dims,
+                  3));
+    check(get_var(&(in.TOTAL_SOL_FLUX),
+                  total_solar_flux_name,
+                  ncid,
+                  dims,
+                  3));
     check(get_var(&(in.SFC_DIR_ALB),
                   surf_dir_albedo_name,
                   ncid,
@@ -240,11 +251,6 @@ int get_input_data(req_model_fields_t * const out,
                   dims,
                   4));
     dims[3] = layer;
-    check(get_var(&(in.SOL_ZEN_ANG),
-                  solar_zen_angle_name,
-                  ncid,
-                  dims,
-                  4));
     in.x = NULL;
     check(malloc_ptr((void **)(&(in.x)),
                      sizeof(*(in.x))*nMols));
@@ -279,12 +285,8 @@ int get_input_data(req_model_fields_t * const out,
         out->EMIS[i] = (fp_t)(in.EMIS[i]);
         out->SFC_DIR_ALB[i] = (fp_t)(in.SFC_DIR_ALB[i]);
         out->SFC_DIF_ALB[i] = (fp_t)(in.SFC_DIF_ALB[i]);
-        for (j=0;j<(int)layer.length;++j)
-        {
-            int off = (int)(i*layer.length + j);
-            out->COS_SOL_ZEN_ANG[off] = (fp_t)(cos(in.SOL_ZEN_ANG[off]*
-                                                   DEG_TO_RAD));
-        }
+        out->COS_SOL_ZEN_ANG[i] = (fp_t)(cos(in.SOL_ZEN_ANG[i]*DEG_TO_RAD));
+        out->TOTAL_SOL_FLUX[i] = (fp_t)(in.TOTAL_SOL_FLUX[i]);
         for (j=0;j<(int)level.length;++j)
         {
             int off = (int)(i*level.length + j);

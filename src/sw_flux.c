@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include "debug.h"
-
 #include "omp.h"
 #include "floating_point_type.h"
 #include "radiation_solvers.h"
@@ -12,14 +9,16 @@ void calc_sw_flux(int const nlevels,
                   int const w0,
                   double const res,
                   fp_t const * const N,
-                  fp_t const * const mu_dir,
+                  fp_t const mu_dir,
                   fp_t const mu_dif,
-                  fp_t const * const tau_in,
+                  fp_t const * const tau_gas,
                   fp_t const sfc_alpha_dir,
                   fp_t const sfc_alpha_dif,
                   fp_t const * const solar_flux,
+                  fp_t const sol_flux_ratio,
                   fp_t * const flux_up,
-                  fp_t * const flux_down)
+                  fp_t * const flux_down,
+                  fp_t * const tau_scatter)
 {
     int const nlayers = nlevels - 1;
     int i;
@@ -36,7 +35,6 @@ void calc_sw_flux(int const nlevels,
         fp_t tau_total[nlayers];
         fp_t omega_avg[nlayers];
         fp_t g_avg[nlayers];
-
         int j;
         for (j=0;j<nlayers;j++)
         {
@@ -53,7 +51,7 @@ void calc_sw_flux(int const nlevels,
             /*Absorption.*/
             omega[ABSORB] = 0.;
             g[ABSORB] = 0.;
-            tau[ABSORB] = tau_in[j*nws+i];
+            tau[ABSORB] = tau_gas[j*nws+i];
 
             /*Rayleigh scattering.*/
             omega[RAYLEIGH] = 1.;
@@ -61,10 +59,7 @@ void calc_sw_flux(int const nlevels,
             fp_t const W = w*1.e-4;
             tau[RAYLEIGH] = (N[j]*1.e-20*W*W*W*W)/
                             (0.268675*1.e5*(9.38076E2 - 10.8426*W*W));
-
-/*
-            printf("%e %e %e\n",w,N[j],tau[RAYLEIGH]);
-*/
+            tau_scatter[j*nws+i] += tau[RAYLEIGH];
 
             /*Get totals/averages.*/
             tau_total[j] = 0.;
@@ -79,16 +74,11 @@ void calc_sw_flux(int const nlevels,
             }
             g_avg[j] /= omega_avg[j];
             omega_avg[j] /= tau_total[j];
-
-
-            printf("%e %e %e\n",tau_total[j],omega_avg[j],g_avg[j]);
-
-
         }
 
-        fp_t flux_up_buf[nlevels];
-        fp_t flux_down_buf[nlevels];
-        check(sw_flux(nlevels,
+        fp_t R[nlevels];
+        fp_t T[nlevels];
+        sw_flux(nlevels,
                 w,
                 N,
                 omega_avg,
@@ -98,14 +88,12 @@ void calc_sw_flux(int const nlevels,
                 tau_total,
                 sfc_alpha_dir,
                 sfc_alpha_dif,
-                solar_flux[i]*mu_dir[0],
-                flux_up_buf,
-                flux_down_buf));
-
+                R,
+                T);
         for (j=0;j<nlevels;++j)
         {
-            flux_up[j*nws+i] = flux_up_buf[j];
-            flux_down[j*nws+i] = flux_down_buf[j];
+            flux_up[j*nws+i] = R[j]*sol_flux_ratio*solar_flux[i]*mu_dir/100.;
+            flux_down[j*nws+i] = T[j]*sol_flux_ratio*solar_flux[i]*mu_dir/100.;
         }
     }
     return;

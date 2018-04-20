@@ -13,7 +13,8 @@ typedef struct input_fields
     double *EMIS; /*Surface emissivity (t,lon,lat).*/
     double *SFC_DIR_ALB; /*Surface albedo for the direct beam (t,lon,lat).*/
     double *SFC_DIF_ALB; /*Surface albedo for the diffuse beam (t,lon,lat).*/
-    double *SOL_ZEN_ANG; /*Solar zenith angle [degrees] (t,lon,lat,lay).*/
+    double *SOL_ZEN_ANG; /*Solar zenith angle [degrees] (t,lon,lat).*/
+    double *TOTAL_SOL_FLUX; /*Total solar flux [W/m^2] (t,lon,lat).*/
     double **x; /*Moleculare abundances [ppmv] in layers (t,lon,lat,lay).*/
 } input_fields_t;
 

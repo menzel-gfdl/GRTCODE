@@ -44,8 +44,6 @@ int alloc_work_vars(WorkVars_t *vars,
                                 sizeof(*(vars->P))*nlevels));
         HANDLE_ERROR(cudaMalloc(&(vars->T),
                                 sizeof(*(vars->T))*nlevels));
-        HANDLE_ERROR(cudaMalloc(&(vars->MU_DIR),
-                                sizeof(*(vars->MU_DIR))*(nlevels-1)));
         HANDLE_ERROR(cudaMalloc(&(vars->x),
                                 sizeof(*(vars->x))*nlevels));
         HANDLE_ERROR(cudaMalloc(&(vars->Pavg),
@@ -68,8 +66,10 @@ int alloc_work_vars(WorkVars_t *vars,
         check(alloc_line_params_device(&(vars->LINES),
                                        nlines));
         int const n = nlayers*nws;
-        HANDLE_ERROR(cudaMalloc(&(vars->tau),
-                                sizeof(*(vars->tau))*n));
+        HANDLE_ERROR(cudaMalloc(&(vars->tau_gas),
+                                sizeof(*(vars->tau_gas))*n));
+        HANDLE_ERROR(cudaMalloc(&(vars->tau_scatter),
+                                sizeof(*(vars->tau_scatter))*n));
         HANDLE_ERROR(cudaMalloc(&(vars->lw_flux_down_per_w),
                                 sizeof(*(vars->lw_flux_down_per_w))*m));
         HANDLE_ERROR(cudaMalloc(&(vars->lw_flux_up_per_w),
@@ -84,7 +84,6 @@ int alloc_work_vars(WorkVars_t *vars,
     {
         vars->P = NULL;
         vars->T = NULL;
-        vars->MU_DIR = NULL;
         vars->x = NULL;
         check(malloc_ptr((void **)(&(vars->Pavg)),
                          sizeof(*(vars->Pavg))*nlayers));
@@ -105,7 +104,8 @@ int alloc_work_vars(WorkVars_t *vars,
         vars->LINES = NULL;
         check(malloc_ptr((void **)(&(vars->Snn_ref)),
                          sizeof(*(vars->Snn_ref))*nlines));
-        vars->tau = NULL;
+        vars->tau_gas = NULL;
+        vars->tau_scatter = NULL;
         check(malloc_ptr((void **)(&(vars->lw_flux_down_per_w)),
                          sizeof(*(vars->lw_flux_down_per_w))*m));
         check(malloc_ptr((void **)(&(vars->lw_flux_up_per_w)),
@@ -133,7 +133,6 @@ int free_work_vars(WorkVars_t *vars,
 #ifdef __NVCC__
         HANDLE_ERROR(cudaFree(vars->P));
         HANDLE_ERROR(cudaFree(vars->T));
-        HANDLE_ERROR(cudaFree(vars->MU_DIR));
         HANDLE_ERROR(cudaFree(vars->x));
         HANDLE_ERROR(cudaFree(vars->Pavg));
         HANDLE_ERROR(cudaFree(vars->Tavg));
@@ -144,7 +143,8 @@ int free_work_vars(WorkVars_t *vars,
         HANDLE_ERROR(cudaFree(vars->PSHIFT));
         HANDLE_ERROR(cudaFree(vars->S));
         check(free_line_params_device(&(vars->LINES)));
-        HANDLE_ERROR(cudaFree(vars->tau));
+        HANDLE_ERROR(cudaFree(vars->tau_gas));
+        HANDLE_ERROR(cudaFree(vars->tau_scatter));
         HANDLE_ERROR(cudaFree(vars->lw_flux_down_per_w));
         HANDLE_ERROR(cudaFree(vars->lw_flux_up_per_w));
         HANDLE_ERROR(cudaFree(vars->sw_flux_down_per_w));
@@ -195,7 +195,8 @@ int launch_host(WorkVars_t * const vars,
     not_null(output_data);
 
     /*Point to output buffers.*/
-    vars->tau = output_data->tau;
+    vars->tau_gas = output_data->tau_gas;
+    vars->tau_scatter = output_data->tau_scatter;
     vars->lw_flux_down = output_data->lw_flux_down;
     vars->lw_flux_up = output_data->lw_flux_up;
     vars->sw_flux_down = output_data->sw_flux_down;
@@ -204,9 +205,12 @@ int launch_host(WorkVars_t * const vars,
     /*Zero out buffers used to accumulate results.*/
     int nlevels = input_data->nlevel;
     int nlayers = nlevels - 1;
-    memset(vars->tau,
+    memset(vars->tau_gas,
            0,
-           sizeof(*(vars->tau))*nlayers*nws);
+           sizeof(*(vars->tau_gas))*nlayers*nws);
+    memset(vars->tau_scatter,
+           0,
+           sizeof(*(vars->tau_scatter))*nlayers*nws);
     memset(vars->lw_flux_down,
            0,
            sizeof(*(vars->lw_flux_down))*nlevels);
@@ -228,7 +232,9 @@ int launch_host(WorkVars_t * const vars,
     fp_t const SFC_DIR_ALB = input_data->SFC_DIR_ALB[offset];
     fp_t const SFC_DIF_ALB = input_data->SFC_DIF_ALB[offset];
     fp_t const MU_DIF = input_data->COS_DIF_BEAM_ANG;
-    vars->MU_DIR = &(input_data->COS_SOL_ZEN_ANG[offset*nlayers]);
+    fp_t const MU_DIR = input_data->COS_SOL_ZEN_ANG[offset];
+    fp_t const SOL_FLUX_RATIO = (input_data->TOTAL_SOL_FLUX[offset])/
+                                (solar_flux->total_sw_flux);
     offset *= nlevels;
     vars->P = &(input_data->P[offset]);
     vars->T = &(input_data->T[offset]);
@@ -366,7 +372,7 @@ int launch_host(WorkVars_t * const vars,
                        vars->PSHIFT,
                        vars->S,
                        vars->Ns,
-                       vars->tau);
+                       vars->tau_gas);
 
         if (continuum && mol_id == H2O)
         {
@@ -378,7 +384,7 @@ int launch_host(WorkVars_t * const vars,
                      lat);
             calc_ctm_optdepth_h(nws,
                                 nlayers,
-                                vars->tau,
+                                vars->tau_gas,
                                 h2o_continuum->coefs[CS],
                                 vars->Tavg,
                                 vars->Psavg,
@@ -400,7 +406,7 @@ int launch_host(WorkVars_t * const vars,
                                       nlayers,
                                       o3_continuum->cross_section,
                                       vars->Ns,
-                                      vars->tau);
+                                      vars->tau_gas);
         }
     }
 
@@ -415,7 +421,7 @@ int launch_host(WorkVars_t * const vars,
                    vars->lw_flux_up_per_w,
                    vars->Tavg,
                    TSURF,
-                   vars->tau,
+                   vars->tau_gas,
                    w,
                    res,
                    EMIS,
@@ -443,46 +449,51 @@ int launch_host(WorkVars_t * const vars,
                      vars->lw_flux_up,
                      res);
 
-    /*Calculate the shortwave fluxes.*/
-    log_mesg("Launching kernel calc_sw_flux at point (%d,%d,%d)",
-             time,
-             lon,
-             lat);
-    calc_sw_flux(nlevels,
-                 nws,
-                 w,
-                 res,
-                 vars->N,
-                 vars->MU_DIR,
-                 MU_DIF,
-                 vars->tau,
-                 SFC_DIR_ALB,
-                 SFC_DIF_ALB,
-                 solar_flux->incident_sw_flux,
-                 vars->sw_flux_up_per_w,
-                 vars->sw_flux_down_per_w);
-
-    /*Integrate the fluxes over wavenumber.*/
-    log_mesg("Integrating downward shortwave fluxes across wavenumbers at"
-                 " point (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    integrate_fluxes(nws,
-                     nlevels,
-                     vars->sw_flux_down_per_w,
-                     vars->sw_flux_down,
-                     res);
-    log_mesg("Integrating upward shortwave fluxes across wavenumbers at"
-                 " point (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    integrate_fluxes(nws,
-                     nlevels,
+    if (MU_DIR >= 0.)
+    {
+        /*Calculate the shortwave fluxes.*/
+        log_mesg("Launching kernel calc_sw_flux at point (%d,%d,%d)",
+                 time,
+                 lon,
+                 lat);
+        calc_sw_flux(nlevels,
+                     nws,
+                     w,
+                     res,
+                     vars->N,
+                     MU_DIR,
+                     MU_DIF,
+                     vars->tau_gas,
+                     SFC_DIR_ALB,
+                     SFC_DIF_ALB,
+                     solar_flux->incident_sw_flux,
+                     SOL_FLUX_RATIO,
                      vars->sw_flux_up_per_w,
-                     vars->sw_flux_up,
-                     res);
+                     vars->sw_flux_down_per_w,
+                     vars->tau_scatter);
+
+        /*Integrate the fluxes over wavenumber.*/
+        log_mesg("Integrating downward shortwave fluxes across wavenumbers"
+                     " at point (%d,%d,%d).",
+                 time,
+                 lon,
+                 lat);
+        integrate_fluxes(nws,
+                         nlevels,
+                         vars->sw_flux_down_per_w,
+                         vars->sw_flux_down,
+                         res);
+        log_mesg("Integrating upward shortwave fluxes across wavenumbers"
+                     " at point (%d,%d,%d).",
+                 time,
+                 lon,
+                 lat);
+        integrate_fluxes(nws,
+                         nlevels,
+                         vars->sw_flux_up_per_w,
+                         vars->sw_flux_up,
+                         res);
+    }
     return SUCCESS;
 }
 

@@ -9,11 +9,12 @@ static char * lat_name = "latitude";
 static char * layer_name = "layer";
 static char * level_name = "level";
 static char * w_name = "wavenumber";
-static char * lw_flux_down_name = "lw_flux_down";
-static char * lw_flux_up_name = "lw_flux_up";
-static char * sw_flux_down_name = "sw_flux_down";
-static char * sw_flux_up_name = "sw_flux_up";
-static char * tau_name = "optical_depth";
+static char * lw_flux_down_name = "lw flux down";
+static char * lw_flux_up_name = "lw flux up";
+static char * sw_flux_down_name = "sw flux down";
+static char * sw_flux_up_name = "sw flux up";
+static char * tau_gas_name = "optical depth gas";
+static char * tau_scatter_name = "optical depth scatter";
 static int t_dimid;
 static int lon_dimid;
 static int lat_dimid;
@@ -24,7 +25,8 @@ static int lw_flux_up_varid;
 static int sw_flux_down_varid;
 static int sw_flux_up_varid;
 static int w_dimid;
-static int tau_varid;
+static int tau_gas_varid;
+static int tau_scatter_varid;
 static nc_type type;
 
 
@@ -66,11 +68,6 @@ int init_output_file(char const * const filename,
                             &lat_dimid));
 
     netcdf_check(nc_def_dim(*ncid,
-                            layer_name,
-                            nlevels-1,
-                            &layer_dimid));
-
-    netcdf_check(nc_def_dim(*ncid,
                             level_name,
                             nlevels,
                             &level_dimid));
@@ -92,7 +89,7 @@ int init_output_file(char const * const filename,
               sizeof(float),
               sizeof(double));
     }
-    int dimids[6] = {t_dimid,lon_dimid,lat_dimid,level_dimid};
+    int dimids[5] = {t_dimid,lon_dimid,lat_dimid,level_dimid,-1};
 
     netcdf_check(nc_def_var(*ncid,
                             lw_flux_down_name,
@@ -124,6 +121,12 @@ int init_output_file(char const * const filename,
 
     if (output_spectra)
     {
+        int nlayers = nlevels - 1;
+        netcdf_check(nc_def_dim(*ncid,
+                                layer_name,
+                                nlayers,
+                                &layer_dimid));
+
         netcdf_check(nc_def_dim(*ncid,
                                 w_name,
                                 nws,
@@ -133,11 +136,18 @@ int init_output_file(char const * const filename,
         dimids[4] = w_dimid;
 
         netcdf_check(nc_def_var(*ncid,
-                                tau_name,
+                                tau_gas_name,
                                 type,
                                 5,
                                 dimids,
-                                &tau_varid));
+                                &tau_gas_varid));
+
+        netcdf_check(nc_def_var(*ncid,
+                                tau_scatter_name,
+                                type,
+                                5,
+                                dimids,
+                                &tau_scatter_varid));
     }
     return SUCCESS;
 }
@@ -157,7 +167,8 @@ int write_data_column(int const ncid,
                       fp_t *lw_flux_up,
                       fp_t *sw_flux_down,
                       fp_t *sw_flux_up,
-                      fp_t *tau,
+                      fp_t *tau_gas,
+                      fp_t *tau_scatter,
                       int const time,
                       int const lon,
                       int const lat,
@@ -195,13 +206,20 @@ int write_data_column(int const ncid,
                                        (float *)sw_flux_up));
         if (output_spectra)
         {
-            not_null(tau);
-            count[3] = nlevels-1;
+            not_null(tau_gas);
+            int nlayers = nlevels - 1;
+            count[3] = nlayers;
             netcdf_check(nc_put_vara_float(ncid,
-                                           tau_varid,
+                                           tau_gas_varid,
                                            start,
                                            count,
-                                           (float *)tau));
+                                           (float *)tau_gas));
+            not_null(tau_scatter);
+            netcdf_check(nc_put_vara_float(ncid,
+                                           tau_scatter_varid,
+                                           start,
+                                           count,
+                                           (float *)tau_scatter));
         }
     }
     else if (type == NC_DOUBLE)
@@ -228,13 +246,20 @@ int write_data_column(int const ncid,
                                         (double *)sw_flux_up));
         if (output_spectra)
         {
-            not_null(tau);
-            count[3] = nlevels-1;
+            not_null(tau_gas);
+            int nlayers = nlevels - 1;
+            count[3] = nlayers;
             netcdf_check(nc_put_vara_double(ncid,
-                                            tau_varid,
+                                            tau_gas_varid,
                                             start,
                                             count,
-                                            (double *)tau));
+                                            (double *)tau_gas));
+            not_null(tau_scatter);
+            netcdf_check(nc_put_vara_double(ncid,
+                                            tau_scatter_varid,
+                                            start,
+                                            count,
+                                            (double *)tau_scatter));
         }
     }
     return SUCCESS;

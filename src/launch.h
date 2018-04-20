@@ -13,9 +13,6 @@ typedef struct WorkVars
 {
     fp_t *P;
     fp_t *T;
-    fp_t *TSURF;
-    fp_t *EMIS;
-    fp_t *MU_DIR;
     fp_t *x;
     fp_t *Pavg;
     fp_t *Tavg;
@@ -27,7 +24,8 @@ typedef struct WorkVars
     fp_t *S;
     line_params_t *LINES;
     fp_t *Snn_ref; /*Only used by host.*/
-    fp_t *tau;
+    fp_t *tau_gas;
+    fp_t *tau_scatter;
     fp_t *lw_flux_down_per_w;
     fp_t *lw_flux_up_per_w;
     fp_t *lw_flux_down;
