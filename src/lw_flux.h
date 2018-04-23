@@ -48,11 +48,4 @@ fp_t effective_planck(fp_t const Tcenter,
                       fp_t const tau);
 
 
-void integrate_fluxes(unsigned int const nF,
-                      int const numLevels,
-                      fp_t const * const fluxes,
-                      fp_t * const fluxes_accumulated,
-                      fp_t const res);
-
-
 #endif

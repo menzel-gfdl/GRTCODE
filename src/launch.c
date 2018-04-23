@@ -428,26 +428,24 @@ int launch_host(WorkVars_t * const vars,
                    vars->T);
 
     /*Integrate the fluxes over wavenumber.*/
-    log_mesg("Integrating downward longwave fluxes across wavenumbers at"
+    log_mesg("Integrating longwave fluxes across wavenumbers at"
                  " point (%d,%d,%d).",
              time,
              lon,
              lat);
-    integrate_fluxes(nws,
-                     nlevels,
-                     vars->lw_flux_down_per_w,
-                     vars->lw_flux_down,
-                     res);
-    log_mesg("Integrating upward longwave fluxes across wavenumbers at point"
-                 " (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    integrate_fluxes(nws,
-                     nlevels,
-                     vars->lw_flux_up_per_w,
-                     vars->lw_flux_up,
-                     res);
+    int i;
+    for (i=0;i<nlevels;++i)
+    {
+        fp_t const M_TO_CM = 100.; /*[cm/m]*/
+        reimann_sum(&(vars->lw_flux_up_per_w[i*nws]),
+                    nws,
+                    res*M_TO_CM,
+                    &(vars->lw_flux_up[i]));
+        reimann_sum(&(vars->lw_flux_down_per_w[i*nws]),
+                    nws,
+                    res*M_TO_CM,
+                    &(vars->lw_flux_down[i]));
+    }
 
     if (MU_DIR >= 0.)
     {
@@ -473,26 +471,22 @@ int launch_host(WorkVars_t * const vars,
                      vars->tau_scatter);
 
         /*Integrate the fluxes over wavenumber.*/
-        log_mesg("Integrating downward shortwave fluxes across wavenumbers"
+        log_mesg("Integrating shortwave fluxes across wavenumbers"
                      " at point (%d,%d,%d).",
                  time,
                  lon,
                  lat);
-        integrate_fluxes(nws,
-                         nlevels,
-                         vars->sw_flux_down_per_w,
-                         vars->sw_flux_down,
-                         res);
-        log_mesg("Integrating upward shortwave fluxes across wavenumbers"
-                     " at point (%d,%d,%d).",
-                 time,
-                 lon,
-                 lat);
-        integrate_fluxes(nws,
-                         nlevels,
-                         vars->sw_flux_up_per_w,
-                         vars->sw_flux_up,
-                         res);
+        for (i=0;i<nlevels;++i)
+        {
+            reimann_sum(&(vars->sw_flux_up_per_w[i*nws]),
+                        nws,
+                        res,
+                        &(vars->sw_flux_up[i]));
+            reimann_sum(&(vars->sw_flux_down_per_w[i*nws]),
+                        nws,
+                        res,
+                        &(vars->sw_flux_down[i]));
+        }
     }
     return SUCCESS;
 }

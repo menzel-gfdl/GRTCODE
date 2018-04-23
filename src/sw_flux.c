@@ -76,24 +76,23 @@ void calc_sw_flux(int const nlevels,
             omega_avg[j] /= tau_total[j];
         }
 
-        fp_t R[nlevels];
-        fp_t T[nlevels];
+        fp_t flux_up_buf[nlevels];
+        fp_t flux_down_buf[nlevels];
         sw_flux(nlevels,
-                w,
-                N,
                 omega_avg,
-                mu_dir,
-                mu_dif,
                 g_avg,
                 tau_total,
+                mu_dir,
+                mu_dif,
                 sfc_alpha_dir,
                 sfc_alpha_dif,
-                R,
-                T);
+                solar_flux[i]*sol_flux_ratio,
+                flux_up_buf,
+                flux_down_buf);
         for (j=0;j<nlevels;++j)
         {
-            flux_up[j*nws+i] = R[j]*sol_flux_ratio*solar_flux[i]*mu_dir/100.;
-            flux_down[j*nws+i] = T[j]*sol_flux_ratio*solar_flux[i]*mu_dir/100.;
+            flux_up[j*nws+i] = flux_up_buf[j];
+            flux_down[j*nws+i] = flux_down_buf[j];
         }
     }
     return;

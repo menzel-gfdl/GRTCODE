@@ -213,28 +213,3 @@ fp_t effective_planck(fp_t const Tcenter,
     return ((planck_func(Tcenter,w) + (a*tau + b*tau*tau)*
            planck_func(Tedge,w))/(1 + a*tau + b*tau*tau));
 }
-
-
-void integrate_fluxes(unsigned int const nF,
-                      int const numLevels,
-                      fp_t const * const fluxes,
-                      fp_t * const fluxes_accumulated,
-                      fp_t const res)
-{
-    fp_t const MToCm = 100;
-    fp_t const resm = res*MToCm; /*Wavenumber resolution (1/m).*/
-    int i;
-    unsigned int j;
-
-    for (i=0;i<numLevels;++i)
-    {
-        fluxes_accumulated[i] = 0;
-        for (j=0;j<nF-1;++j)
-        {
-            fp_t a = fluxes[i*nF+j];
-            fp_t b = fluxes[i*nF+j+1];
-            fluxes_accumulated[i] += resm*0.5*(a+b);
-        }
-    }
-    return;
-}

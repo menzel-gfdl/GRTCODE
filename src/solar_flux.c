@@ -38,14 +38,15 @@ int get_solar_flux(char const * const filepath,
                     &data_size));
     sf->incident_sw_flux = coefs[FLUX];
 
-    sf->total_sw_flux = 0.;
     int s = data_size/(CSV_NUM_COEFS + 1);
+    double total = 0.;
     int i;
-    for (i=0;i<s;++i)
+    for (i=0;i<(s-1);++i)
     {
-        sf->total_sw_flux += data[(FLUX+1)*s + i];
+        double dx = data[i+1] - data[i];
+        total += 0.5*dx*(data[(FLUX+1)*s + i] + data[(FLUX+1)*s + i + 1]);
     }
-
+    sf->total_sw_flux = (fp_t)total;
     if (put_on_device)
     {
         using_gpu();

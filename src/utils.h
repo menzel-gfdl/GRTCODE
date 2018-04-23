@@ -41,6 +41,13 @@ int input_bounds_check(int lower,
 int check_launch_mode(int const launch_type);
 
 
+/*Perform an integral using a reimann sum.*/
+int reimann_sum(fp_t const * const data,
+                int const data_size,
+                fp_t const dx,
+                fp_t * const out);
+
+
 int get_sorted_bounds(fp_t const val,
                       fp_t const * const array,
                       int const array_size,
