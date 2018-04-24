@@ -1,0 +1,38 @@
+# NetCDF C Configuration Summary
+==============================
+
+# General
+-------
+NetCDF Version:		4.6.1
+Configured On:		Tue Apr 24 16:12:17 EDT 2018
+Host System:		x86_64-pc-linux-gnu
+Build Directory: 	/home/Raymond.Menzel/grtcodev2/packages/netcdf-4.6.1/netcdf-4.6.1
+Install Prefix:         /home/Raymond.Menzel/grtcodev2/packages/netcdf-4.6.1
+
+# Compiling Options
+-----------------
+C Compiler:		/usr/bin/gcc
+CFLAGS:			
+CPPFLAGS:		-I/home/Raymond.Menzel/grtcodev2/packages/hdf5-1.10.1/include
+LDFLAGS:		-L/home/Raymond.Menzel/grtcodev2/packages/hdf5-1.10.1/lib
+AM_CFLAGS:		
+AM_CPPFLAGS:		
+AM_LDFLAGS:		
+Shared Library:		yes
+Static Library:		yes
+Extra libraries:	-lhdf5_hl -lhdf5 -lm -lz -lcurl 
+
+# Features
+--------
+NetCDF-2 API:		yes
+HDF4 Support:		no
+NetCDF-4 API:		yes
+NC-4 Parallel Support:	no
+PNetCDF Support:	no
+DAP2 Support:		yes
+DAP4 Support:		yes
+Diskless Support:	yes
+MMap Support:		no
+JNA Support:		no
+CDF5 Support:		yes
+ERANGE fill Support:	no
