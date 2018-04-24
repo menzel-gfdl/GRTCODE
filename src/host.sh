@@ -14,7 +14,5 @@ fi
 
 mv grtcode.x $RUN
 cd $RUN
-#time $GRT -aINPUT/new.multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc -r1.0 -ofoo --h2octm --o3ctm -h -t0 -T1 -x0 -X0 -y0 -Y0 -w1 -W10000\
-#   HITFILES/01_hit12.par HITFILES/02_hit12.par HITFILES/03_hit12.par HITFILES/04_hit08.par HITFILES/06_hit12.par HITFILES/07_hit12.par
-
-time $GRT -aINPUT/new.multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc -r1.0 -ofoo --h2octm --o3ctm -h -t0 -T1 -x0 -X0 -y0 -Y0 -w1 -W10000 HITFILES/03_hit12.par
+time $GRT -aINPUT/new.multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-0-3.0_none.nc -r1.0 -ofoo --h2octm --o3ctm -h -t0 -T0 -x0 -X0 -y0 -Y0 -w1 -W50000\
+   HITFILES/01_hit12.par HITFILES/02_hit12.par HITFILES/03_hit12.par HITFILES/04_hit08.par HITFILES/06_hit12.par HITFILES/07_hit12.par
