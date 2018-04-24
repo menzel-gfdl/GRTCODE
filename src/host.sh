@@ -1,7 +1,7 @@
 #!/bin/bash
 
 GRT="./grtcode.x"
-RUN="../run_host"
+RUN="../run"
 
 MAKEFILE="Makefile.gcc"
 
