@@ -1,10 +1,10 @@
+#include "omp.h"
 #include "floating_point_type.h"
 #include "GasProps.h"
 #include "GaussianFuncs.h"
 #include "IdaVoigtFuncs.h"
 #include "line_shape.h"
 #include "LorentzFuncs.h"
-#include "omp.h"
 #include "RfmVoigtFuncs.h"
 
 #ifdef __NVCC__

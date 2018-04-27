@@ -1,7 +1,7 @@
+#include "omp.h"
 #include "eval_pShift.h"
 #include "floating_point_type.h"
 #include "line_shape_utils.h"
-#include "omp.h"
 
 
 /*Compute the pressure-shift correction of the line position for each

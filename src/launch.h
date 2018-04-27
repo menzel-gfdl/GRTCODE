@@ -1,13 +1,13 @@
 #ifndef LAUNCH_H_
 #define LAUNCH_H_
 
-#include "continuum.h"
 #include "floating_point_type.h"
 #include "model_fields.h"
 #include "parseHITRANfile.h"
-#include "o3_continuum.h"
+#include "ozone_continuum.h"
 #include "output_fields.h"
 #include "solar_flux.h"
+#include "water_vapor_continuum.h"
 
 typedef struct WorkVars
 {
@@ -60,8 +60,8 @@ int launch_host(WorkVars_t * const vars,
                 fp_t const w,
                 double const res,
                 int const breadth,
-                int const continuum,
-                ContinuumCoefs_t * const h2o_continuum,
+                int const h2o_ctm,
+                WaterVaporContinuumCoefs_t * const h2o_continuum,
                 int const o3_ctm,
                 OzoneContinuumCoefs_t const * const o3_continuum,
                 OutputFields_t * const output_data);

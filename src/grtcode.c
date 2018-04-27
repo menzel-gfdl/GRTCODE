@@ -1,20 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "omp.h"
 #include "arguments.h"
 #include "constants.h"
-#include "continuum.h"
 #include "debug.h"
 #include "input_fields.h"
 #include "launch.h"
 #include "model_fields.h"
 #include "molecules.h"
-#include "o3_continuum.h"
+#include "ozone_continuum.h"
 #include "parseHITRANfile.h"
 #include "solar_flux.h"
 #include "TIPS_2011.h"
 #include "utils.h"
 #include "write_output.h"
-#include "omp.h"
+#include "water_vapor_continuum.h"
 
 #ifdef __NVCC__
 #include "cudaHelpers.cuh"
@@ -183,24 +183,23 @@ int main(int argc,
 
     /*Read in the solar flux values.*/
     SolarFlux_t solar_flux;
-    check(get_solar_flux("INPUT/solar_flux.csv",
-                         &solar_flux,
+    check(get_solar_flux(&solar_flux,
                          nF,
                          arguments.w,
                          arguments.res,
                          (launchType == DEVICE_LAUNCH)));
 
     /*Read in the water vapor continuum coefficients.*/
-    ContinuumCoefs_t h2o_continuum;
+    WaterVaporContinuumCoefs_t h2o_continuum;
     if (arguments.h2o_ctm)
     {
         /*Read in continuum coefficients and optionally put them on the
           device.*/
-        check(get_h2o_continuum_coefs(&h2o_continuum,
-                                      nF,
-                                      arguments.w,
-                                      arguments.res,
-                                      (launchType == DEVICE_LAUNCH)));
+        check(get_water_vapor_continuum_coefs(&h2o_continuum,
+                                              nF,
+                                              arguments.w,
+                                              arguments.res,
+                                              (launchType == DEVICE_LAUNCH)));
     }
 
     /*Read in the ozone continuum coefficients.*/
@@ -208,9 +207,7 @@ int main(int argc,
     if (arguments.o3_ctm)
     {
         /*Read in the ozone continuum coefficients.*/
-        check(get_ozone_continuum_coefs("INPUT/ozone_continuum/"
-                                            "ozone_continuum.csv",
-                                        &o3_continuum,
+        check(get_ozone_continuum_coefs(&o3_continuum,
                                         nF,
                                         arguments.w,
                                         arguments.res,
@@ -326,9 +323,9 @@ int main(int argc,
                                         out.sw_flux_up,
                                         out.tau_gas,
                                         out.tau_scatter,
-                                        time,
-                                        lon,
-                                        lat,
+                                        time-arguments.t,
+                                        lon-arguments.x,
+                                        lat-arguments.y,
                                         inputData.nlevel,
                                         nF,
                                         1));
@@ -357,8 +354,8 @@ int main(int argc,
     /*Free memory storing the continuum coefficients.*/
     if (arguments.h2o_ctm)
     {
-        check(free_continuum_coeffs(&h2o_continuum,
-                                    (launchType == DEVICE_LAUNCH)));
+        check(free_water_vapor_continuum_coeffs(&h2o_continuum,
+                                                (launchType == DEVICE_LAUNCH)));
     }
 
     /*Free memory storing the input solar flux values.*/

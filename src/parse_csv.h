@@ -6,6 +6,7 @@
 int parse_csv(char const * const filepath,
               int * const num_lines,
               int * const num_cols,
+              int const ignore_headers,
               char *** out);
 
 

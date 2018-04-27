@@ -296,3 +296,36 @@ int get_sorted_bounds(fp_t const val,
     }
     return SUCCESS;
 }
+
+
+int linear_interpolation(fp_t const * const x,
+                         fp_t const * const y,
+                         int const xy_size,
+                         fp_t const val,
+                         fp_t * const out)
+{
+    not_null(x);
+    not_null(y);
+    not_null(out);
+
+    int left;
+    int right;
+    check(get_sorted_bounds(val,
+                            x,
+                            xy_size,
+                            &left,
+                            &right));
+    if (left == right)
+    {
+        *out = y[left];
+    }
+    else if (left >= 0 && right >= 0)
+    {
+        /*Do a linear interpolation.*/
+        fp_t m = (y[right] - y[left])/
+                 (x[right] - x[left]);
+        fp_t b = y[right] - m*x[right];
+        *out = val*m + b;
+    }
+    return SUCCESS;
+}

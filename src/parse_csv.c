@@ -41,10 +41,12 @@ static int copy_token(char * const token,
 }
 
 
-/*Parse a csv file.*/
+/*Parse a csv file, assuming that the first line in the file contains
+  headers for each of the columns.*/
 int parse_csv(char const * const filepath,
               int * const num_lines,
               int * const num_cols,
+              int const ignore_headers,
               char *** out)
 {
     /*Check inputs.*/
@@ -117,7 +119,18 @@ int parse_csv(char const * const filepath,
     }
 
     /*Allocate arrays to hold the values that will be read in.*/
+    rewind(f);
     char **vals;
+    if (ignore_headers)
+    {
+        (*num_lines)--;
+        if (*num_lines == 0)
+        {
+            fatal("the file %s only contains headers, no data.",
+                  filepath);
+        }
+        fgets(line,MAXCHARSPERLINE,f);
+    }
     int num_vals = (*num_cols)*(*num_lines);
     check(malloc_ptr((void **)(&vals),
                      sizeof(*vals)*num_vals));
@@ -128,11 +141,11 @@ int parse_csv(char const * const filepath,
                          sizeof(*(vals[i]))*MAXCHARSPERTOKEN));
         snprintf(vals[i],
                  MAXCHARSPERTOKEN,
-                 "\n");
+                 "%c",
+                 '\0');
     }
 
     /*Read in the data.*/
-    rewind(f);
     int line_index = 0;
     while (fgets(line,MAXCHARSPERLINE,f) != NULL)
     {

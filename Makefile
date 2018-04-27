@@ -5,8 +5,8 @@ OBJ = grtcode.o write_output.o launch.o sw_flux.o lw_flux.o output_fields.o \
       eval_profile.o RfmVoigtFuncs.o IdaVoigtFuncs.o GaussianFuncs.o \
       eval_Snn_correction.o eval_pShift.o eval_gamma.o LorentzFuncs.o \
       pre_eval_Snn.o line_shape_utils.o GasProps.o integrate_layer.o \
-      TIPS_2011.o continuum.o o3_continuum.o solar_flux.o \
-      continuum_helpers.o parseHITRANfile.o input_fields.o model_fields.o \
+      TIPS_2011.o water_vapor_continuum.o ozone_continuum.o solar_flux.o \
+      parseHITRANfile.o input_fields.o model_fields.o \
       arguments.o molecules.o parse_csv.o utils.o constants.o
 EXECUTABLE = grtcode.x
 

@@ -1,7 +1,7 @@
+#include "omp.h"
 #include "eval_Snn_correction.h"
 #include "floating_point_type.h"
 #include "line_shape_utils.h"
-#include "omp.h"
 
 
 /*Compute the temperature correction of the line intensities for each

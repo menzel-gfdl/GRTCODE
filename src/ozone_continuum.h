@@ -1,5 +1,5 @@
-#ifndef O3_CONTINUUM_H_
-#define O3_CONTINUUM_H_
+#ifndef OZONE_CONTINUUM_H_
+#define OZONE_CONTINUUM_H_
 
 #include "floating_point_type.h"
 
@@ -11,8 +11,7 @@ typedef struct OzoneContinuumCoefs
 
 
 /*Read in the ozone continuum coefficients.*/
-int get_ozone_continuum_coefs(char const * const filepath,
-                              OzoneContinuumCoefs_t *cc,
+int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
                               unsigned int const nws,
                               int const w0,
                               double const res,

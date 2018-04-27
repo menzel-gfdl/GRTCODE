@@ -1,7 +1,7 @@
+#include "omp.h"
 #include "eval_gamma.h"
 #include "floating_point_type.h"
 #include "LorentzFuncs.h"
-#include "omp.h"
 
 
 /*Compute the pressure broadened line halfwidth for each transition.

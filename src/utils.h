@@ -55,4 +55,11 @@ int get_sorted_bounds(fp_t const val,
                       int * const right);
 
 
+int linear_interpolation(fp_t const * const x,
+                         fp_t const * const y,
+                         int const xy_size,
+                         fp_t const val,
+                         fp_t * const out);
+
+
 #endif

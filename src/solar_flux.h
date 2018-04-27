@@ -12,8 +12,7 @@ typedef struct SolarFlux
 
 
 /*Read in the solar flux values.*/
-int get_solar_flux(char const * const filepath,
-                   SolarFlux_t *sf,
+int get_solar_flux(SolarFlux_t *sf,
                    unsigned int const nws,
                    int const w0,
                    double const res,

@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "constants.h"
-#include "continuum.h"
 #include "debug.h"
 #include "eval_gamma.h"
 #include "eval_profile.h"
@@ -14,12 +13,13 @@
 #include "lw_flux.h"
 #include "model_fields.h"
 #include "molecules.h"
-#include "o3_continuum.h"
+#include "ozone_continuum.h"
 #include "parseHITRANfile.h"
 #include "pre_eval_Snn.h"
 #include "solar_flux.h"
 #include "sw_flux.h"
 #include "utils.h"
+#include "water_vapor_continuum.h"
 
 #ifdef __NVCC__
 #include "cudaHelpers.cuh"
@@ -183,8 +183,8 @@ int launch_host(WorkVars_t * const vars,
                 fp_t const w,
                 double const res,
                 int const breadth,
-                int const continuum,
-                ContinuumCoefs_t * const h2o_continuum,
+                int const h2o_ctm,
+                WaterVaporContinuumCoefs_t * const h2o_continuum,
                 int const o3_ctm,
                 OzoneContinuumCoefs_t const * const o3_continuum,
                 OutputFields_t * const output_data)
@@ -374,7 +374,7 @@ int launch_host(WorkVars_t * const vars,
                        vars->Ns,
                        vars->tau_gas);
 
-        if (continuum && mol_id == H2O)
+        if (h2o_ctm && mol_id == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
             log_mesg("Launching kernel calc_ctm_optdetph_h at point"
@@ -382,17 +382,17 @@ int launch_host(WorkVars_t * const vars,
                      time,
                      lon,
                      lat);
-            calc_ctm_optdepth_h(nws,
-                                nlayers,
-                                vars->tau_gas,
-                                h2o_continuum->coefs[CS],
-                                vars->Tavg,
-                                vars->Psavg,
-                                vars->Ns,
-                                h2o_continuum->coefs[T0],
-                                h2o_continuum->coefs[CF],
-                                vars->Pavg,
-                                h2o_continuum->coefs[T0F]);
+            calc_water_vapor_ctm_optdepth_h(nws,
+                                            nlayers,
+                                            vars->tau_gas,
+                                            h2o_continuum->coefs[MTCKD25_S296],
+                                            vars->Tavg,
+                                            vars->Psavg,
+                                            vars->Ns,
+                                            h2o_continuum->coefs[CKDS],
+                                            h2o_continuum->coefs[MTCKD25_F296],
+                                            vars->Pavg,
+                                            h2o_continuum->coefs[CKDF]);
         }
         else if (o3_ctm && mol_id == O3)
         {
