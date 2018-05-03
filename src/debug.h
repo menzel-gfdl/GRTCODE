@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "netcdf.h"
+#include "radiation_solvers.h"
 
 
 enum return_codes
@@ -82,6 +83,15 @@ enum return_codes
         fatal("netcdf returned error code %d. %s.", \
               e_, \
               nc_strerror(e_)); \
+    }}
+
+
+#define rs_check(val) {\
+    int e_ = val; \
+    if (e_ != RS_SUCCESS) \
+    { \
+        fatal("radiation solvers library returned error code %d.", \
+              e_); \
     }}
 
 

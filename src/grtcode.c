@@ -4,8 +4,9 @@
 #include "arguments.h"
 #include "constants.h"
 #include "debug.h"
+#include "device_launch.h"
+#include "host_launch.h"
 #include "input_fields.h"
-#include "launch.h"
 #include "model_fields.h"
 #include "molecules.h"
 #include "ozone_continuum.h"
@@ -240,11 +241,24 @@ int main(int argc,
 
     /*Allocate/set pointers to buffers needed by the computation.*/
     WorkVars_t bufs;
-    check(alloc_work_vars(&bufs,
-                          inputData.nlevel,
-                          MAX_NUM_LINES,
-                          nF,
-                          (launchType == DEVICE_LAUNCH)));
+    WorkVars_h_t bufs_h;
+    if (launchType == DEVICE_LAUNCH)
+    {
+        using_gpu();
+#ifdef __NVCC__
+        check(alloc_work_vars(&bufs,
+                              inputData.nlevel,
+                              MAX_NUM_LINES,
+                              nF));
+#endif
+    }
+    else
+    {
+        check(alloc_work_vars_h(&bufs_h,
+                                inputData.nlevel,
+                                MAX_NUM_LINES,
+                                nF));
+    }
 
     /*Initialize output file.*/
     int outfile_ncid;
@@ -268,42 +282,45 @@ int main(int argc,
             {
                 if (launchType == HOST_LAUNCH)
                 {
-                    check(launch_host(&bufs,
-                                      &inputData,
-                                      &solar_flux,
-                                      time,
-                                      lon,
-                                      lat,
-                                      nMols,
-                                      hitLines,
-                                      nF,
-                                      (fp_t)arguments.w,
-                                      arguments.res,
-                                      arguments.wingBreadth,
-                                      arguments.h2o_ctm,
-                                      &h2o_continuum,
-                                      arguments.o3_ctm,
-                                      &o3_continuum,
-                                      &out));
+                    check(launch_h(&bufs_h,
+                                   &inputData,
+                                   &solar_flux,
+                                   time,
+                                   lon,
+                                   lat,
+                                   nMols,
+                                   hitLines,
+                                   nF,
+                                   (fp_t)arguments.w,
+                                   arguments.res,
+                                   arguments.wingBreadth,
+                                   arguments.h2o_ctm,
+                                   &h2o_continuum,
+                                   arguments.o3_ctm,
+                                   &o3_continuum,
+                                   &out));
                 }
-                else if(launchType == DEVICE_LAUNCH)
+                else if (launchType == DEVICE_LAUNCH)
                 {
                     using_gpu();
 #ifdef __NVCC__
-                    check(launch_device(&bufs,
-                                        &inputData,
-                                        time,
-                                        lon,
-                                        lat,
-                                        nMols,
-                                        hitLines,
-                                        nF,
-                                        (fp_t)arguments.w,
-                                        arguments.res,
-                                        arguments.wingBreadth,
-                                        arguments.h2o_ctm,
-                                        &h2o_continuum,
-                                        &out));
+                    check(launch(&bufs,
+                                 &inputData,
+                                 &solar_flux,
+                                 time,
+                                 lon,
+                                 lat,
+                                 nMols,
+                                 hitLines,
+                                 nF,
+                                 (fp_t)arguments.w,
+                                 arguments.res,
+                                 arguments.wingBreadth,
+                                 arguments.h2o_ctm,
+                                 &h2o_continuum,
+                                 arguments.o3_ctm,
+                                 &o3_continuum,
+                                 &out));
 #endif
                 }
                 else
@@ -337,8 +354,17 @@ int main(int argc,
     check(close_output_file(outfile_ncid));
 
     /*Free/nullify pointers to buffers needed by the computation.*/
-    check(free_work_vars(&bufs,
-                         (launchType == DEVICE_LAUNCH)));
+    if (launchType == DEVICE_LAUNCH)
+    {
+        using_gpu();
+#ifdef __NVCC__
+        check(free_work_vars(&bufs));
+#endif
+    }
+    else
+    {
+        check(free_work_vars_h(&bufs_h));
+    }
 
     /*Free memory storing the data that was output from the run.*/
     check(free_output_fields(&out,

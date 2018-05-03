@@ -2,9 +2,15 @@
 #define FLOATING_POINT_TYPE_H_
 
 #ifdef DOUBLE_PRECISION
-typedef double fp_t;
+#define TYPE double
 #else
-typedef float fp_t;
+#define TYPE float
 #endif
+
+typedef TYPE fp_t;
+
+#define cat(a,b) a##b
+#define funcname(func,type) cat(func,type)
+
 
 #endif

@@ -1,13 +1,16 @@
-CC = gcc
-CFLAGS = -g -Wall -Wextra -pedantic -std=c99 -fopenmp
+CC = cc
+NVCC = nvcc
+CFLAGS = '-g -O3'
+NVCCFLAGS = --compiler-options ${CFLAGS} -g -O3 --use_fast_math --maxrregcount=32
+NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 
-OBJ = grtcode.o write_output.o host_launch.o sw_flux.o lw_flux.o output_fields.o \
+OBJ = grtcode.o write_output.o device_launch.o host_launch.o sw_flux.o lw_flux.o output_fields.o \
       eval_profile.o RfmVoigtFuncs.o IdaVoigtFuncs.o GaussianFuncs.o \
       eval_Snn_correction.o eval_pShift.o eval_gamma.o LorentzFuncs.o \
       pre_eval_Snn.o line_shape_utils.o GasProps.o integrate_layer.o \
       TIPS_2011.o water_vapor_continuum.o ozone_continuum.o solar_flux.o \
       parseHITRANfile.o input_fields.o model_fields.o \
-      arguments.o molecules.o parse_csv.o utils.o constants.o
+      arguments.o molecules.o parse_csv.o cudaHelpers.o utils.o constants.o
 EXECUTABLE = grtcode.x
 
 INCLUDE = -Isrc \
@@ -25,10 +28,13 @@ RPATH = -Wl,-rpath=`readlink -f packages/netcdf-4.6.1/lib` \
 all: ${EXECUTABLE}
 
 ${EXECUTABLE}: ${OBJ}
-	${CC} ${CFLAGS} -o $@ $^ ${LDFLAGS} ${RPATH} ${LIBS}
+	${NVCC} ${NVCCFLAGS} -o $@ $^ ${LDFLAGS} --linker-options ${RPATH} ${LIBS}
 
 %.o: src/%.c
-	${CC} ${CFLAGS} ${INCLUDE} -o $@ -c $<
+	${NVCC} -x cu -dc ${NVCCLDFLAGS} ${NVCCFLAGS} --compiler-options ${INCLUDE} -o $@ -c $<
+
+%.o: src/%.cu
+	${NVCC} -x cu -dc ${NVCCLDFLAGS} ${NVCCFLAGS} --compiler-options ${INCLUDE} -o $@ -c $<
 
 clean:
 	rm -f *.o *.x
