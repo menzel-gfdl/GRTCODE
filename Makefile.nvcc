@@ -1,7 +1,7 @@
 CC = cc
 NVCC = nvcc
 CFLAGS = '-g -O3'
-NVCCFLAGS = --compiler-options ${CFLAGS} -g -O3 --use_fast_math --maxrregcount=32
+NVCCFLAGS = --compiler-options ${CFLAGS} -g -O3
 NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 
 OBJ = grtcode.o write_output.o device_launch.o host_launch.o sw_flux.o lw_flux.o output_fields.o \
@@ -16,19 +16,19 @@ EXECUTABLE = grtcode.x
 INCLUDE = -Isrc \
           -Ipackages/radiation_solvers/src \
           -Ipackages/netcdf-4.6.1/include
-LDFLAGS = -Lpackages/radiation_solvers \
-          -Lpackages/netcdf-4.6.1/lib \
+LDFLAGS = -Lpackages/netcdf-4.6.1/lib \
           -Lpackages/hdf5-1.10.1/lib
-LIBS = -lradiation_solvers -lnetcdf -lhdf5 -lm
+LIBS = packages/radiation_solvers/libradiation_solvers.a -lnetcdf -lhdf5 -lm
 
 RPATH = -Wl,-rpath=`readlink -f packages/netcdf-4.6.1/lib` \
-        -Wl,-rpath=`readlink -f packages/hdf5-1.10.1/lib` \
-        -Wl,-rpath=`readlink -f packages/radiation_solvers`
+        -Wl,-rpath=`readlink -f packages/hdf5-1.10.1/lib`
 
 all: ${EXECUTABLE}
 
 ${EXECUTABLE}: ${OBJ}
-	${NVCC} ${NVCCFLAGS} -o $@ $^ ${LDFLAGS} --linker-options ${RPATH} ${LIBS}
+	${NVCC} ${NVCCFLAGS} -o $@ $^ packages/radiation_solvers/libradiation_solvers.a \
+                                -lnetcdf -lhdf5
+#	${NVCC} ${NVCCFLAGS} -o $@ $^ ${LDFLAGS} -Xcompiler "${RPATH}" ${LIBS}
 
 %.o: src/%.c
 	${NVCC} -x cu -dc ${NVCCLDFLAGS} ${NVCCFLAGS} --compiler-options ${INCLUDE} -o $@ -c $<
