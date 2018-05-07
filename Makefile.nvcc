@@ -1,6 +1,6 @@
 CC = cc
 NVCC = nvcc
-CFLAGS = '-g -O3'
+CFLAGS = '-g -O3 -fopenmp'
 NVCCFLAGS = --compiler-options ${CFLAGS} -g -O3
 NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 
@@ -10,7 +10,7 @@ OBJ = grtcode.o write_output.o device_launch.o host_launch.o sw_flux.o lw_flux.o
       pre_eval_Snn.o line_shape_utils.o GasProps.o integrate_layer.o \
       TIPS_2011.o water_vapor_continuum.o ozone_continuum.o solar_flux.o \
       parseHITRANfile.o input_fields.o model_fields.o \
-      arguments.o molecules.o parse_csv.o cudaHelpers.o utils.o constants.o
+      arguments.o molecules.o parse_csv.o query_gpu.o cudaHelpers.o utils.o constants.o
 EXECUTABLE = grtcode.x
 
 INCLUDE = -Isrc \
@@ -18,17 +18,15 @@ INCLUDE = -Isrc \
           -Ipackages/netcdf-4.6.1/include
 LDFLAGS = -Lpackages/netcdf-4.6.1/lib \
           -Lpackages/hdf5-1.10.1/lib
-LIBS = packages/radiation_solvers/libradiation_solvers.a -lnetcdf -lhdf5 -lm
+LIBS = packages/radiation_solvers/libradiation_solvers.a -lnetcdf -lhdf5 -lhdf5_hl -lm
 
-RPATH = -Wl,-rpath=`readlink -f packages/netcdf-4.6.1/lib` \
-        -Wl,-rpath=`readlink -f packages/hdf5-1.10.1/lib`
+RPATH = '-rpath=`readlink -f packages/netcdf-4.6.1/lib`'
+RPATH2 = '-rpath=`readlink -f packages/hdf5-1.10.1/lib`'
 
 all: ${EXECUTABLE}
 
 ${EXECUTABLE}: ${OBJ}
-	${NVCC} ${NVCCFLAGS} -o $@ $^ packages/radiation_solvers/libradiation_solvers.a \
-                                -lnetcdf -lhdf5
-#	${NVCC} ${NVCCFLAGS} -o $@ $^ ${LDFLAGS} -Xcompiler "${RPATH}" ${LIBS}
+	${NVCC} ${NVCCFLAGS} -o $@ -Xlinker ${RPATH} -Xlinker ${RPATH2} $^ ${LDFLAGS} ${LIBS}
 
 %.o: src/%.c
 	${NVCC} -x cu -dc ${NVCCLDFLAGS} ${NVCCFLAGS} --compiler-options ${INCLUDE} -o $@ -c $<

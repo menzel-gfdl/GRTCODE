@@ -1,8 +1,10 @@
 #!/bin/bash
 
+source $MODULESHOME/init/bash
+module load cuda/9.1
+
 GRT="grtcode.x"
 RUN="run"
-
 MAKEFILE="Makefile.nvcc"
 
 cd packages/radiation_solvers

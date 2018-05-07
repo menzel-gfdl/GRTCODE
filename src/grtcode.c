@@ -19,7 +19,10 @@
 
 #ifdef __NVCC__
 #include "cudaHelpers.cuh"
+#include "query_gpu.cuh"
 #endif
+
+#define MAX_NUM_DEVICES 8
 
 int main(int argc,
          char* argv[])
@@ -66,13 +69,28 @@ int main(int argc,
               arguments.host);
     }
     int const launchType = arguments.host == 1 ? HOST_LAUNCH : DEVICE_LAUNCH;
+    int num_gpus;
     if (launchType == DEVICE_LAUNCH)
     {
         using_gpu();
 #ifdef __NVCC__
+#ifdef _OPENMP
+        check(get_num_gpus(&num_gpus,1));
+        if (num_gpus > MAX_NUM_DEVICES)
+        {
+            log_mesg("the number of available gpus (%d) > the maximum"
+                         " number of devices allowed (%d).  Only using"
+                         " %d devices.",
+                     num_gpus,
+                     MAX_NUM_DEVICES,
+                     MAX_NUM_DEVICES);
+            num_gpus = MAX_NUM_DEVICES;
+        }
+#else
         /*Set the GPU to be the host's current device.*/
         int const deviceNumber = arguments.device;
         HANDLE_ERROR(cudaSetDevice(deviceNumber));
+#endif
 #endif
     }
 
@@ -226,7 +244,7 @@ int main(int argc,
     cudaStream_t *streams = NULL;
 #endif
 
-#ifdef _OPENMP
+#if defined(_OPENMP) && !defined(__NVCC__)
     /*Print out the number of OpenMP threads that will be used.*/
     log_mesg("Using %d OpenMP threads.",
              omp_get_max_threads());
@@ -272,80 +290,83 @@ int main(int argc,
 
     /*Loop over the atmospheric columns.*/
     int time;
+    int lon;
+    int lat;
+
+#if defined(__NVCC__) && defined(_OPENMP)
+#pragma omp parallel for num_threads(1) \
+                         collapse(3) \
+                         default(shared) \
+                         private(time,lon,lat)
+#endif
     for (time=arguments.t;time<=arguments.T;++time)
     {
-        int lon;
         for (lon=arguments.x;lon<=arguments.X;++lon)
         {
-            int lat;
             for (lat=arguments.y;lat<=arguments.Y;++lat)
             {
                 if (launchType == HOST_LAUNCH)
                 {
-                    check(launch_h(&bufs_h,
-                                   &inputData,
-                                   &solar_flux,
-                                   time,
-                                   lon,
-                                   lat,
-                                   nMols,
-                                   hitLines,
-                                   nF,
-                                   (fp_t)arguments.w,
-                                   arguments.res,
-                                   arguments.wingBreadth,
-                                   arguments.h2o_ctm,
-                                   &h2o_continuum,
-                                   arguments.o3_ctm,
-                                   &o3_continuum,
-                                   &out));
+                    launch_h(&bufs_h,
+                             &inputData,
+                             &solar_flux,
+                             time,
+                             lon,
+                             lat,
+                             nMols,
+                             hitLines,
+                             nF,
+                             (fp_t)arguments.w,
+                             arguments.res,
+                             arguments.wingBreadth,
+                             arguments.h2o_ctm,
+                             &h2o_continuum,
+                             arguments.o3_ctm,
+                             &o3_continuum,
+                             &out);
                 }
                 else if (launchType == DEVICE_LAUNCH)
                 {
                     using_gpu();
 #ifdef __NVCC__
-                    check(launch(&bufs,
-                                 &inputData,
-                                 &solar_flux,
-                                 time,
-                                 lon,
-                                 lat,
-                                 nMols,
-                                 hitLines,
-                                 nF,
-                                 (fp_t)arguments.w,
-                                 arguments.res,
-                                 arguments.wingBreadth,
-                                 arguments.h2o_ctm,
-                                 &h2o_continuum,
-                                 arguments.o3_ctm,
-                                 &o3_continuum,
-                                 &out));
+#ifdef _OPENMP
+                    HANDLE_ERROR(cudaSetDevice(omp_get_thread_num()));
 #endif
-                }
-                else
-                {
-                    fatal("invalid launch type (%d) requested, must be"
-                              "either %d or %d.",
-                          launchType,
-                          DEVICE_LAUNCH,
-                          HOST_LAUNCH);
+                    launch(&bufs,
+                           &inputData,
+                           &solar_flux,
+                           time,
+                           lon,
+                           lat,
+                           nMols,
+                           hitLines,
+                           nF,
+                           (fp_t)arguments.w,
+                           arguments.res,
+                           arguments.wingBreadth,
+                           arguments.h2o_ctm,
+                           &h2o_continuum,
+                           arguments.o3_ctm,
+                           &o3_continuum,
+                           &out);
+#endif
                 }
 
                 /*Write out the column of output data.*/
-                check(write_data_column(outfile_ncid,
-                                        out.lw_flux_down,
-                                        out.lw_flux_up,
-                                        out.sw_flux_down,
-                                        out.sw_flux_up,
-                                        out.tau_gas,
-                                        out.tau_scatter,
-                                        time-arguments.t,
-                                        lon-arguments.x,
-                                        lat-arguments.y,
-                                        inputData.nlevel,
-                                        nF,
-                                        1));
+#pragma omp critical (output)
+                write_data_column(outfile_ncid,
+                                  out.lw_flux_down,
+                                  out.lw_flux_up,
+                                  out.sw_flux_down,
+                                  out.sw_flux_up,
+                                  out.tau_gas,
+                                  out.tau_scatter,
+                                  time-arguments.t,
+                                  lon-arguments.x,
+                                  lat-arguments.y,
+                                  inputData.nlevel,
+                                  nF,
+                                  0);
             }
         }
     }
