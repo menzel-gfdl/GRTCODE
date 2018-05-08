@@ -22,7 +22,6 @@
 #include "query_gpu.cuh"
 #endif
 
-#define MAX_NUM_DEVICES 8
 
 int main(int argc,
          char* argv[])
@@ -60,37 +59,32 @@ int main(int argc,
     /*Make sure that only one target was specified (device or host).  If
       the device flag is given, an integer argument specifies the number of
       the device that will be used for the run (default is device 0).*/
-    if (arguments.device != DEFAULT_DEVICE && arguments.host != 0)
+    int launchType;
+    int num_devices;
+    if (arguments.host != 0)
     {
-        fatal("more than one target specified (device=%d,host=%d).  Please"
-                  " use either --host or --device or neither flag to just"
-                  " default to device 0.",
-              arguments.device,
-              arguments.host);
+        if (arguments.device != DEFAULT_DEVICE)
+        {
+            fatal("more than one target specified (device=%d,host=%d)."
+                      "  Please use either --host or --device or neither"
+                      " flag (defaults to device 0).",
+                  arguments.device,
+                  arguments.host);
+        }
+        launchType = HOST_LAUNCH;
+        num_devices = 1;
     }
-    int const launchType = arguments.host == 1 ? HOST_LAUNCH : DEVICE_LAUNCH;
-    int num_gpus;
-    if (launchType == DEVICE_LAUNCH)
+    else
     {
         using_gpu();
-#ifdef __NVCC__
+        launchType = DEVICE_LAUNCH;
 #ifdef _OPENMP
-        check(get_num_gpus(&num_gpus,1));
-        if (num_gpus > MAX_NUM_DEVICES)
-        {
-            log_mesg("the number of available gpus (%d) > the maximum"
-                         " number of devices allowed (%d).  Only using"
-                         " %d devices.",
-                     num_gpus,
-                     MAX_NUM_DEVICES,
-                     MAX_NUM_DEVICES);
-            num_gpus = MAX_NUM_DEVICES;
-        }
+        /*Use all available devices via OpenMP.*/
+        check(get_num_gpus(&num_devices,1));
 #else
-        /*Set the GPU to be the host's current device.*/
-        int const deviceNumber = arguments.device;
-        HANDLE_ERROR(cudaSetDevice(deviceNumber));
-#endif
+        /*Use only the input device.*/
+        num_devices = 1;
+        HANDLE_ERROR(cudaSetDevice(arguments.device));
 #endif
     }
 
@@ -201,81 +195,84 @@ int main(int argc,
                              inputData.nlat-1));
 
     /*Read in the solar flux values.*/
-    SolarFlux_t solar_flux;
-    check(get_solar_flux(&solar_flux,
+    SolarFlux_t solar_flux_h;
+    check(get_solar_flux(&solar_flux_h,
                          nF,
                          arguments.w,
-                         arguments.res,
-                         (launchType == DEVICE_LAUNCH)));
-
-    /*Read in the water vapor continuum coefficients.*/
-    WaterVaporContinuumCoefs_t h2o_continuum;
-    if (arguments.h2o_ctm)
+                         arguments.res));
+    SolarFlux_t *solar_flux = NULL;
+    check(malloc_ptr((void **)(&solar_flux),
+                     sizeof(*solar_flux)*num_devices));
+    for (i=0;i<num_devices;++i)
     {
-        /*Read in continuum coefficients and optionally put them on the
-          device.*/
-        check(get_water_vapor_continuum_coefs(&h2o_continuum,
-                                              nF,
-                                              arguments.w,
-                                              arguments.res,
-                                              (launchType == DEVICE_LAUNCH)));
+        if (launchType == DEVICE_LAUNCH)
+        {
+            HANDLE_ERROR(cudaSetDevice(i));
+            check(put_solar_flux_on_device(&solar_flux_h,
+                                           &(solar_flux[i])));
+        }
+        else
+        {
+            memcpy(&(solar_flux[i]),
+                   &solar_flux_h,
+                   sizeof(solar_flux_h));
+        }
     }
 
-    /*Read in the ozone continuum coefficients.*/
-    OzoneContinuumCoefs_t o3_continuum;
+    WaterVaporContinuumCoefs_t h2o_continuum_h;
+    WaterVaporContinuumCoefs_t *h2o_continuum = NULL;
+    if (arguments.h2o_ctm)
+    {
+        /*Read in the water vapor continuum coefficients.*/
+        check(get_water_vapor_continuum_coefs(&h2o_continuum_h,
+                                              nF,
+                                              arguments.w,
+                                              arguments.res));
+        check(malloc_ptr((void **)(&h2o_continuum),
+                         sizeof(*h2o_continuum)*num_devices));
+        for (i=0;i<num_devices;++i)
+        {
+            if (launchType == DEVICE_LAUNCH)
+            {
+                HANDLE_ERROR(cudaSetDevice(i));
+                check(put_water_vapor_coefs_on_device(&h2o_continuum_h,
+                                                      &(h2o_continuum[i])));
+            }
+            else
+            {
+                memcpy(&(h2o_continuum[i]),
+                       &h2o_continuum_h,
+                       sizeof(h2o_continuum_h));
+            }
+        }
+    }
+
+    OzoneContinuumCoefs_t o3_continuum_h;
+    OzoneContinuumCoefs_t *o3_continuum = NULL;
     if (arguments.o3_ctm)
     {
         /*Read in the ozone continuum coefficients.*/
-        check(get_ozone_continuum_coefs(&o3_continuum,
+        check(get_ozone_continuum_coefs(&o3_continuum_h,
                                         nF,
                                         arguments.w,
-                                        arguments.res,
-                                        (launchType == DEVICE_LAUNCH)));
-    }
-
-#ifdef __NVCC__
-    /*Initialize TIPS.*/
-    check(initTIPS_d());
-#endif
-
-#ifdef __NVCC__
-    /*Declare CUDA stream parameters.*/
-    int nstreams = -1;
-    cudaStream_t *streams = NULL;
-#endif
-
-#if defined(_OPENMP) && !defined(__NVCC__)
-    /*Print out the number of OpenMP threads that will be used.*/
-    log_mesg("Using %d OpenMP threads.",
-             omp_get_max_threads());
-#endif
-
-    /*Allocate space for the data that will be output from the run.*/
-    OutputFields_t out;
-    check(alloc_output_fields(&out,
-                              nF,
-                              inputData.nlevel,
-                              (launchType == DEVICE_LAUNCH)));
-
-    /*Allocate/set pointers to buffers needed by the computation.*/
-    WorkVars_t bufs;
-    WorkVars_h_t bufs_h;
-    if (launchType == DEVICE_LAUNCH)
-    {
-        using_gpu();
-#ifdef __NVCC__
-        check(alloc_work_vars(&bufs,
-                              inputData.nlevel,
-                              MAX_NUM_LINES,
-                              nF));
-#endif
-    }
-    else
-    {
-        check(alloc_work_vars_h(&bufs_h,
-                                inputData.nlevel,
-                                MAX_NUM_LINES,
-                                nF));
+                                        arguments.res));
+        check(malloc_ptr((void **)(&o3_continuum),
+                         sizeof(*o3_continuum)*num_devices));
+        for (i=0;i<num_devices;++i)
+        {
+            if (launchType == DEVICE_LAUNCH)
+            {
+                HANDLE_ERROR(cudaSetDevice(i));
+                check(put_ozone_coefs_on_device(&o3_continuum_h,
+                                                &(o3_continuum[i])));
+            }
+            else
+            {
+                memcpy(&(o3_continuum[i]),
+                       &o3_continuum_h,
+                       sizeof(o3_continuum_h));
+            }
+        }
     }
 
     /*Initialize output file.*/
@@ -288,13 +285,75 @@ int main(int argc,
                            nF,
                            1));
 
+    /*Allocate space for the data that will be output from the run.*/
+    OutputFields_t *out = NULL;
+    check(malloc_ptr((void **)(&out),
+                     sizeof(*out)*num_devices));
+    for (i=0;i<num_devices;++i)
+    {
+        check(alloc_output_fields(&(out[i]),
+                                  nF,
+                                  inputData.nlevel,
+                                  (launchType == DEVICE_LAUNCH)));
+    }
+
+    /*Allocate/set pointers to buffers needed by the computation.*/
+    WorkVars_t *bufs = NULL;
+    WorkVars_h_t *bufs_h = NULL;
+    if (launchType == DEVICE_LAUNCH)
+    {
+        using_gpu();
+        check(malloc_ptr((void **)(&bufs),
+                         sizeof(*bufs)*num_devices));
+        for (i=0;i<num_devices;++i)
+        {
+            HANDLE_ERROR(cudaSetDevice(i));
+            check(alloc_work_vars(&(bufs[i]),
+                                  inputData.nlevel,
+                                  MAX_NUM_LINES,
+                                  nF));
+        }
+    }
+    else
+    {
+        check(malloc_ptr((void **)(&bufs_h),
+                         sizeof(*bufs_h)*num_devices));
+        for (i=0;i<num_devices;++i)
+        {
+            check(alloc_work_vars_h(&(bufs_h[i]),
+                                    inputData.nlevel,
+                                    MAX_NUM_LINES,
+                                    nF));
+        }
+    }
+
+#ifdef __NVCC__
+    /*Initialize TIPS.*/
+    check(initTIPS_d());
+
+    /*Declare CUDA stream parameters.*/
+    int nstreams = -1;
+    cudaStream_t *streams = NULL;
+#endif
+
+#if defined(_OPENMP) && !defined(__NVCC__)
+    /*Print out the number of OpenMP threads that will be used.*/
+    log_mesg("Using %d OpenMP threads.",
+             omp_get_max_threads());
+#endif
+
     /*Loop over the atmospheric columns.*/
     int time;
     int lon;
     int lat;
 
 #if defined(__NVCC__) && defined(_OPENMP)
-#pragma omp parallel for num_threads(1) \
+/*
+                         shared(num_devices,arguments,launchType,bufs,bufs_h, \
+                                inputData,solar_flux,hitLines,h2o_continuum, \
+                                o3_continuum,out,outfile_ncid,stderr) \
+*/
+#pragma omp parallel for num_threads(num_devices) \
                          collapse(3) \
                          default(shared) \
                          private(time,lon,lat)
@@ -305,11 +364,12 @@ int main(int argc,
         {
             for (lat=arguments.y;lat<=arguments.Y;++lat)
             {
+                int index = num_devices - 1;
                 if (launchType == HOST_LAUNCH)
                 {
-                    launch_h(&bufs_h,
+                    launch_h(&(bufs_h[index]),
                              &inputData,
-                             &solar_flux,
+                             &(solar_flux[index]),
                              time,
                              lon,
                              lat,
@@ -320,21 +380,24 @@ int main(int argc,
                              arguments.res,
                              arguments.wingBreadth,
                              arguments.h2o_ctm,
-                             &h2o_continuum,
+                             &(h2o_continuum[index]),
                              arguments.o3_ctm,
-                             &o3_continuum,
-                             &out);
+                             &(o3_continuum[index]),
+                             &(out[index]));
                 }
                 else if (launchType == DEVICE_LAUNCH)
                 {
                     using_gpu();
-#ifdef __NVCC__
 #ifdef _OPENMP
-                    HANDLE_ERROR(cudaSetDevice(omp_get_thread_num()));
+                    index = omp_get_thread_num();
+                    HANDLE_ERROR(cudaSetDevice(index));
+                    log_mesg("thread %d setting current device to %d.",
+                             omp_get_thread_num(),
+                             index);
 #endif
-                    launch(&bufs,
+                    launch(&(bufs[index]),
                            &inputData,
-                           &solar_flux,
+                           &(solar_flux[index]),
                            time,
                            lon,
                            lat,
@@ -345,22 +408,21 @@ int main(int argc,
                            arguments.res,
                            arguments.wingBreadth,
                            arguments.h2o_ctm,
-                           &h2o_continuum,
+                           &(h2o_continuum[index]),
                            arguments.o3_ctm,
-                           &o3_continuum,
-                           &out);
-#endif
+                           &(o3_continuum[index]),
+                           &(out[index]));
                 }
 
                 /*Write out the column of output data.*/
 #pragma omp critical (output)
                 write_data_column(outfile_ncid,
-                                  out.lw_flux_down,
-                                  out.lw_flux_up,
-                                  out.sw_flux_down,
-                                  out.sw_flux_up,
-                                  out.tau_gas,
-                                  out.tau_scatter,
+                                  out[index].lw_flux_down,
+                                  out[index].lw_flux_up,
+                                  out[index].sw_flux_down,
+                                  out[index].sw_flux_up,
+                                  out[index].tau_gas,
+                                  out[index].tau_scatter,
                                   time-arguments.t,
                                   lon-arguments.x,
                                   lat-arguments.y,
@@ -379,35 +441,52 @@ int main(int argc,
     {
         using_gpu();
 #ifdef __NVCC__
-        check(free_work_vars(&bufs));
+        for (i=0;i<num_devices;++i)
+        {
+            log_mesg("freeing work buffers on device %d.",
+                     i);
+            HANDLE_ERROR(cudaSetDevice(i));
+            check(free_work_vars(&(bufs[i])));
+        }
 #endif
+        free(bufs);
     }
     else
     {
-        check(free_work_vars_h(&bufs_h));
+        for (i=0;i<num_devices;++i)
+        {
+            check(free_work_vars_h(&(bufs_h[i])));
+        }
+        free(bufs_h);
     }
 
     /*Free memory storing the data that was output from the run.*/
-    check(free_output_fields(&out,
-                             (launchType == DEVICE_LAUNCH)));
+    for (i=0;i<num_devices;++i)
+    {
+#ifdef __NVCC__
+       log_mesg("freeing output buffers on device %d.",
+                i);
+        HANDLE_ERROR(cudaSetDevice(i));
+#endif
+        check(free_output_fields(&(out[i]),
+                                 (launchType == DEVICE_LAUNCH)));
+    }
+    free(out);
 
     /*Free memory storing the ozone continuum coefficients.*/
     if (arguments.o3_ctm)
     {
-        check(free_ozone_continuum_coefs(&o3_continuum,
-                                         (launchType == DEVICE_LAUNCH)));
+        check(free_ozone_continuum_coefs(&o3_continuum_h));
     }
 
     /*Free memory storing the continuum coefficients.*/
     if (arguments.h2o_ctm)
     {
-        check(free_water_vapor_continuum_coeffs(&h2o_continuum,
-                                                (launchType == DEVICE_LAUNCH)));
+        check(free_water_vapor_continuum_coeffs(&h2o_continuum_h));
     }
 
     /*Free memory storing the input solar flux values.*/
-    check(free_solar_flux(&solar_flux,
-                          (launchType == DEVICE_LAUNCH)));
+    check(free_solar_flux(&solar_flux_h));
 
     /*Free memory storing HITRAN line parameters.*/
     for (mol=0;mol<nMols;++mol)

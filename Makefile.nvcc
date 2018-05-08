@@ -1,6 +1,7 @@
 CC = cc
 NVCC = nvcc
 CFLAGS = '-g -O3 -fopenmp'
+#CFLAGS = '-g -O3'
 NVCCFLAGS = --compiler-options ${CFLAGS} -g -O3
 NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 

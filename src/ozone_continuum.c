@@ -16,8 +16,7 @@
 int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
                               unsigned int const nws,
                               int const w0,
-                              double const res,
-                              int put_on_device)
+                              double const res)
 {
     not_null(cc);
 
@@ -83,44 +82,43 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
                                    &(c[j])));
     }
     free(fbuf);
-
-    if (put_on_device)
-    {
-        using_gpu();
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaMalloc(&(cc->cross_section),
-                                num_bytes));
-        HANDLE_ERROR(cudaMemcpy(cc->cross_section,
-                                c,
-                                num_bytes,
-                                cudaMemcpyHostToDevice));
-#endif
-        free(c);
-    }
-    else
-    {
-        cc->cross_section = c;
-    }
+    cc->cross_section = c;
+    cc->nws = nws;
     return SUCCESS;
 }
 
 
-int free_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
-                               int const on_device)
+int free_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc)
 {
     not_null(cc);
-    if (on_device)
-    {
-        using_gpu();
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaFree(cc->cross_section));
-#endif
-    }
-    else
-    {
-        free(cc->cross_section);
-        cc->cross_section = NULL;
-    }
+    free(cc->cross_section);
+    cc->cross_section = NULL;
+    return SUCCESS;
+}
+
+
+int put_ozone_coefs_on_device(OzoneContinuumCoefs_t const * const in,
+                              OzoneContinuumCoefs_t * const out)
+{
+    not_null(in);
+    not_null(out);
+    using_gpu();
+    int num_bytes = sizeof(*(in->cross_section))*(in->nws);
+    HANDLE_ERROR(cudaMalloc(&(out->cross_section),
+                            num_bytes));
+    HANDLE_ERROR(cudaMemcpy(out->cross_section,
+                            in->cross_section,
+                            num_bytes,
+                            cudaMemcpyHostToDevice));
+    return SUCCESS;
+}
+
+
+int remove_ozone_coefs_from_device(OzoneContinuumCoefs_t * const in)
+{
+    not_null(in);
+    using_gpu();
+    HANDLE_ERROR(cudaFree(in->cross_section));
     return SUCCESS;
 }
 

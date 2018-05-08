@@ -15,8 +15,7 @@
 int get_solar_flux(SolarFlux_t *sf,
                    unsigned int const nws,
                    int const w0,
-                   double const res,
-                   int put_on_device)
+                   double const res)
 {
     not_null(sf);
 
@@ -88,43 +87,43 @@ int get_solar_flux(SolarFlux_t *sf,
                       nws,
                       res,
                       &(sf->total_sw_flux)));
-
-    if (put_on_device)
-    {
-        using_gpu();
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaMalloc(&(sf->incident_sw_flux),
-                                num_bytes));
-        HANDLE_ERROR(cudaMemcpy(sf->incident_sw_flux,
-                                c,
-                                num_bytes,
-                                cudaMemcpyHostToDevice));
-#endif
-        free(c);
-    }
-    else
-    {
-        sf->incident_sw_flux = c;
-    }
+    sf->incident_sw_flux = c;
+    sf->nws = nws;
     return SUCCESS;
 }
 
 
-int free_solar_flux(SolarFlux_t *sf,
-                    int const on_device)
+int free_solar_flux(SolarFlux_t *sf)
 {
     not_null(sf);
-    if (on_device)
-    {
-        using_gpu();
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaFree(sf->incident_sw_flux));
-#endif
-    }
-    else
-    {
-        free(sf->incident_sw_flux);
-        sf->incident_sw_flux = NULL;
-    }
+    free(sf->incident_sw_flux);
+    sf->incident_sw_flux = NULL;
+    return SUCCESS;
+}
+
+
+int put_solar_flux_on_device(SolarFlux_t const * const in,
+                             SolarFlux_t * const out)
+{
+    not_null(in);
+    not_null(out);
+    using_gpu();
+    int num_bytes = sizeof(*(in->incident_sw_flux))*(in->nws);
+    HANDLE_ERROR(cudaMalloc(&(out->incident_sw_flux),
+                            num_bytes));
+    HANDLE_ERROR(cudaMemcpy(out->incident_sw_flux,
+                            in->incident_sw_flux,
+                            num_bytes,
+                            cudaMemcpyHostToDevice));
+    out->total_sw_flux = in->total_sw_flux;
+    return SUCCESS;
+}
+
+
+int remove_solar_flux_from_device(SolarFlux_t * const in)
+{
+    not_null(in);
+    using_gpu();
+    HANDLE_ERROR(cudaFree(in->incident_sw_flux));
     return SUCCESS;
 }

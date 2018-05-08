@@ -154,10 +154,10 @@ int launch(WorkVars_t * const vars,
     int nlayers = nlevels - 1;
     HANDLE_ERROR(cudaMemset(vars->tau_gas,
                             0,
-                            sizeof(*(vars->tau_gas))*nlayers*nws));
+                            sizeof(fp_t)*nlayers*nws));
     HANDLE_ERROR(cudaMemset(vars->tau_scatter,
                             0,
-                            sizeof(*(vars->tau_scatter))*nlayers*nws));
+                            sizeof(fp_t)*nlayers*nws));
     memset(output_data->lw_flux_down,
            0,
            sizeof(*(output_data->lw_flux_down))*nlevels);
@@ -230,7 +230,7 @@ int launch(WorkVars_t * const vars,
                  mol);
         HANDLE_ERROR(cudaMemcpy(vars->x,
                                 &((input_data->x[mol])[offset]),
-                                sizeof(*(vars->x))*nlevels,
+                                sizeof(fp_t)*nlevels,
                                 cudaMemcpyHostToDevice));
 
         /*Copy the line parameters for the current molecule to the device.*/
@@ -240,35 +240,35 @@ int launch(WorkVars_t * const vars,
         unsigned int nlines = line_params[mol]->nLines;
         HANDLE_ERROR(cudaMemcpy(vars->LINES->iso,
                                 line_params[mol]->iso,
-                                sizeof(*(vars->LINES->iso))*nlines,
+                                sizeof(*(line_params[mol]->iso))*nlines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(vars->LINES->Vnn,
                                 line_params[mol]->Vnn,
-                                sizeof(*(vars->LINES->Vnn))*nlines,
+                                sizeof(*(line_params[mol]->Vnn))*nlines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(vars->LINES->Snn_ref,
                                 line_params[mol]->Snn_ref,
-                                sizeof(*(vars->LINES->Snn_ref))*nlines,
+                                sizeof(*(line_params[mol]->Snn_ref))*nlines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(vars->LINES->Yair,
                                 line_params[mol]->Yair,
-                                sizeof(*(vars->LINES->Yair))*nlines,
+                                sizeof(*(line_params[mol]->Yair))*nlines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(vars->LINES->Yself,
                                 line_params[mol]->Yself,
-                                sizeof(*(vars->LINES->Yself))*nlines,
+                                sizeof(*(line_params[mol]->Yself))*nlines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(vars->LINES->En,
                                 line_params[mol]->En,
-                                sizeof(*(vars->LINES->En))*nlines,
+                                sizeof(*(line_params[mol]->En))*nlines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(vars->LINES->n,
                                 line_params[mol]->n,
-                                sizeof(*(vars->LINES->n))*nlines,
+                                sizeof(*(line_params[mol]->n))*nlines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(vars->LINES->d,
                                 line_params[mol]->d,
-                                sizeof(*(vars->LINES->d))*nlines,
+                                sizeof(*(line_params[mol]->d))*nlines,
                                 cudaMemcpyHostToDevice));
 
         /*Calculate the thread-block size and number of thread blocks that
@@ -493,15 +493,15 @@ int launch(WorkVars_t * const vars,
              lat);
     HANDLE_ERROR(cudaMemcpy(output_data->tau_gas,
                             vars->tau_gas,
-                            sizeof(*(vars->tau_gas))*nws*nlayers,
+                            sizeof(*(output_data->tau_gas))*nws*nlayers,
                             cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaMemcpy(output_data->lw_flux_down_per_w,
                             vars->lw_flux_down_per_w,
-                            sizeof(*(vars->lw_flux_down_per_w))*nws*nlevels,
+                            sizeof(*(output_data->lw_flux_down_per_w))*nws*nlevels,
                             cudaMemcpyDeviceToHost));
     HANDLE_ERROR(cudaMemcpy(output_data->lw_flux_up_per_w,
                             vars->lw_flux_up_per_w,
-                            sizeof(*(vars->lw_flux_up_per_w))*nws*nlevels,
+                            sizeof(*(output_data->lw_flux_up_per_w))*nws*nlevels,
                             cudaMemcpyDeviceToHost));
 
     /*Integrate the fluxes over wavenumber.*/
@@ -562,15 +562,15 @@ int launch(WorkVars_t * const vars,
                  lat);
         HANDLE_ERROR(cudaMemcpy(output_data->tau_scatter,
                                 vars->tau_scatter,
-                                sizeof(*(vars->tau_scatter))*nws*nlayers,
+                                sizeof(*(output_data->tau_scatter))*nws*nlayers,
                                 cudaMemcpyDeviceToHost));
         HANDLE_ERROR(cudaMemcpy(output_data->sw_flux_down_per_w,
                                 vars->sw_flux_down_per_w,
-                                sizeof(*(vars->sw_flux_down_per_w))*nws*nlevels,
+                                sizeof(*(output_data->sw_flux_down_per_w))*nws*nlevels,
                                 cudaMemcpyDeviceToHost));
         HANDLE_ERROR(cudaMemcpy(output_data->sw_flux_up_per_w,
                                 vars->sw_flux_up_per_w,
-                                sizeof(*(vars->sw_flux_up_per_w))*nws*nlevels,
+                                sizeof(*(output_data->sw_flux_up_per_w))*nws*nlevels,
                                 cudaMemcpyDeviceToHost));
 
         /*Integrate the fluxes over wavenumber.*/

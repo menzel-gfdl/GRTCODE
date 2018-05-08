@@ -17,18 +17,24 @@ enum water_vapor_coefs
 typedef struct WaterVaporContinuumCoefs
 {
     fp_t **coefs;
+    int nws;
 } WaterVaporContinuumCoefs_t;
 
 
 int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
                                     unsigned int const nws,
                                     int const w0,
-                                    double const res,
-                                    int put_on_device);
+                                    double const res);
 
 
-int free_water_vapor_continuum_coeffs(WaterVaporContinuumCoefs_t *cc,
-                                      int const on_device);
+int free_water_vapor_continuum_coeffs(WaterVaporContinuumCoefs_t *cc);
+
+
+int put_water_vapor_coefs_on_device(WaterVaporContinuumCoefs_t const * const in,
+                                    WaterVaporContinuumCoefs_t * const out);
+
+
+int remove_water_vapor_coefs_from_device(WaterVaporContinuumCoefs_t * const in);
 
 
 #ifdef __NVCC__
