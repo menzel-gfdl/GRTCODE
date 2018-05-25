@@ -84,7 +84,9 @@ int main(int argc,
 #else
         /*Use only the input device.*/
         num_devices = 1;
+#ifdef __NVCC__
         HANDLE_ERROR(cudaSetDevice(arguments.device));
+#endif
 #endif
     }
 
@@ -207,7 +209,9 @@ int main(int argc,
     {
         if (launchType == DEVICE_LAUNCH)
         {
+#ifdef __NVCC__
             HANDLE_ERROR(cudaSetDevice(i));
+#endif
             check(put_solar_flux_on_device(&solar_flux_h,
                                            &(solar_flux[i])));
         }
@@ -234,7 +238,9 @@ int main(int argc,
         {
             if (launchType == DEVICE_LAUNCH)
             {
+#ifdef __NVCC__
                 HANDLE_ERROR(cudaSetDevice(i));
+#endif
                 check(put_water_vapor_coefs_on_device(&h2o_continuum_h,
                                                       &(h2o_continuum[i])));
             }
@@ -262,7 +268,9 @@ int main(int argc,
         {
             if (launchType == DEVICE_LAUNCH)
             {
+#ifdef __NVCC__
                 HANDLE_ERROR(cudaSetDevice(i));
+#endif
                 check(put_ozone_coefs_on_device(&o3_continuum_h,
                                                 &(o3_continuum[i])));
             }
@@ -307,7 +315,9 @@ int main(int argc,
                          sizeof(*bufs)*num_devices));
         for (i=0;i<num_devices;++i)
         {
+#ifdef __NVCC__
             HANDLE_ERROR(cudaSetDevice(i));
+#endif
             check(alloc_work_vars(&(bufs[i]),
                                   inputData.nlevel,
                                   MAX_NUM_LINES,
@@ -390,7 +400,9 @@ int main(int argc,
                     using_gpu();
 #ifdef _OPENMP
                     index = omp_get_thread_num();
+#ifdef __NVCC__
                     HANDLE_ERROR(cudaSetDevice(index));
+#endif
                     log_mesg("thread %d setting current device to %d.",
                              omp_get_thread_num(),
                              index);

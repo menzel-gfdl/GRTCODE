@@ -133,12 +133,14 @@ int put_water_vapor_coefs_on_device(WaterVaporContinuumCoefs_t const * const in,
     for (i=0;i<NUM_COEFS;++i)
     {
         int num_bytes = sizeof(*(in->coefs[i]))*(in->nws);
+#ifdef __NVCC__
         HANDLE_ERROR(cudaMalloc(&(out->coefs[i]),
                                 num_bytes));
         HANDLE_ERROR(cudaMemcpy(out->coefs[i],
                                 in->coefs[i],
                                 num_bytes,
                                 cudaMemcpyHostToDevice));
+#endif
     }
     return SUCCESS;
 }
@@ -151,7 +153,9 @@ int remove_water_vapor_coefs_from_device(WaterVaporContinuumCoefs_t * const in)
     int i;
     for (i=0;i<NUM_COEFS;++i)
     {
+#ifdef __NVCC__
         HANDLE_ERROR(cudaFree(in->coefs[i]));
+#endif
     }
     free(in->coefs);
     in->coefs = NULL;

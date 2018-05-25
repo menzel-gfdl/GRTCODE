@@ -104,12 +104,14 @@ int put_ozone_coefs_on_device(OzoneContinuumCoefs_t const * const in,
     not_null(out);
     using_gpu();
     int num_bytes = sizeof(*(in->cross_section))*(in->nws);
+#ifdef __NVCC__
     HANDLE_ERROR(cudaMalloc(&(out->cross_section),
                             num_bytes));
     HANDLE_ERROR(cudaMemcpy(out->cross_section,
                             in->cross_section,
                             num_bytes,
                             cudaMemcpyHostToDevice));
+#endif
     return SUCCESS;
 }
 
@@ -118,7 +120,9 @@ int remove_ozone_coefs_from_device(OzoneContinuumCoefs_t * const in)
 {
     not_null(in);
     using_gpu();
+#ifdef __NVCC__
     HANDLE_ERROR(cudaFree(in->cross_section));
+#endif
     return SUCCESS;
 }
 

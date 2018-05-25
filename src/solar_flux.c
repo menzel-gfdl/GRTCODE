@@ -109,12 +109,14 @@ int put_solar_flux_on_device(SolarFlux_t const * const in,
     not_null(out);
     using_gpu();
     int num_bytes = sizeof(*(in->incident_sw_flux))*(in->nws);
+#ifdef __NVCC__
     HANDLE_ERROR(cudaMalloc(&(out->incident_sw_flux),
                             num_bytes));
     HANDLE_ERROR(cudaMemcpy(out->incident_sw_flux,
                             in->incident_sw_flux,
                             num_bytes,
                             cudaMemcpyHostToDevice));
+#endif
     out->total_sw_flux = in->total_sw_flux;
     return SUCCESS;
 }
@@ -124,6 +126,8 @@ int remove_solar_flux_from_device(SolarFlux_t * const in)
 {
     not_null(in);
     using_gpu();
+#ifdef __NVCC__
     HANDLE_ERROR(cudaFree(in->incident_sw_flux));
+#endif
     return SUCCESS;
 }
