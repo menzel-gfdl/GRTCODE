@@ -1520,7 +1520,7 @@ __host__ __device__
 #endif
 fp_t AtoB(fp_t const aa,
           fp_t const * const B,
-          fp_t const npt)
+          int const npt)
 {
     /*Prevent divide by zero.*/
     fp_t const eps = 0.0001;

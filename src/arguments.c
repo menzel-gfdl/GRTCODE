@@ -41,10 +41,17 @@ static struct argp_option options[] =
      LAUNCH_GROUP},
 
     {"host",
-     'h',
+     -1,
      0,
      0,
      "Use HOST cpu implementation. \n\t(incompatible with --device)",
+     LAUNCH_GROUP},
+
+    {"workers",
+     -2,
+     "VAL",
+     OPTION_ARG_OPTIONAL,
+     "Number of GPUs or threads (if run only on the host) used per rank.",
      LAUNCH_GROUP},
 
     {"output",
@@ -198,14 +205,14 @@ static struct argp_option options[] =
      PPMV_GROUP},
 
     {"h2octm",
-     -1,
+     -3,
      0,
      0,
      "Enables the water vapor continuum.",
      PPMV_GROUP},
 
     {"o3ctm",
-     -2,
+     -4,
      0,
      0,
      "Enables the ozone continuum.",
@@ -269,9 +276,6 @@ static error_t parse_opt(int key,
         case 'd':
             check_usage(to_int(arg,
                                &(arguments->device)));
-            break;
-        case 'h':
-            arguments->host = 1;
             break;
         case 'o':
             arguments->outputFile = arg;
@@ -341,9 +345,16 @@ static error_t parse_opt(int key,
                                        &(arguments->molConc[O2])));
             break;
         case -1:
-            arguments->h2o_ctm = 1;
+            arguments->host = 1;
             break;
         case -2:
+            check_usage(to_int(arg,
+                               &(arguments->workers)));
+            break;
+        case -3:
+            arguments->h2o_ctm = 1;
+            break;
+        case -4:
             arguments->o3_ctm = 1;
             break;
         case ARGP_KEY_ARG:

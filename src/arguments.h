@@ -31,6 +31,9 @@ struct arguments
                                in the MoleculeNumber_t enum defined in
                                molecules.h.*/
     char *outputFile; /*Output netCDF file.*/
+    int workers; /*Number of workers (threads if host only, or devices if
+                   run on GPUs.*/
+    int write_spectra; /*Flag for writing out optical depth values.*/
 };
 
 

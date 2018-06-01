@@ -86,6 +86,23 @@ enum return_codes
     }}
 
 
+#ifdef MPI
+#define mpi_check(val) {\
+    int e_ = val; \
+    if (e_ != MPI_SUCCESS) \
+    { \
+        char *err_str_; \
+        int err_str_len_; \
+        MPI_Error_string(e_,err_str_,&err_str_len_); \
+        fatal("mpi returned error code %d. %s.", \
+              e_, \
+              err_str_); \
+    }}
+#else
+#define mpi_check(val) {}
+#endif
+
+
 #define rs_check(val) {\
     int e_ = val; \
     if (e_ != RS_SUCCESS) \

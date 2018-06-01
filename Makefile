@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -Wextra -pedantic -std=c99 -fopenmp
+CFLAGS = -g -Wall -Wextra -pedantic -std=c99 -fopenmp -DMPI
 
 OBJ = grtcode.o write_output.o host_launch.o sw_flux.o lw_flux.o output_fields.o \
       eval_profile.o RfmVoigtFuncs.o IdaVoigtFuncs.o GaussianFuncs.o \
@@ -16,7 +16,7 @@ INCLUDE = -Isrc \
 LDFLAGS = -Lpackages/radiation_solvers \
           -Lpackages/netcdf-4.6.1/lib \
           -Lpackages/hdf5-1.10.1/lib
-LIBS = -lradiation_solvers -lnetcdf -lhdf5 -lm
+LIBS = -lradiation_solvers -lnetcdf -lhdf5 -lhdf5_hl -lm
 
 RPATH = -Wl,-rpath=`readlink -f packages/netcdf-4.6.1/lib` \
         -Wl,-rpath=`readlink -f packages/hdf5-1.10.1/lib` \
