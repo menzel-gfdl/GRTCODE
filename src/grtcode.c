@@ -26,7 +26,7 @@
 #include "query_gpu.cuh"
 #endif
 
-#ifdef MPI
+#ifdef use_MPI
 #include "mpi.h"
 #endif
 
@@ -37,7 +37,7 @@ int main(int argc,
     /*Initialize MPI (if necessary).*/
     int rank = 0;
     int num_ranks = 1;
-#ifdef MPI
+#ifdef use_MPI
     mpi_check(MPI_Init(NULL,NULL));
     mpi_check(MPI_Comm_size(MPI_COMM_WORLD,&num_ranks));
     mpi_check(MPI_Comm_rank(MPI_COMM_WORLD,&rank));
@@ -649,9 +649,13 @@ int main(int argc,
     }
     free(hit_lines);
 
-#ifdef MPI
+/*
+#ifdef use_MPI
+*/
     mpi_check(MPI_Finalize());
+/*
 #endif
+*/
 
     log_mesg("Run completed successfully, returning code %d.",
              SUCCESS);

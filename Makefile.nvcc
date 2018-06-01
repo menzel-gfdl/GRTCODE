@@ -1,8 +1,7 @@
 CC = cc
 NVCC = nvcc
-CFLAGS = '-g -O3 -fopenmp'
-#CFLAGS = '-g -O3'
-NVCCFLAGS = --compiler-options ${CFLAGS} -g -O3
+CFLAGS = -g
+NVCCFLAGS = -ccbin ${CC} --compiler-options "${CFLAGS}" -g -O3
 NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 
 OBJ = grtcode.o write_output.o device_launch.o host_launch.o sw_flux.o lw_flux.o output_fields.o \
@@ -21,13 +20,12 @@ LDFLAGS = -Lpackages/netcdf-4.6.1/lib \
           -Lpackages/hdf5-1.10.1/lib
 LIBS = packages/radiation_solvers/libradiation_solvers.a -lnetcdf -lhdf5 -lhdf5_hl -lm
 
-RPATH = '-rpath=`readlink -f packages/netcdf-4.6.1/lib`'
-RPATH2 = '-rpath=`readlink -f packages/hdf5-1.10.1/lib`'
+RPATH = '-rpath=`readlink -f packages/netcdf-4.6.1/lib`:`readlink -f packages/hdf5-1.10.1/lib`'
 
 all: ${EXECUTABLE}
 
 ${EXECUTABLE}: ${OBJ}
-	${NVCC} ${NVCCFLAGS} -o $@ -Xlinker ${RPATH} -Xlinker ${RPATH2} $^ ${LDFLAGS} ${LIBS}
+	${NVCC} ${NVCCFLAGS} -o $@ -Xlinker ${RPATH} $^ ${LDFLAGS} ${LIBS}
 
 %.o: src/%.c
 	${NVCC} -x cu -dc ${NVCCLDFLAGS} ${NVCCFLAGS} --compiler-options ${INCLUDE} -o $@ -c $<

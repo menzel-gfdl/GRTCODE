@@ -86,7 +86,7 @@ enum return_codes
     }}
 
 
-#ifdef MPI
+#ifdef use_MPI
 #define mpi_check(val) {\
     int e_ = val; \
     if (e_ != MPI_SUCCESS) \
