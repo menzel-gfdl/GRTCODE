@@ -649,13 +649,9 @@ int main(int argc,
     }
     free(hit_lines);
 
-/*
 #ifdef use_MPI
-*/
     mpi_check(MPI_Finalize());
-/*
 #endif
-*/
 
     log_mesg("Run completed successfully, returning code %d.",
              SUCCESS);
