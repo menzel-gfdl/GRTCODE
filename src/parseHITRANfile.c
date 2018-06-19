@@ -1,408 +1,482 @@
-/* GRTCODE is a GPU-able Radiative Transfer Code
- * Copyright (C) 2016  Garrett Wright
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; version 2.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
- */
-
-#include <stdlib.h>
+#include <float.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+#include <unistd.h>
+#include "debug.h"
+#include "floating_point_type.h"
+#include "molecules.h"
 #include "parseHITRANfile.h"
+#include "utils.h"
 
-/* BEGIN HITRAN FORMATTING CONFIG */
-const unsigned int HITRAN2012_fmt[NCOLS][2] = {
-  {2 , UI8},
-  {1 , UI8},
-  {12, F64},
-  {10, F64},
-  {10, NIL},
-  {5 , F32},
-  {5,  F32},
-  {10, F32},
-  {4,  F32},
-  {8,  F32},
-  {15, NIL},
-  {15, NIL},
-  {15, NIL},
-  {15, NIL},
-  {6,  NIL},
-  {12, NIL},
-  {1,  NIL},
-  {7,  NIL},
-  {7,  NIL}
+#ifdef __NVCC__
+#include "cudaHelpers.cuh"
+#endif
+
+typedef enum RefLinePtrIdx
+{
+    mol_pidx,
+    iso_pidx,
+    Vnn_pidx,
+    Snn_ref_pidx,
+    Yair_pidx,
+    Yself_pidx,
+    En_pidx,
+    n_pidx,
+    d_pidx
+} RefLinePtrIdx_t;
+
+typedef enum HITRAN2012_cols
+{
+    mol_c,
+    iso_c,
+    Vnn_c,
+    Snn_c,
+    A_c,
+    Yair_c,
+    Yself_c,
+    Elo_c,
+    n_c,
+    del_c,
+    Vu_c,
+    Vl_c,
+    Qu_c,
+    Ql_c,
+    Ierr_c,
+    Iref_c,
+    flag_c,
+    gu_c,
+    gl_c,
+    NCOLS
+} HITRAN2012_col_t;
+
+typedef enum LookupCast
+{
+  NIL,
+  I32,
+  F32,
+  F64
+} LookupCast_t;
+
+typedef union HITRAN2012_vals
+{
+    void *nil;
+    int i;
+    float f;
+    double d;
+} HITRAN2012_vals_t;
+
+static unsigned int const HITRAN2012_recordLen = 160;
+static unsigned int const HITRAN2012_pad = 2;
+static unsigned int const HITRAN2012_fmt[NCOLS][2] =
+{
+    {2 , I32},
+    {1 , I32},
+    {12, F64},
+    {10, F64},
+    {10, NIL},
+    {5 , F32},
+    {5,  F32},
+    {10, F32},
+    {4,  F32},
+    {8,  F32},
+    {15, NIL},
+    {15, NIL},
+    {15, NIL},
+    {15, NIL},
+    {6,  NIL},
+    {12, NIL},
+    {1,  NIL},
+    {7,  NIL},
+    {7,  NIL}
 };
-const unsigned int HITRAN2012_recordLen = 160;  /* 160 plus  */
-const unsigned int HITRAN2012_pad = 2;  /* trailing newline char,plus sentinel */
-/* END HITRAN FORMATTING CONFIG */
 
-
-RefLinePtrs_t allocHost(unsigned int nLines, RefLine_flags_t flags) {
-  const unsigned int cuFlags = flags.cumemset_host_flags;
-  RefLinePtrs_t self;
-  self.nLines = nLines;
-  self.mol = 0;
-
-  if (cuFlags != ((unsigned int)-1) ) {
+static int alloc_line_params_host(line_params_t **lineParams,
+                                  unsigned int nLines,
+                                  line_flags_t flags)
+{
+    not_null(lineParams);
+    is_null(*lineParams);
+    unsigned int const cuFlags = flags.cumemset_host_flags;
+    line_params_t *self = NULL;
+    check(malloc_ptr((void **)(&(self)),
+                     sizeof(*self)));
+    self->nLines = nLines;
+    self->mol = -1;
+    if (cuFlags != ((unsigned int)-1))
+    {
+        using_gpu();
 #ifdef __NVCC__
-    /* cudaHostAlloc */
-    HANDLE_ERROR( cudaHostAlloc( &(self.iso) , nLines*sizeof(*(self.iso)), cuFlags) );
-    HANDLE_ERROR( cudaHostAlloc( &(self.Vnn) , nLines*sizeof(*(self.Vnn)), cuFlags) );
-    HANDLE_ERROR( cudaHostAlloc( &(self.Snn_ref) , nLines*sizeof(*(self.Snn_ref)), cuFlags) );
-    HANDLE_ERROR( cudaHostAlloc( &(self.Yair) , nLines*sizeof(*(self.Yair)), cuFlags) );
-    HANDLE_ERROR( cudaHostAlloc( &(self.Yself) , nLines*sizeof(*(self.Yself)), cuFlags) );
-    HANDLE_ERROR( cudaHostAlloc( &(self.En) , nLines*sizeof(*(self.En)), cuFlags) );
-    HANDLE_ERROR( cudaHostAlloc( &(self.n) , nLines*sizeof(*(self.n)), cuFlags) );
-    HANDLE_ERROR( cudaHostAlloc( &(self.d) , nLines*sizeof(*(self.d)), cuFlags) );
-#else
-    fprintf(stderr,"You have not built for CUDA. This will end badly. Aborting.\n.");
-    exit(1);
+        HANDLE_ERROR(cudaHostAlloc(&(self->iso),
+                                   nLines*sizeof(*(self->iso)),
+                                   cuFlags));
+        HANDLE_ERROR(cudaHostAlloc(&(self->Vnn),
+                                   nLines*sizeof(*(self->Vnn)),
+                                   cuFlags));
+        HANDLE_ERROR(cudaHostAlloc(&(self->Snn_ref),
+                                   nLines*sizeof(*(self->Snn_ref)),
+                                   cuFlags));
+        HANDLE_ERROR(cudaHostAlloc(&(self->Yair),
+                                   nLines*sizeof(*(self->Yair)),
+                                   cuFlags));
+        HANDLE_ERROR(cudaHostAlloc(&(self->Yself),
+                                   nLines*sizeof(*(self->Yself)),
+                                   cuFlags));
+        HANDLE_ERROR(cudaHostAlloc(&(self->En),
+                                   nLines*sizeof(*(self->En)),
+                                   cuFlags));
+        HANDLE_ERROR(cudaHostAlloc(&(self->n),
+                                   nLines*sizeof(*(self->n)),
+                                   cuFlags));
+        HANDLE_ERROR(cudaHostAlloc(&(self->d),
+                                   nLines*sizeof(*(self->d)),
+                                   cuFlags));
 #endif
-  }
-  else
-  {
-    /* malloc */
-    self.iso = ( uint8_t* )malloc( nLines*sizeof(*(self.iso)) ) ;
-    self.Vnn = ( REAL_t* )malloc( nLines*sizeof(*(self.Vnn)) );
-    self.Snn_ref = ( REAL_t* )malloc( nLines*sizeof(*(self.Snn_ref)) );
-    self.Yair = ( float* )malloc( nLines*sizeof(*(self.Yair)) );
-    self.Yself = ( float*)malloc( nLines*sizeof(*(self.Yself)) );
-    self.En = ( float* )malloc( nLines*sizeof(*(self.En)) );
-    self.n = ( float* )malloc( nLines*sizeof(*(self.n)) );
-    self.d = ( float* )malloc( nLines*sizeof(*(self.d)) );
-
-    if ( self.iso == NULL ||
-         self.Vnn == NULL ||
-         self.Snn_ref == NULL ||
-         self.Yair == NULL ||
-         self.Yself == NULL ||
-         self.En == NULL ||
-         self.n == NULL ||
-         self.d == NULL	){
-      fprintf(stderr,"allocHost failed to malloc\n");
-      exit(1);
     }
-  }
-  return self;
-}
-
-#ifdef __NVCC__
-RefLinePtrs_t allocDevice( unsigned int nLines ) {
-  RefLinePtrs_t self;
-  self.nLines = nLines;
-  self.mol =0;
-  
-  /* cudaDeviceAlloc */
-  HANDLE_ERROR( cudaMalloc( &(self.iso) , nLines*sizeof( *(self.iso)) ) );
-  HANDLE_ERROR( cudaMalloc( &(self.Vnn) , nLines*sizeof( *(self.Vnn)) ) );
-  HANDLE_ERROR( cudaMalloc( &(self.Snn_ref) , nLines*sizeof( *(self.Snn_ref)) ) );
-  HANDLE_ERROR( cudaMalloc( &(self.Yair) , nLines*sizeof( *(self.Yair)) ) );
-  HANDLE_ERROR( cudaMalloc( &(self.Yself) , nLines*sizeof( *(self.Yself)) ) );
-  HANDLE_ERROR( cudaMalloc( &(self.En) , nLines*sizeof( *(self.En)) ) );
-  HANDLE_ERROR( cudaMalloc( &(self.n) , nLines*sizeof( *(self.n)) ) );
-  HANDLE_ERROR( cudaMalloc( &(self.d) , nLines*sizeof( *(self.d)) ) );
-
-  return self;
-}
-
-void freeDevice(RefLinePtrs_t self){
-  HANDLE_ERROR( cudaFree( self.iso ) );
-  HANDLE_ERROR( cudaFree( self.Vnn ) );
-  HANDLE_ERROR( cudaFree( self.Snn_ref ) );
-  HANDLE_ERROR( cudaFree( self.Yair ) );
-  HANDLE_ERROR( cudaFree( self.Yself ) );
-  HANDLE_ERROR( cudaFree( self.En ) );
-  HANDLE_ERROR( cudaFree( self.n ) );
-  HANDLE_ERROR( cudaFree( self.d ) );
-  return;
-}
-#endif
-
-void freeHost(RefLinePtrs_t self, RefLine_flags_t flags){
-  const unsigned int cuFlags = flags.cumemset_host_flags;
-
-  if ( cuFlags != ((unsigned int)-1) ) {
-#ifdef __NVCC__
-    /* cudaHostAlloc */
-    HANDLE_ERROR( cudaFreeHost( self.iso ) );
-    HANDLE_ERROR( cudaFreeHost( self.Vnn ) );
-    HANDLE_ERROR( cudaFreeHost( self.Snn_ref ) );
-    HANDLE_ERROR( cudaFreeHost( self.Yair ) );
-    HANDLE_ERROR( cudaFreeHost( self.Yself ) );
-    HANDLE_ERROR( cudaFreeHost( self.En ) );
-    HANDLE_ERROR( cudaFreeHost( self.n ) );
-    HANDLE_ERROR( cudaFreeHost( self.d ) );
-#else
-    fprintf(stderr,"You have not built for CUDA. This will end badly. Aborting.\n.");
-    exit(1);
-#endif
-
-  }
-  else {
-    free( self.iso );
-    free( self.Vnn );
-    free( self.Snn_ref );
-    free( self.Yair );
-    free( self.Yself );
-    free( self.En );
-    free( self.n );
-    free( self.d );
-  }
-  return;
-}
-
-void reallocRefLines( RefLinePtrs_t* Lines, RefLine_flags_t old_flags, RefLine_flags_t new_flags){
-  /* to realloc as minimal size and/or different flags */
-  unsigned int i;
-  /* shallow copy */
-  RefLinePtrs_t old = *Lines;
-
-  /* alloc a smaller array */
-  RefLinePtrs_t newLines = allocHost(old.nLines , new_flags);
-
-  /* deep copy */
-  newLines.mol = old.mol;
-  newLines.nLines = old.nLines;
-  for(i=0 ; i<old.nLines ; ++i){
-    newLines.iso[i] = old.iso[i];
-    newLines.Vnn[i] = old.Vnn[i];
-    newLines.Snn_ref[i] = old.Snn_ref[i];
-    newLines.Yair[i] = old.Yair[i];
-    newLines.Yself[i] = old.Yself[i];
-    newLines.En[i] = old.En[i];
-    newLines.n[i] = old.n[i];
-    newLines.d[i] = old.d[i];
-  }
-
-  /* free old */
-  freeHost(old, old_flags);
-
-  /* update pointer */
-  *Lines = newLines;
-
-  return;
-}
-
-
-HITRAN2012_vals_t HITRAN2012_cast(const int col, char* sval){
-  const LookupCast_t typ = (LookupCast_t)HITRAN2012_fmt[col][1];
-  HITRAN2012_vals_t val={0};
-  char* endptr;
-  errno=0;
-  switch (typ) {
-    case NIL :
-      val.nil= NULL;
-      break;
-    case UI8 :
-      val.i = (uint8_t)( strtol(sval, &endptr,10) );
-      if (val.i==0 && errno !=0 ){
-        /* error */
-        if (errno == EINVAL){
-          fprintf(stderr,"strtol failed: Invalid Value.\nGiven %s \nLeaving tail of %s\nAborting.\n", sval, endptr);
-          exit(1);
-        }
-        else if (errno == ERANGE){
-          fprintf(stderr,"strtol reported out of range: \nGiven %s leaving tail of %s\nStoring %d and Continuing\n", sval, endptr,val.i);
-        }
-        else {
-          fprintf(stderr,"strtol failed: Uknown Error, errno: %d .\nGiven %s \nLeaving tail of %s\nAborting.\n", errno, sval, endptr);
-          exit(1);
-        }
-      }
-      break;
-    case F64:
-    case F32:
-      /* falls through from F64 */
-      val.d = (strtod(sval, &endptr));
-      if (val.d==0 && errno !=0 ){
-        /* error */
-        if (errno == EINVAL){
-          fprintf(stderr,"strtod failed: Invalid Value.\nGiven %s \nLeaving tail of %s\nAborting.\n", sval, endptr);
-          exit(1);
-        }
-        else if (errno == ERANGE){
-          fprintf(stderr,"strtod reported out of range: \nGiven %s leaving tail of %s\nStoring %f and Continuing\n", sval, endptr,val.d);
-        }
-        else {
-          fprintf(stderr,"strtod failed: Uknown Error, errno: %d .\nGiven %s \nLeaving tail of %s\nAborting.\n", errno, sval, endptr);
-          exit(1);
-        }
-      }
-      /* for floats, cast */
-      if (typ==F32){
-        val.f = val.d;  /* cast to float */
-      }
-      break;
-
-    default :
-      fprintf(stderr,"\nHITRAN2012_cast failed on col %d, LookupCast_t %d, sval: %s \n",HITRAN2012_fmt[col][0],HITRAN2012_fmt[col][1],sval);
-      exit(1);
-  }
-
-  return val;
-}
-
-
-
-/*/\* for portability, though I haven't seen a machine without getline in a while...*\/ */
-/* int getsLineFromFile(char* line, int maxLineLen, FILE *fp){ */
-/*   if ( fgets(line,maxLineLen+1,fp) == NULL){ */
-/*     return -1; */
-/*   } */
-/*   else { */
-/*     return strnlen(line,maxLineLen); */
-/*   } */
-/* } */
-
-
-RefLinePtrs_t parseHITRANfile( char fname[], RefLine_flags_t flags, REAL_t loWn, REAL_t hiWn){
-  unsigned int n=0;
-  size_t l=0;
-  ssize_t ll=0;
-  const unsigned int MAXLINE=163;
-  char* buf = (char*)calloc(MAXLINE,sizeof(char));
-
-  RefLinePtrs_t RefLines;
-
-  /* parsing temps */
-  int col;
-  size_t offset;
-  size_t len;
-  char tmp[16];
-  unsigned int valIdx;  /* begin */
-  unsigned int t;
-  
-  /* open file */
-  FILE *fp = fopen(fname,"r");
-  if (fp == NULL){
-    fprintf(stderr,"error opening file %s \n",fname);
-    exit(1);
-  }
-
-  /* line count */
-  /* while( (l=getsLineFromFile(buf, MAXLINE, fp)) != -1) */
-  while ( (ll=getline(&buf,&l,fp)) != -1)
-  {
-    ++n;
-  }
-  fprintf(stderr,"Found %s has %d total lines. Parsing into struct.\n",fname,n);
-
-
-
-  /* malloc */
-  RefLines = allocHost(n,flags);
-
-  /* parse */
-  rewind(fp);
-  n=0;
-  while( (ll=getline( &buf, &l, fp)) != -1){
-    if ( (ll-HITRAN2012_recordLen)>HITRAN2012_pad || ll<HITRAN2012_recordLen){
-      if (ll > (HITRAN2012_recordLen + HITRAN2012_pad) ){
-        fprintf(stderr,"\nFound bad record at line %d ( %lu exceeds max %d chars) in %s\n",n,l,MAXLINE,fname);
-      }
-      else{
-        fprintf(stderr,"\nFound bad record (too short) at line %d in %s, len %lu \n",n,fname,l);
-      }
-      exit(1);
+    else
+    {
+        check(malloc_ptr((void **)(&(self->iso)),
+                         sizeof(*(self->iso))*nLines));
+        check(malloc_ptr((void **)(&(self->Vnn)),
+                         sizeof(*(self->Vnn))*nLines));
+        check(malloc_ptr((void **)(&(self->Snn_ref)),
+                         sizeof(*(self->Snn_ref))*nLines));
+        check(malloc_ptr((void **)(&(self->Yair)),
+                         sizeof(*(self->Yair))*nLines));
+        check(malloc_ptr((void **)(&(self->Yself)),
+                         sizeof(*(self->Yself))*nLines));
+        check(malloc_ptr((void **)(&(self->En)),
+                         sizeof(*(self->En))*nLines));
+        check(malloc_ptr((void **)(&(self->n)),
+                         sizeof(*(self->n))*nLines));
+        check(malloc_ptr((void **)(&(self->d)),
+                         sizeof(*(self->n))*nLines));
     }
+    *lineParams = self;
+    return SUCCESS;
+}
 
-    valIdx=0;  /* begin */
-    offset=0;
-    /* read format, place into arrays */
-    for (col=0; col<NCOLS ; ++col){
-      len = HITRAN2012_fmt[col][0];
-      t =HITRAN2012_fmt[col][1];
-      strncpy(tmp , &(buf[offset]), len);
-      tmp[len]='\0';  /* sentinel */
-      offset+=len;
-      if ( t != NIL){
-        switch( valIdx ){
-          case mol_pidx:
-            t = HITRAN2012_cast( col , tmp).i;
-            if (n==0){
-              RefLines.mol = t;
-            }
-            else if( RefLines.mol != t ){
-              fprintf(stderr,"Molecule changed from %d to %d at line %d. Aborting\n",RefLines.mol, t, n);
-              exit(1);
+int free_line_params_host(line_params_t **lineParams,
+                          line_flags_t flags)
+{
+    not_null(lineParams);
+    not_null(*lineParams);
+    line_params_t *self = *lineParams;
+    unsigned int const cuFlags = flags.cumemset_host_flags;
+    if (cuFlags != ((unsigned int)-1))
+    {
+        using_gpu();
+#ifdef __NVCC__
+        HANDLE_ERROR(cudaFreeHost(self->iso));
+        HANDLE_ERROR(cudaFreeHost(self->Vnn));
+        HANDLE_ERROR(cudaFreeHost(self->Snn_ref));
+        HANDLE_ERROR(cudaFreeHost(self->Yair));
+        HANDLE_ERROR(cudaFreeHost(self->Yself));
+        HANDLE_ERROR(cudaFreeHost(self->En));
+        HANDLE_ERROR(cudaFreeHost(self->n));
+        HANDLE_ERROR(cudaFreeHost(self->d));
+#endif
+    }
+    else
+    {
+        free(self->iso);
+        free(self->Vnn);
+        free(self->Snn_ref);
+        free(self->Yair);
+        free(self->Yself);
+        free(self->En);
+        free(self->n);
+        free(self->d);
+    }
+    free(self);
+    *lineParams = NULL;
+    return SUCCESS;
+}
+
+static int realloc_line_params_host(line_params_t **lineParams,
+                                    line_flags_t old_flags,
+                                    line_flags_t new_flags)
+{
+    not_null(lineParams);
+    not_null(*lineParams);
+    line_params_t *old_ptr = *lineParams;
+    line_params_t *new_ptr = NULL;
+    check(alloc_line_params_host(&new_ptr,
+                                 old_ptr->nLines,
+                                 new_flags));
+    new_ptr->mol = old_ptr->mol;
+    new_ptr->nLines = old_ptr->nLines;
+    unsigned int i;
+    for (i=0;i<old_ptr->nLines;++i)
+    {
+        new_ptr->iso[i] = old_ptr->iso[i];
+        new_ptr->Vnn[i] = old_ptr->Vnn[i];
+        new_ptr->Snn_ref[i] = old_ptr->Snn_ref[i];
+        new_ptr->Yair[i] = old_ptr->Yair[i];
+        new_ptr->Yself[i] = old_ptr->Yself[i];
+        new_ptr->En[i] = old_ptr->En[i];
+        new_ptr->n[i] = old_ptr->n[i];
+        new_ptr->d[i] = old_ptr->d[i];
+    }
+    check(free_line_params_host(&old_ptr,
+                                old_flags));
+    *lineParams = new_ptr;
+    return SUCCESS;
+}
+
+static int HITRAN2012_cast(HITRAN2012_vals_t *val,
+                           int const col,
+                           char *sval)
+{
+    not_null(val);
+    not_null(sval);
+    LookupCast_t const typ = (LookupCast_t)(HITRAN2012_fmt[col][1]);
+    switch (typ)
+    {
+        case NIL:
+            val->nil = NULL;
+            break;
+        case I32:
+            check(to_int(sval,
+                         &(val->i)));
+            break;
+        case F64:
+        case F32:
+            check(to_double(sval,
+                            &(val->d)));
+            if (typ == F32)
+            {
+                if (val->d >= -1.f*FLT_MAX && val->d <= FLT_MAX)
+                {
+                    val->f = val->d;
+                }
+                else
+                {
+                    fatal("value %e from column %d cannot be safely"
+                              " cast as a float.",
+                          val->d,
+                          col);
+                }
             }
             break;
-          case iso_pidx :
-            RefLines.iso[n] = HITRAN2012_cast( col , tmp).i;
-            break;
-          case Vnn_pidx:
-            RefLines.Vnn[n] = (REAL_t)HITRAN2012_cast( col , tmp).d;
-            break;
-          case   Snn_ref_pidx:
-            RefLines.Snn_ref[n] = (REAL_t)HITRAN2012_cast( col , tmp).d;
-            break;
-          case   Yair_pidx:
-            RefLines.Yair[n] = HITRAN2012_cast( col , tmp).f;
-            break;
-          case   Yself_pidx:
-            RefLines.Yself[n] = HITRAN2012_cast( col , tmp).f;
-            break;
-          case   En_pidx:
-            RefLines.En[n] = HITRAN2012_cast( col , tmp).f;
-            break;
-          case   n_pidx:
-            RefLines.n[n] = HITRAN2012_cast( col , tmp).f;
-            break;
-          case d_pidx:
-            RefLines.d[n] = HITRAN2012_cast( col , tmp).f;
-            break;
-          default:
-            fprintf(stderr,"\n Unkown RefLinePtrIdx_t=%d, abort \n",valIdx);
-            exit(1);
-        }
-        ++valIdx;
-      }
+        default:
+            fatal("cast failed on col %d, LookupCast_t %d, sval: %s.",
+                  HITRAN2012_fmt[col][0],
+                  HITRAN2012_fmt[col][1],
+                  sval);
     }
-    if ( (loWn < 0) && (hiWn < 0) ) {
-      /* always contribute to index */
-      ++n;
-    }
-    else { 			/* filter */
-      if( (RefLines.Vnn[n] >= loWn) && (RefLines.Vnn[n] <= hiWn) ){
-	/*  contribute to index */
-	++n;
-      }
-      /* else pretend it doesn't exist */
-    }
-  }
-  /* set nLines */
-  RefLines.nLines = n;
-  
-  if (fclose(fp)){
-    fprintf(stderr,"error closing file %s \n",fname);
-    exit(1);
-  }
-
-  if ( (loWn >=0) || (hiWn>=0) ){
-    fprintf(stderr, "Filtering lines in range [%f,%f] resulted in %d lines.\n", loWn, hiWn, n);
-    reallocRefLines(&RefLines,flags,flags);
-  }
-  
-  return RefLines;
+    return SUCCESS;
 }
 
-#ifndef SKIPMAIN
-int main(int argc, char* argv[]){
+int parse_hitran_file(line_params_t **lineParams,
+                      char *fileName,
+                      line_flags_t flags,
+                      double loWn,
+                      double hiWn)
+{
+    not_null(lineParams);
+    is_null(*lineParams);
+    not_null(fileName);
 
-  RefLine_flags_t flags= {0,1,0}; /* cumalloc default, host=True, device=false */
-  RefLinePtrs_t L = parseHITRANfile(argv[1],flags);
+    /*Open the file.*/
+    log_mesg("Opening and reading HITRAN line parameters from file %s.",
+             fileName);
+    FILE *fp = NULL;
+    open_file(fp,
+              fileName,
+              "r");
 
-  return EXIT_SUCCESS;
+    /*Count the number of lines in the file.*/
+    size_t const maxLine = 163;
+    char* buf = (char *)calloc(maxLine,sizeof(*buf));
+    not_null(buf);
+    ssize_t ll = 0;
+    size_t l = 0;
+    unsigned int n = 0;
+    while ((ll=getline(&buf,&l,fp)) != -1)
+    {
+        ++n;
+    }
+    rewind(fp);
+
+    /*Malloc space.*/
+    line_params_t *lines = NULL;
+    check(alloc_line_params_host(&lines,
+                                 n,
+                                 flags));
+
+    /*Parse out the line parameters.*/
+    n = 0;
+    while((ll=getline(&buf,&l,fp)) != -1)
+    {
+        if ((ll-HITRAN2012_recordLen) > HITRAN2012_pad)
+        {
+            fatal("Found bad record at line %u (%zu exceeds max %zu chars)"
+                      " in file %s.",
+                  n,
+                  (size_t)ll,
+                  maxLine,
+                  fileName);
+        }
+        else if (ll < HITRAN2012_recordLen)
+        {
+            fatal("Found bad record at line %u (%zu less than %zu chars)"
+                      " in file %s.",
+                  n,
+                  (size_t)ll,
+                  maxLine,
+                  fileName);
+        }
+        unsigned int valIdx = 0;
+        size_t offset = 0;
+        int col;
+        for (col=0;col<NCOLS;++col)
+        {
+            size_t len = HITRAN2012_fmt[col][0];
+            unsigned int t = HITRAN2012_fmt[col][1];
+            char tmp[16];
+            strncpy(tmp,&(buf[offset]),len);
+            tmp[len]='\0';
+            offset += len;
+            if (t != NIL)
+            {
+                HITRAN2012_vals_t val;
+                check(HITRAN2012_cast(&val,
+                                      col,
+                                      tmp));
+                int mol_id;
+                switch (valIdx)
+                {
+                    case mol_pidx:
+                        check(HITRAN_id_to_model_id(val.i,
+                                                    &mol_id));
+                        if (n == 0)
+                        {
+                            lines->mol = mol_id;
+                        }
+                        else if (lines->mol != mol_id)
+                        {
+                            fatal("molecule changed from %d to %d at line %u"
+                                      " in file %s.",
+                                  lines->mol,
+                                  mol_id,
+                                  n,
+                                  fileName);
+                        }
+                        break;
+                    case iso_pidx:
+                        lines->iso[n] = val.i;
+                        break;
+                    case Vnn_pidx:
+                        lines->Vnn[n] = (fp_t)(val.d);
+                        break;
+                    case Snn_ref_pidx:
+                        lines->Snn_ref[n] = (fp_t)(val.d);
+                        break;
+                    case Yair_pidx:
+                        lines->Yair[n] = val.f;
+                        break;
+                    case Yself_pidx:
+                        lines->Yself[n] = val.f;
+                        break;
+                    case En_pidx:
+                        lines->En[n] = val.f;
+                        break;
+                    case n_pidx:
+                        lines->n[n] = val.f;
+                        break;
+                    case d_pidx:
+                        lines->d[n] = val.f;
+                        break;
+                    default:
+                        fatal("Unknown column index (%d) on line %u in file"
+                                  "%s.",
+                              valIdx,
+                              n,
+                              fileName);
+                }
+                ++valIdx;
+            }
+        }
+        if ((loWn < 0) && (hiWn < 0))
+        {
+            /*Include the line for the calculation.*/
+            ++n;
+        }
+        else if ((lines->Vnn[n] >= loWn) && (lines->Vnn[n] <= hiWn))
+        {
+            /*Include the line for the calculation.*/
+            ++n;
+        }
+    }
+    free(buf);
+
+    /*Set the number of lines that will be used in the calculation.*/
+    lines->nLines = n;
+
+    /*Close the file.*/
+    if (fclose(fp))
+    {
+        fatal("error closing file %s.",
+              fileName);
+    }
+
+    if ((loWn >=0) || (hiWn>=0))
+    {
+        check(realloc_line_params_host(&lines,
+                                       flags,
+                                       flags));
+    }
+    *lineParams = lines;
+    return SUCCESS;
+}
+
+#ifdef __NVCC__
+int alloc_line_params_device(line_params_t **lineParams,
+                             unsigned int nLines)
+{
+    not_null(lineParams);
+    is_null(*lineParams);
+    line_params_t *self = NULL;
+    check(malloc_ptr((void **)(&self),
+                     sizeof(*self)));
+    self->nLines = nLines;
+    self->mol = -1;
+    HANDLE_ERROR(cudaMalloc(&(self->iso),
+                            nLines*sizeof(*(self->iso))));
+    HANDLE_ERROR(cudaMalloc(&(self->Vnn),
+                            nLines*sizeof(*(self->Vnn))));
+    HANDLE_ERROR(cudaMalloc(&(self->Snn_ref),
+                            nLines*sizeof(*(self->Snn_ref))));
+    HANDLE_ERROR(cudaMalloc(&(self->Yair),
+                            nLines*sizeof(*(self->Yair))));
+    HANDLE_ERROR(cudaMalloc(&(self->Yself),
+                            nLines*sizeof(*(self->Yself))));
+    HANDLE_ERROR(cudaMalloc(&(self->En),
+                            nLines*sizeof(*(self->En))));
+    HANDLE_ERROR(cudaMalloc(&(self->n),
+                            nLines*sizeof(*(self->n))));
+    HANDLE_ERROR(cudaMalloc(&(self->d),
+                            nLines*sizeof(*(self->d))));
+    *lineParams = self;
+    return SUCCESS;
+}
+
+int free_line_params_device(line_params_t **lineParams)
+{
+    not_null(lineParams);
+    not_null(*lineParams);
+    line_params_t *self = *lineParams;
+    HANDLE_ERROR(cudaFree(self->iso));
+    HANDLE_ERROR(cudaFree(self->Vnn));
+    HANDLE_ERROR(cudaFree(self->Snn_ref));
+    HANDLE_ERROR(cudaFree(self->Yair));
+    HANDLE_ERROR(cudaFree(self->Yself));
+    HANDLE_ERROR(cudaFree(self->En));
+    HANDLE_ERROR(cudaFree(self->n));
+    HANDLE_ERROR(cudaFree(self->d));
+    free(self);
+    *lineParams = NULL;
+    return SUCCESS;
 }
 #endif

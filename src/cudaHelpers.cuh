@@ -1,8 +1,13 @@
-#ifndef SET_CUDAHELPERS_H_
-#define SET_CUDAHELPERS_H_
+#ifndef CUDAHELPERS_H_
+#define CUDAHELPERS_H_
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#ifndef __NVCC__
+#error
+#endif
 
 #define HANDLE_ERROR(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)

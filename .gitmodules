@@ -1,0 +1,3 @@
+[submodule "packages/radiation_solvers"]
+	path = packages/radiation_solvers
+	url = git@gitlab.gfdl.noaa.gov:Raymond.Menzel/radiation_solvers.git
