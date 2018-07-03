@@ -1,0 +1,53 @@
+CC = cc
+NVCC = nvcc
+CFLAGS = -g -Wall -Wextra -fopenmp -Wno-variadic-macros \
+         -Wno-long-long
+NVCCFLAGS = -ccbin ${CC} --compiler-options "${CFLAGS}" -g -O3
+NVCCLDFLAGS = --compiler-options '-shared -fPIC'
+CPPFLAGS =
+FC = gfortran
+FFLAGS = -g -Wall -Wextra -pedantic -std=f2008ts -fopenmp
+
+OBJ = molecular_lines.o new.o device_launch.o host_launch.o \
+      ozone_continuum.o water_vapor_continuum.o eval_profile.o \
+      eval_snn_correction.o eval_pshift.o eval_gamma.o pre_eval_snn.o \
+      integrate_layer.o line_shape_utils.o gas_properties.o RFM_voigt.o \
+      ida_voigt.o doppler.o lorentz.o TIPS_2011.o parse_HITRAN_file.o \
+      parse_csv.o molecules.o utils.o cuda_helpers.o
+LIB_NAME = molecular_lines
+STATIC_LIB = lib${LIB_NAME}.a
+SHARED_LIB = lib${LIB_NAME}.so
+LIB_MOD = ${LIB_NAME}.mod
+LIBS = ${STATIC_LIB} ${SHARED_LIB}
+PREFIX = 
+
+TESTX = example.x
+TESTOBJ = example.o
+
+all: ${LIBS}
+test: ${TESTX}
+
+${STATIC_LIB}: ${OBJ}
+	ar rcs $@ $^
+	ranlib $@
+
+${SHARED_LIB}: ${OBJ}
+	${NVCC} ${NVCCLDFLAGS} -o $@ $^
+
+%.o: %.c
+	${NVCC} -x cu -dc ${NVCCFLAGS} ${NVCCLDFLAGS} ${CPPFLAGS} -o $@ -c $<
+
+%.o: %.cu
+	${NVCC} -x cu -dc ${NVCCFLAGS} ${NVCCLDFLAGS} ${CPPFLAGS} -o $@ -c $<
+
+%.o: %.F90
+	${FC} ${FFLAGS} -fPIC -o $@ -c $<
+
+${TESTOBJ}: ${LIBS}
+
+${TESTX}: ${TESTOBJ} ${LIBS}
+	${FC} ${FFLAGS} -o $@ $< -L. -l${LIB_NAME} -Wl,-rpath=.
+
+clean:
+	rm -f ${LIBS} ${LIB_MOD} ${OBJ}
+	rm -f ${TESTX} ${TESTOBJ}
