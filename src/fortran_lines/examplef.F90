@@ -32,25 +32,25 @@ program test
     wn = 100._c_double
     wres = 0.1_c_double
     num_columns = 4
-    h2o_hitran = "h2o_hit12.par"//c_null_char
+    h2o_hitran = "h2o_hit12.par"
 
     !Initalize library.
-    rc = initialize_grt(context, &
-                        num_levels, &
-                        w0, &
-                        wn, &
-                        wres, &
-                        num_wpoints, &
-                        use_gpu=1, &
-                        use_h2o_ctm=1)
+    rc = initialize_grt_f(context, &
+                          num_levels, &
+                          w0, &
+                          wn, &
+                          wres, &
+                          num_wpoints, &
+                          use_gpu=0, &
+                          use_h2o_ctm=1)
     call check_rc(rc)
 
     !Add water vapor.
-    rc = add_molecule(context, &
-                      h2o_hitran, &
-                      h2o, &
-                      min_line_center_wavenumber=4._c_double, &
-                      max_line_center_wavenumber=8._c_double)
+    rc = add_molecule_f(context, &
+                        h2o_hitran, &
+                        h2o, &
+                        min_line_center_wavenumber=4._c_double, &
+                        max_line_center_wavenumber=8._c_double)
     call check_rc(rc)
 
     !Mimic getting input data.
@@ -70,19 +70,17 @@ program test
         enddo
 
         !Set water vapor ppmv.
-        rc = set_molecule_ppmv(context, &
-                               h2o, &
-                               ppmv)
+        rc = set_molecule_ppmv_f(context, &
+                                 h2o, &
+                                 ppmv)
         call check_rc(rc)
 
         !Calculate the optical depths.
-        rc = calculate_optical_depth(context, &
-                                     pressure, &
-                                     temperature, &
-                                     optical_depth)
+        rc = calculate_optical_depth_f(context, &
+                                       pressure, &
+                                       temperature, &
+                                       optical_depth)
         call check_rc(rc)
-!       write(*,*) optical_depth
-
     enddo
 
     !Clean up.
@@ -92,7 +90,7 @@ program test
     deallocate(optical_depth)
 
     !Finalize library.
-    rc = finalize_grt(context)
+    rc = finalize_grt_f(context)
     call check_rc(rc)
 
 
@@ -100,8 +98,13 @@ program test
 
 
     subroutine check_rc(rc)
+        use iso_fortran_env
         integer(kind=c_int),intent(in) :: rc
+        character(len=256) :: mesg
         if (rc .ne. 0) then
+            call grt_errstr_f(rc, &
+                              mesg)
+            write(error_unit,*) trim(mesg)
             stop 1
         endif
     end subroutine check_rc

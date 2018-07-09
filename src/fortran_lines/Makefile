@@ -4,7 +4,12 @@ CPPFLAGS =
 FC = gfortran
 FFLAGS = -g -Wall -Wextra -pedantic -std=f2008ts -fopenmp
 
-OBJ = molecular_lines.o new.o host_launch.o ozone_continuum.o water_vapor_continuum.o eval_profile.o eval_snn_correction.o eval_pshift.o eval_gamma.o pre_eval_snn.o integrate_layer.o line_shape_utils.o gas_properties.o RFM_voigt.o ida_voigt.o doppler.o lorentz.o TIPS_2011.o parse_HITRAN_file.o parse_csv.o molecules.o utils.o
+OBJ = molecular_lines.o new.o host_launch.o ozone_continuum.o \
+      water_vapor_continuum.o eval_profile.o eval_snn_correction.o \
+      eval_pshift.o eval_gamma.o pre_eval_snn.o integrate_layer.o \
+      line_shape_utils.o gas_properties.o RFM_voigt.o ida_voigt.o \
+      doppler.o lorentz.o TIPS_2011.o parse_HITRAN_file.o parse_csv.o \
+      molecules.o utils.o
 LIB_NAME = molecular_lines
 STATIC_LIB = lib${LIB_NAME}.a
 SHARED_LIB = lib${LIB_NAME}.so
@@ -25,7 +30,7 @@ ${STATIC_LIB}: ${OBJ}
 	ranlib $@
 
 ${SHARED_LIB}: ${OBJ}
-	ld -shared -fPIC -o $@ $^
+	${FC} -shared -fPIC -o $@ $^
 
 %.o: %.c
 	${CC} ${CFLAGS} ${CPPFLAGS} -fPIC -o $@ -c $<
@@ -36,10 +41,16 @@ ${SHARED_LIB}: ${OBJ}
 ${TESTOBJ}: ${LIBS}
 
 ${TESTX}: ${TESTOBJ} ${LIBS}
-	${CC} ${CFLAGS} -o $@ $< -L. -l${LIB_NAME} -Wl,-rpath='$$ORIGIN' -lm
+	${CC} ${CFLAGS} -o $@ $< -L. -l${LIB_NAME} -Wl,-rpath='$$ORIGIN'
 
 ${TESTFX}: ${TESTFOBJ} ${LIBS}
 	${FC} ${FFLAGS} -o $@ $< -L. -l${LIB_NAME} -Wl,-rpath='$$ORIGIN'
+
+install:
+	install -d ${PREFIX}/include
+	install -t ${PREFIX}/include ${LIB_NAME}f.mod src/${LIB_NAME}.h
+	install -d ${PREFIX}/lib
+	install -t ${PREFIX}/lib ${LIBS}
 
 clean:
 	rm -f ${LIBS} ${LIB_MOD} ${OBJ}

@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef _OPENMP
@@ -129,7 +130,6 @@ int initialize_grt(GrtContext_t **context,
     int const max_num_threads = min_num_threads;
 #endif
 
-
     if (num_threads != NULL)
     {
         in_range(*num_threads,min_num_threads,max_num_threads);
@@ -163,7 +163,6 @@ int initialize_grt(GrtContext_t **context,
         {
             check(put_water_vapor_coefs_on_device(&h2o_cc,
                                                   c.h2o_cc));
-
         }
         else
         {
@@ -527,6 +526,82 @@ int calculate_optical_depth(GrtContext_t *context,
                        context->use_o3_ctm,
                        context->o3_cc,
                        optical_depth));
+    }
+    return SUCCESS;
+}
+
+
+int grt_errstr(int const code,
+               char * const buf,
+               int const buf_size)
+{
+    not_null(buf);
+    min_check(buf_size,1);
+    switch (code)
+    {
+        case SUCCESS:
+            break;
+        case INVALID_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: detected a floating point invalid.");
+            break;
+        case DIVBYZERO_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: detected a floating point divide-by-zero.");
+            break;
+        case OVERFLOW_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: detected a floating point overflow.");
+            break;
+        case UNDERFLOW_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: detected a floating point underflow.");
+            break;
+        case SENTINEL_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: entered unexpected code branch.");
+            break;
+        case NULL_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: attempt to dereference a null pointer.");
+            break;
+        case NON_NULL_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: expected a null pointer, but pointer already"
+                         " has a value assigned to it.");
+            break;
+        case RANGE_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: detected a value out of its expected range.");
+            break;
+        case VALUE_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: detected a bad value.");
+            break;
+        case COMPILER_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: build was done with an incorrect compiler.");
+            break;
+        case IO_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: error while performing I/O.");
+            break;
+        default:
+            snprintf(buf,
+                     buf_size,
+                     "Unknown code %d.",
+                     code);
     }
     return SUCCESS;
 }

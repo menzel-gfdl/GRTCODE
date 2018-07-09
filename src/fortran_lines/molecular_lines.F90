@@ -13,11 +13,12 @@ module molecular_lines
     !! \include examplef.F90
 
 
-    public :: initialize_grt
-    public :: finalize_grt
-    public :: add_molecule
-    public :: set_molecule_ppmv
-    public :: calculate_optical_depth
+    public :: initialize_grt_f
+    public :: finalize_grt_f
+    public :: add_molecule_f
+    public :: set_molecule_ppmv_f
+    public :: calculate_optical_depth_f
+    public :: grt_errstr_f
 
 
 #ifdef DOUBLE_PRECISION
@@ -28,19 +29,20 @@ module molecular_lines
 
 
     interface
-        function initialize_grt(context, &
-                                num_levels, &
-                                w0, &
-                                wn, &
-                                wres, &
-                                num_wpoints, &
-                                wcutoff, &
-                                use_gpu, &
-                                num_threads, &
-                                use_h2o_ctm, &
-                                use_o3_ctm) &
+        !> \brief function 1
+        function initialize_grt_f(context, &
+                                  num_levels, &
+                                  w0, &
+                                  wn, &
+                                  wres, &
+                                  num_wpoints, &
+                                  wcutoff, &
+                                  use_gpu, &
+                                  num_threads, &
+                                  use_h2o_ctm, &
+                                  use_o3_ctm) &
             result(return_code) &
-            bind(c)
+            bind(c,name="initialize_grt")
             use iso_c_binding
             implicit none
             type(c_ptr),intent(inout) :: context
@@ -55,19 +57,20 @@ module molecular_lines
             integer(kind=c_int),intent(in),optional :: use_h2o_ctm
             integer(kind=c_int),intent(in),optional :: use_o3_ctm
             integer(kind=c_int) :: return_code
-        end function initialize_grt
+        end function initialize_grt_f
     end interface
 
 
+    !> \brief function 1
     interface
-        function finalize_grt(context) &
+        function finalize_grt_f(context) &
             result(return_code) &
-            bind(c)
+            bind(c,name="finalize_grt")
             use iso_c_binding
             implicit none
             type(c_ptr),intent(inout) :: context
             integer(kind=c_int) :: return_code
-        end function finalize_grt
+        end function finalize_grt_f
     end interface
 
 
@@ -82,7 +85,7 @@ module molecular_lines
             use iso_c_binding
             implicit none
             type(c_ptr),value,intent(in) :: context
-            character(kind=c_char,len=1),dimension(*) :: hitran_filepath
+            character(kind=c_char,len=1),dimension(*),intent(in) :: hitran_filepath
             integer(kind=c_int),intent(inout) :: molecule_id
             real(kind=c_double),intent(in),optional :: min_line_center_wavenumber
             real(kind=c_double),intent(in),optional :: max_line_center_wavenumber
@@ -92,28 +95,28 @@ module molecular_lines
 
 
     interface
-        function set_molecule_ppmv(context, &
-                                   molecule_id, &
-                                   ppmv) &
+        function set_molecule_ppmv_f(context, &
+                                     molecule_id, &
+                                     ppmv) &
             result(return_code) &
-            bind(c)
+            bind(c,name="set_molecule_ppmv")
             use iso_c_binding
             implicit none
             type(c_ptr),value,intent(in) :: context
             integer(kind=c_int),value,intent(in) :: molecule_id
             real(kind=FP),dimension(*),intent(in) :: ppmv
             integer(kind=c_int) :: return_code
-        end function set_molecule_ppmv
+        end function set_molecule_ppmv_f
     end interface
 
 
     interface
-        function calculate_optical_depth(context, &
-                                         pressure, &
-                                         temperature, &
-                                         optical_depth) &
+        function calculate_optical_depth_f(context, &
+                                           pressure, &
+                                           temperature, &
+                                           optical_depth) &
             result(return_code) &
-            bind(c)
+            bind(c,name="calculate_optical_depth")
             use iso_c_binding
             implicit none
             type(c_ptr),value,intent(in) :: context
@@ -121,10 +124,83 @@ module molecular_lines
             real(kind=FP),dimension(*),intent(in) :: temperature
             real(kind=FP),dimension(*),intent(inout) :: optical_depth
             integer(kind=c_int) :: return_code
-        end function calculate_optical_depth
+        end function calculate_optical_depth_f
     end interface
 
 
+    interface
+        function grt_errstr(code, &
+                            buf, &
+                            buf_size) &
+            result(return_code) &
+            bind(c)
+            use iso_c_binding
+            implicit none
+            integer(kind=c_int),value,intent(in) :: code
+            character(kind=c_char,len=1),dimension(*),intent(inout) :: buf
+            integer(kind=c_int),value,intent(in) :: buf_size
+            integer(kind=c_int) :: return_code
+        end function grt_errstr
+    end interface
+
+
+    contains
+
+
+        function add_molecule_f(context, &
+                                hitran_filepath, &
+                                molecule_id, &
+                                min_line_center_wavenumber, &
+                                max_line_center_wavenumber) &
+            result(return_code)
+            use iso_c_binding
+            implicit none
+
+            type(c_ptr),value,intent(in) :: context
+            character(len=*),intent(in) :: hitran_filepath
+            integer(kind=c_int),intent(inout) :: molecule_id
+            real(kind=c_double),intent(in),optional :: min_line_center_wavenumber
+            real(kind=c_double),intent(in),optional :: max_line_center_wavenumber
+            integer(kind=c_int) :: return_code
+
+            character(kind=c_char,len=1024) :: buf
+
+            if (len_trim(hitran_filepath) .ge. len(buf)) then
+                stop 1
+            endif
+            buf = ""
+            buf = trim(hitran_filepath)//c_null_char
+            return_code = add_molecule(context, &
+                                       buf, &
+                                       molecule_id, &
+                                       min_line_center_wavenumber, &
+                                       max_line_center_wavenumber)
+        end function add_molecule_f
+
+
+        subroutine grt_errstr_f(code, &
+                                buf)
+            use iso_fortran_env
+            use iso_c_binding
+            implicit none
+
+            integer(kind=c_int),intent(in) :: code
+            character(len=*),intent(inout) :: buf
+
+            integer(kind=c_int) :: return_code
+
+            buf = ""
+            return_code = grt_errstr(code, &
+                                     buf, &
+                                     len(buf,kind=c_int))
+            if (return_code .ne. 0) then
+                write(error_unit,*) "GRT: error while getting error string."
+                stop 1
+            endif
+        end subroutine grt_errstr_f
+
+
+#ifdef FOO
     !> \defgroup highlevelfortranapi High Level Fortran API
     !! \section Overview
     !!     The high level fortran API provides a more simplified interface,
@@ -144,9 +220,6 @@ module molecular_lines
 
     !Private variables.
     type(c_ptr) :: context
-
-
-    contains
 
 
     subroutine check_rc(rc)
@@ -206,7 +279,7 @@ module molecular_lines
         call check_rc(rc)
     end subroutine grt_end
 
-
+#endif
 
 
 end module molecular_lines

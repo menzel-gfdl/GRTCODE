@@ -5,7 +5,13 @@
 
 
 #define check_rc(rc) { \
-    if (rc != 0) {fprintf(stderr,"%s: %d Error\n",__FILE__,__LINE__);return 1;}}
+    if (rc != 0) { \
+        char buf[256]; \
+        int e_ = grt_errstr(rc,buf,256); \
+        fprintf(stderr,"%s\n",buf); \
+        fprintf(stderr,"%s: %d Error\n",__FILE__,__LINE__); \
+        return EXIT_FAILURE; \
+    }}
 
 
 #ifdef DOUBLE_PRECISION
