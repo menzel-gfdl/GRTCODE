@@ -1,597 +1,279 @@
-#ifdef __NVCC__
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "constants.h"
-#include "cudaHelpers.cuh"
+#ifdef __NVCC__
+#include "cuda_helpers.cuh"
+#else
+#error
+#endif
 #include "debug.h"
 #include "device_launch.h"
 #include "eval_gamma.h"
 #include "eval_profile.h"
-#include "eval_pShift.h"
-#include "eval_Snn_correction.h"
+#include "eval_pshift.h"
+#include "eval_snn_correction.h"
 #include "floating_point_type.h"
 #include "integrate_layer.h"
-#include "lw_flux.h"
-#include "model_fields.h"
 #include "molecules.h"
 #include "ozone_continuum.h"
-#include "parseHITRANfile.h"
-#include "pre_eval_Snn.h"
-#include "solar_flux.h"
-#include "sw_flux.h"
+#include "parse_HITRAN_file.h"
+#include "pre_eval_snn.h"
 #include "utils.h"
 #include "water_vapor_continuum.h"
 
 
-int alloc_work_vars(WorkVars_t *vars,
-                    int const nlevels,
-                    int const nlines,
-                    int const nws)
+int launch(int const num_levels,
+           fp_t const * const P,
+           fp_t const * const T,
+           fp_t const * const x,
+           fp_t * const Pavg,
+           fp_t * const Tavg,
+           fp_t * const N,
+           fp_t * const Ns,
+           fp_t * const Psavg,
+           fp_t * const gamma,
+           fp_t * const Pshift,
+           fp_t * const s,
+           LineParams_t *lines,
+           int const num_molecules,
+           LineParams_t ** const line_params,
+           double const w0,
+           double const wres,
+           uint64_t const num_wpoints,
+           double const wcutoff,
+           int const use_h2o_ctm,
+           WaterVaporContinuumCoefs_t * const h2o_cc,
+           int const use_o3_ctm,
+           OzoneContinuumCoefs_t const * const o3_cc,
+           fp_t * const tau)
 {
-    not_null(vars);
-    using_gpu();
-    int const nlayers = nlevels - 1;
-    int const l = nlayers*nlines;
-    int const m = nlevels*nws;
-    int const n = nlayers*nws;
-
-    /*Memcpy in values from host.*/
-    HANDLE_ERROR(cudaMalloc(&(vars->P),
-                            sizeof(*(vars->P))*nlevels));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->T),
-                            sizeof(*(vars->T))*nlevels));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->x),
-                            sizeof(*(vars->x))*nlevels));
-
-    vars->LINES = NULL;
-    check(alloc_line_params_device(&(vars->LINES),
-                                   nlines));
-
-    /*Memcpy out values to host.*/
-    HANDLE_ERROR(cudaMalloc(&(vars->tau_gas),
-                            sizeof(*(vars->tau_gas))*n));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->tau_scatter),
-                            sizeof(*(vars->tau_scatter))*n));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->lw_flux_down_per_w),
-                            sizeof(*(vars->lw_flux_down_per_w))*m));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->lw_flux_up_per_w),
-                            sizeof(*(vars->lw_flux_up_per_w))*m));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->sw_flux_down_per_w),
-                            sizeof(*(vars->sw_flux_down_per_w))*m));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->sw_flux_up_per_w),
-                            sizeof(*(vars->sw_flux_up_per_w))*m));
-
-    /*Per-column buffers.*/
-    HANDLE_ERROR(cudaMalloc(&(vars->Pavg),
-                            sizeof(*(vars->Pavg))*nlayers));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->Tavg),
-                            sizeof(*(vars->Tavg))*nlayers));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->N),
-                            sizeof(*(vars->N))*nlayers));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->Ns),
-                            sizeof(*(vars->Ns))*nlayers));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->Psavg),
-                            sizeof(*(vars->Psavg))*nlayers));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->GAMMA),
-                            sizeof(*(vars->GAMMA))*l));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->PSHIFT),
-                            sizeof(*(vars->PSHIFT))*l));
-
-    HANDLE_ERROR(cudaMalloc(&(vars->S),
-                            sizeof(*(vars->S))*l));
-    return SUCCESS;
-}
-
-
-int free_work_vars(WorkVars_t *vars)
-{
-    not_null(vars);
-    using_gpu();
-    HANDLE_ERROR(cudaFree(vars->P));
-    HANDLE_ERROR(cudaFree(vars->T));
-    HANDLE_ERROR(cudaFree(vars->x));
-    check(free_line_params_device(&(vars->LINES)));
-    HANDLE_ERROR(cudaFree(vars->tau_gas));
-    HANDLE_ERROR(cudaFree(vars->tau_scatter));
-    HANDLE_ERROR(cudaFree(vars->lw_flux_down_per_w));
-    HANDLE_ERROR(cudaFree(vars->lw_flux_up_per_w));
-    HANDLE_ERROR(cudaFree(vars->sw_flux_down_per_w));
-    HANDLE_ERROR(cudaFree(vars->sw_flux_up_per_w));
-    HANDLE_ERROR(cudaFree(vars->Pavg));
-    HANDLE_ERROR(cudaFree(vars->Tavg));
-    HANDLE_ERROR(cudaFree(vars->N));
-    HANDLE_ERROR(cudaFree(vars->Ns));
-    HANDLE_ERROR(cudaFree(vars->Psavg));
-    HANDLE_ERROR(cudaFree(vars->GAMMA));
-    HANDLE_ERROR(cudaFree(vars->PSHIFT));
-    HANDLE_ERROR(cudaFree(vars->S));
-    return SUCCESS;
-}
-
-
-int launch(WorkVars_t * const vars,
-           req_model_fields_t * const input_data,
-           SolarFlux_t const * const solar_flux,
-           int const time,
-           int const lon,
-           int const lat,
-           int const nmols,
-           line_params_t ** const line_params,
-           unsigned int const nws,
-           fp_t const w,
-           double const res,
-           int const breadth,
-           int const h2o_ctm,
-           WaterVaporContinuumCoefs_t * const h2o_continuum,
-           int const o3_ctm,
-           OzoneContinuumCoefs_t const * const o3_continuum,
-           OutputFields_t * const output_data)
-{
-    not_null(vars);
-    not_null(input_data);
-    not_null(solar_flux);
-    not_null(line_params);
-    not_null(h2o_continuum);
-    not_null(o3_continuum);
-    not_null(output_data);
-
     /*Zero out buffers used to accumulate results.*/
-    int nlevels = input_data->nlevel;
-    int nlayers = nlevels - 1;
-    HANDLE_ERROR(cudaMemset(vars->tau_gas,
+    int num_layers = num_levels - 1;
+    HANDLE_ERROR(cudaMemset(tau,
                             0,
-                            sizeof(fp_t)*nlayers*nws));
-    HANDLE_ERROR(cudaMemset(vars->tau_scatter,
-                            0,
-                            sizeof(fp_t)*nlayers*nws));
-    memset(output_data->lw_flux_down,
-           0,
-           sizeof(*(output_data->lw_flux_down))*nlevels);
-    memset(output_data->lw_flux_up,
-           0,
-           sizeof(*(output_data->lw_flux_up))*nlevels);
-    memset(output_data->sw_flux_down,
-           0,
-           sizeof(*(output_data->sw_flux_down))*nlevels);
-    memset(output_data->sw_flux_up,
-           0,
-           sizeof(*(output_data->sw_flux_up))*nlevels);
+                            sizeof(*tau)*num_layers*num_wpoints));
 
-    /*Copy the correct column of input data to the device.*/
-    log_mesg("Copying column of input data from host to device at point"
-                 " (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    unsigned int offset = time*input_data->nlon*input_data->nlat +
-                          lon*input_data->nlat + lat;
-    fp_t const TSURF = input_data->TSURF[offset];
-    fp_t const EMIS = input_data->EMIS[offset];
-    fp_t const SFC_DIR_ALB = input_data->SFC_DIR_ALB[offset];
-    fp_t const SFC_DIF_ALB = input_data->SFC_DIF_ALB[offset];
-    fp_t const MU_DIF = input_data->COS_DIF_BEAM_ANG;
-    fp_t const MU_DIR = input_data->COS_SOL_ZEN_ANG[offset];
-    fp_t const SOL_FLUX_RATIO = (input_data->TOTAL_SOL_FLUX[offset])/
-                                (solar_flux->total_sw_flux);
-    offset *= nlevels;
-    HANDLE_ERROR(cudaMemcpy(vars->P,
-                            &(input_data->P[offset]),
-                            sizeof(*(input_data->P))*nlevels,
-                            cudaMemcpyHostToDevice));
-    HANDLE_ERROR(cudaMemcpy(vars->T,
-                            &(input_data->T[offset]),
-                            sizeof(*(input_data->T))*nlevels,
-                            cudaMemcpyHostToDevice));
-
-    /*Calculate the total number density of air molecules integrated across
+    /*Calculate the total number density of air moleucles integrated across
       each layer.*/
-    log_mesg("Launching kernel integrated_N at point (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    integrated_N<<<1,nlayers,0,0>>>(nlayers,
-                                    vars->P,
-                                    vars->N);
+    log_mesg("Integration total number density across %d layers.",
+             num_layers);
+    integrated_N<<<1,num_layers,0,0>>>(num_layers,
+                                       P,
+                                       N);
 
     /*Calculate integrated average layer quantities.*/
-    log_mesg("Launching kernel Curtis_Godson_PT at point (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    Curtis_Godson_PT<<<1,nlayers,0,0>>>(nlayers,
-                                        vars->P,
-                                        vars->T,
-                                        vars->Pavg,
-                                        vars->Tavg);
+    log_mesg("Calculating Curtis-Godson pressure and temperature across"
+                 " %d layers.",
+             num_layers);
+    Curtis_Godson_PT<<<1,num_layers,0,0>>>(num_layers,
+                                           P,
+                                           T,
+                                           Pavg,
+                                           Tavg);
 
     /*Loop over the molecules and calculate the optical depths.*/
     int min_grid_size;
     int dim_block;
     int dim_grid;
     int mol;
-    for (mol=0;mol<nmols;++mol)
+    for (mol=0;mol<num_molecules;++mol)
     {
-        /*Copy the molecular abundance from the host to the device.*/
-        log_mesg("Copying abundance from host to device for molecule %d.",
-                 mol);
-        HANDLE_ERROR(cudaMemcpy(vars->x,
-                                &((input_data->x[mol])[offset]),
-                                sizeof(fp_t)*nlevels,
-                                cudaMemcpyHostToDevice));
-
-        /*Copy the line parameters for the current molecule to the device.*/
-        log_mesg("Copying line parameters from host to device for"
-                     " molecule %d.",
-                 mol);
-        unsigned int nlines = line_params[mol]->nLines;
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->iso,
+        /*Copy line parameters to device.*/
+        unsigned int num_lines = line_params[mol]->num_lines;
+        int mol_id = line_params[mol]->mol;
+        HANDLE_ERROR(cudaMemcpy(lines->iso,
                                 line_params[mol]->iso,
-                                sizeof(*(line_params[mol]->iso))*nlines,
+                                sizeof(*(lines->iso))*num_lines,
                                 cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->Vnn,
-                                line_params[mol]->Vnn,
-                                sizeof(*(line_params[mol]->Vnn))*nlines,
+        HANDLE_ERROR(cudaMemcpy(lines->vnn,
+                                line_params[mol]->vnn,
+                                sizeof(*(lines->vnn))*num_lines,
                                 cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->Snn_ref,
-                                line_params[mol]->Snn_ref,
-                                sizeof(*(line_params[mol]->Snn_ref))*nlines,
+        HANDLE_ERROR(cudaMemcpy(lines->snn_ref,
+                                line_params[mol]->snn_ref,
+                                sizeof(*(lines->snn_ref))*num_lines,
                                 cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->Yair,
-                                line_params[mol]->Yair,
-                                sizeof(*(line_params[mol]->Yair))*nlines,
+        HANDLE_ERROR(cudaMemcpy(lines->yair,
+                                line_params[mol]->yair,
+                                sizeof(*(lines->yair))*num_lines,
                                 cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->Yself,
-                                line_params[mol]->Yself,
-                                sizeof(*(line_params[mol]->Yself))*nlines,
+        HANDLE_ERROR(cudaMemcpy(lines->yself,
+                                line_params[mol]->yself,
+                                sizeof(*(lines->yself))*num_lines,
                                 cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->En,
-                                line_params[mol]->En,
-                                sizeof(*(line_params[mol]->En))*nlines,
+        HANDLE_ERROR(cudaMemcpy(lines->en,
+                                line_params[mol]->en,
+                                sizeof(*(lines->en))*num_lines,
                                 cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->n,
+        HANDLE_ERROR(cudaMemcpy(lines->n,
                                 line_params[mol]->n,
-                                sizeof(*(line_params[mol]->n))*nlines,
+                                sizeof(*(lines->n))*num_lines,
                                 cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(vars->LINES->d,
+        HANDLE_ERROR(cudaMemcpy(lines->d,
                                 line_params[mol]->d,
-                                sizeof(*(line_params[mol]->d))*nlines,
+                                sizeof(*(lines->d))*num_lines,
                                 cudaMemcpyHostToDevice));
-
-        /*Calculate the thread-block size and number of thread blocks that
-          maximizes the occupancy on the device.  Round up to make sure
-          that all input data is used.  The CUDA API may produce a warning
-          that can be safely ignored depending on the sdk version and
-          -W flags.*/
-        HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
-                                                        &dim_block,
-                                                        pre_eval_Snn,
-                                                        0,
-                                                        ((int)nlines)));
-        dim_grid = (((int)nlines) + dim_block - 1)/dim_block;
 
         /*Calculate the initial Snn_ref correction.*/
-        log_mesg("Launching kernel pre_eval_Snn at point (%d,%d,%d)"
+        log_mesg("Launching kernel pre_eval_snn across %d layers"
                      " for molecule %d.",
-                 time,
-                 lon,
-                 lat,
+                 num_layers,
                  mol);
-        int mol_id = line_params[mol]->mol;
-        pre_eval_Snn<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nlines,
+        HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
+                                                        &dim_block,
+                                                        pre_eval_snn,
+                                                        0,
+                                                        ((int)num_lines)));
+        dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
+        pre_eval_snn<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_lines,
                                                                                  mol_id,
-                                                                                 vars->LINES->iso,
-                                                                                 vars->LINES->Vnn,
-                                                                                 vars->LINES->En,
-                                                                                 vars->LINES->Snn_ref);
+                                                                                 lines->iso,
+                                                                                 lines->vnn,
+                                                                                 lines->en,
+                                                                                 lines->snn_ref);
 
         /*Calculate the integrated average layer partial pressure.*/
-        log_mesg("Launching kernel Curtis_Godson_PsN at point (%d,%d,%d)"
-                     " for molecule %d.",
-                 time,
-                 lon,
-                 lat,
+        fp_t const *xp = &(x[mol*num_levels]);
+        log_mesg("Calculating Curtis-Godson partial pressure and abundance"
+                     " across %d layers for molecule %d.",
+                 num_layers,
                  mol);
-        Curtis_Godson_PsNs<<<1,nlayers,0,0>>>(nlayers,
-                                              vars->P,
-                                              vars->x,
-                                              vars->N,
-                                              vars->Psavg,
-                                              vars->Ns);
+        Curtis_Godson_PsNs<<<1,num_layers,0,0>>>(num_layers,
+                                                 P,
+                                                 xp,
+                                                 N,
+                                                 Psavg,
+                                                 Ns);
 
+        /*Calcluate the lorentz half-width at half-max (HWHM).*/
+        log_mesg("Launching kernel eval_gamma across %d layers"
+                     " for molecule %d.",
+                 num_layers,
+                 mol);
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
                                                         eval_gamma,
                                                         0,
-                                                        ((int)nlines)));
-        dim_grid = (((int)nlines) + dim_block - 1)/dim_block;
-
-        /*Calcluate the lorentz half-width at half-max (HWHM).*/
-        log_mesg("Launching kernel eval_gamma at point (%d,%d,%d)"
-                     " for molecule %d.",
-                 time,
-                 lon,
-                 lat,
-                 mol);
-        eval_gamma<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nlayers,
-                                                                               nlines,
-                                                                               vars->Pavg,
-                                                                               vars->Tavg,
-                                                                               vars->Psavg,
-                                                                               vars->LINES->Yself,
-                                                                               vars->LINES->Yair,
-                                                                               vars->LINES->n,
-                                                                               vars->GAMMA);
-
-        HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
-                                                        &dim_block,
-                                                        eval_pShift,
-                                                        0,
-                                                        ((int)nlines)));
-        dim_grid = (((int)nlines) + dim_block - 1)/dim_block;
+                                                        ((int)num_lines)));
+        dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
+        eval_gamma<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_layers,
+                                                                               num_lines,
+                                                                               Pavg,
+                                                                               Tavg,
+                                                                               Psavg,
+                                                                               lines->yself,
+                                                                               lines->yair,
+                                                                               lines->n,
+                                                                               gamma);
 
         /*Calcluate the shift in the line center frequency due to the
           pressure.*/
-        log_mesg("Launching kernel eval_pShift at point (%d,%d,%d)"
+        log_mesg("Launching kernel eval_pshift across %d layers"
                      " for molecule %d.",
-                 time,
-                 lon,
-                 lat,
+                 num_layers,
                  mol);
-        eval_pShift<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nlayers,
-                                                                                nlines,
-                                                                                vars->Pavg,
-                                                                                vars->LINES->Vnn,
-                                                                                vars->LINES->d,
-                                                                                vars->PSHIFT);
-
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
-                                                        eval_Snn_correction,
+                                                        eval_pshift,
                                                         0,
-                                                        ((int)nlines)));
-        dim_grid = (((int)nlines) + dim_block - 1)/dim_block;
+                                                        ((int)num_lines)));
+        dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
+        eval_pshift<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_layers,
+                                                                                num_lines,
+                                                                                Pavg,
+                                                                                lines->vnn,
+                                                                                lines->d,
+                                                                                Pshift);
 
         /*Calculate the remainder of the Snn_ref correction.*/
-        log_mesg("Launching kernel eval_Snn_correction at point (%d,%d,%d)"
+        log_mesg("Launching kernel eval_snn_correction across %d layers"
                      " for molecule %d.",
-                 time,
-                 lon,
-                 lat,
+                 num_layers,
                  mol);
-        eval_Snn_correction<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nlayers,
-                                                                                        nlines,
+        HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
+                                                        &dim_block,
+                                                        eval_snn_correction,
+                                                        0,
+                                                        ((int)num_lines)));
+        dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
+        eval_snn_correction<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_layers,
+                                                                                        num_lines,
                                                                                         mol_id,
-                                                                                        vars->Tavg,
-                                                                                        vars->LINES->iso,
-                                                                                        vars->LINES->Vnn,
-                                                                                        vars->LINES->En,
-                                                                                        vars->LINES->Snn_ref,
-                                                                                        vars->S);
+                                                                                        Tavg,
+                                                                                        lines->iso,
+                                                                                        lines->vnn,
+                                                                                        lines->en,
+                                                                                        lines->snn_ref,
+                                                                                        s);
 
+        /*Calculate the molecule's optical depths and add them to existing
+          values.*/
+        log_mesg("Launching kernel eval_profile across %d layers"
+                     " for molecule %d.",
+                 num_layers,
+                 mol);
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
                                                         eval_profile,
                                                         0,
-                                                        ((int)nlines)));
-        dim_grid = (((int)nlines) + dim_block - 1)/dim_block;
-
-        /*Calculate the molecule's optical depths and add them to existing
-          values.*/
-        log_mesg("Launching kernel eval_profile at point (%d,%d,%d)"
-                     " for molecule %d.",
-                 time,
-                 lon,
-                 lat,
-                 mol);
+                                                        ((int)num_lines)));
+        dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
         eval_profile<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(mol_id,
-                                                                                 nlines,
-                                                                                 nws,
-                                                                                 w,
-                                                                                 res,
-                                                                                 nlayers,
-                                                                                 breadth,
-                                                                                 vars->Tavg,
-                                                                                 vars->GAMMA,
-                                                                                 vars->PSHIFT,
-                                                                                 vars->S,
-                                                                                 vars->Ns,
-                                                                                 vars->tau_gas);
+                                                                                 num_lines,
+                                                                                 num_wpoints,
+                                                                                 w0,
+                                                                                 wres,
+                                                                                 num_layers,
+                                                                                 wcutoff,
+                                                                                 Tavg,
+                                                                                 gamma,
+                                                                                 Pshift,
+                                                                                 s,
+                                                                                 Ns,
+                                                                                 tau);
 
-        if (h2o_ctm && mol_id == H2O)
+        if (use_h2o_ctm && mol_id == H2O)
         {
-            HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
-                                                            &dim_block,
-                                                            calc_water_vapor_ctm_optdepth,
-                                                            0,
-                                                            ((int)nws)));
-            dim_grid = (((int)nws) + dim_block - 1)/dim_block;
-
             /*Calculate the water vapor continuum optical depths.*/
-            log_mesg("Launching kernel calc_water_vapor_ctm_optdetph"
-                         " at point (%d,%d,%d).",
-                     time,
-                     lon,
-                     lat);
-            calc_water_vapor_ctm_optdepth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nws,
-                                                                                                      nlayers,
-                                                                                                      vars->tau_gas,
-                                                                                                      h2o_continuum->coefs[MTCKD25_S296],
-                                                                                                      vars->Tavg,
-                                                                                                      vars->Psavg,
-                                                                                                      vars->Ns,
-                                                                                                      h2o_continuum->coefs[CKDS],
-                                                                                                      h2o_continuum->coefs[MTCKD25_F296],
-                                                                                                      vars->Pavg,
-                                                                                                      h2o_continuum->coefs[CKDF]);
-        }
-        else if (o3_ctm && mol_id == O3)
-        {
+            log_mesg("Calculating optical depth due to the water vapor"
+                         " continuum across %d layers.",
+                     num_layers);
             HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                             &dim_block,
-                                                            calc_water_vapor_ctm_optdepth,
+                                                            calc_water_vapor_ctm_optical_depth,
                                                             0,
-                                                            ((int)nws)));
-            dim_grid = (((int)nws) + dim_block - 1)/dim_block;
-
-            /*Calculate the ozone continuum optical depths.*/
-            log_mesg("Launching kernel calc_ozone_ctm_optdetph"
-                         " at point (%d,%d,%d).",
-                     time,
-                     lon,
-                     lat);
-            calc_ozone_ctm_optdepth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nws,
-                                                                                                nlayers,
-                                                                                                o3_continuum->cross_section,
-                                                                                                vars->Ns,
-                                                                                                vars->tau_gas);
+                                                            ((int)num_lines)));
+            dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
+            calc_water_vapor_ctm_optical_depth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_wpoints,
+                                                                                                           num_layers,
+                                                                                                           tau,
+                                                                                                           h2o_cc->coefs[MTCKD25_S296],
+                                                                                                           Tavg,
+                                                                                                           Psavg,
+                                                                                                           Ns,
+                                                                                                           h2o_cc->coefs[CKDS],
+                                                                                                           h2o_cc->coefs[MTCKD25_F296],
+                                                                                                           Pavg,
+                                                                                                           h2o_cc->coefs[CKDF]);
         }
-    }
-
-    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
-                                                    &dim_block,
-                                                    calc_lw_flux,
-                                                    0,
-                                                    ((int)nws)));
-    dim_grid = (((int)nws) + dim_block - 1)/dim_block;
-
-    /*Calculate the longwave fluxes.*/
-    log_mesg("Launching kernel calc_lw_flux at point (%d,%d,%d)",
-             time,
-             lon,
-             lat);
-    calc_lw_flux<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nws,
-                                                                             nlayers,
-                                                                             vars->lw_flux_down_per_w,
-                                                                             vars->lw_flux_up_per_w,
-                                                                             vars->Tavg,
-                                                                             TSURF,
-                                                                             vars->tau_gas,
-                                                                             w,
-                                                                             res,
-                                                                             EMIS,
-                                                                             vars->T);
-
-    /*Copy the optical depths and fluxes from the device to the host.*/
-    log_mesg("Copying optical depths and longwave fluxes from device to host"
-                 " at point (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    HANDLE_ERROR(cudaMemcpy(output_data->tau_gas,
-                            vars->tau_gas,
-                            sizeof(*(output_data->tau_gas))*nws*nlayers,
-                            cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(output_data->lw_flux_down_per_w,
-                            vars->lw_flux_down_per_w,
-                            sizeof(*(output_data->lw_flux_down_per_w))*nws*nlevels,
-                            cudaMemcpyDeviceToHost));
-    HANDLE_ERROR(cudaMemcpy(output_data->lw_flux_up_per_w,
-                            vars->lw_flux_up_per_w,
-                            sizeof(*(output_data->lw_flux_up_per_w))*nws*nlevels,
-                            cudaMemcpyDeviceToHost));
-
-    /*Integrate the fluxes over wavenumber.*/
-    log_mesg("Integrating longwave fluxes across wavenumbers at"
-                 " point (%d,%d,%d).",
-             time,
-             lon,
-             lat);
-    int i;
-    for (i=0;i<nlevels;++i)
-    {
-        fp_t const M_TO_CM = 100.; /*[cm/m]*/
-        reimann_sum(&(output_data->lw_flux_up_per_w[i*nws]),
-                    nws,
-                    res*M_TO_CM,
-                    &(output_data->lw_flux_up[i]));
-        reimann_sum(&(output_data->lw_flux_down_per_w[i*nws]),
-                    nws,
-                    res*M_TO_CM,
-                    &(output_data->lw_flux_down[i]));
-    }
-
-    if (MU_DIR >= 0.)
-    {
-        HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
-                                                        &dim_block,
-                                                        calc_sw_flux,
-                                                        0,
-                                                        ((int)nws)));
-        dim_grid = (((int)nws) + dim_block - 1)/dim_block;
-
-        /*Calculate the shortwave fluxes.*/
-        log_mesg("Launching kernel calc_sw_flux at point (%d,%d,%d).",
-                 time,
-                 lon,
-                 lat);
-        calc_sw_flux<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(nlevels,
-                                                                                 nws,
-                                                                                 w,
-                                                                                 res,
-                                                                                 vars->N,
-                                                                                 MU_DIR,
-                                                                                 MU_DIF,
-                                                                                 vars->tau_gas,
-                                                                                 SFC_DIR_ALB,
-                                                                                 SFC_DIF_ALB,
-                                                                                 solar_flux->incident_sw_flux,
-                                                                                 SOL_FLUX_RATIO,
-                                                                                 vars->sw_flux_up_per_w,
-                                                                                 vars->sw_flux_down_per_w,
-                                                                                 vars->tau_scatter);
-
-        /*Copy the optical depths and fluxes from the device to the host.*/
-        log_mesg("Copying optical depths and shortwave fluxes from device"
-                     " to host at point (%d,%d,%d).",
-                 time,
-                 lon,
-                 lat);
-        HANDLE_ERROR(cudaMemcpy(output_data->tau_scatter,
-                                vars->tau_scatter,
-                                sizeof(*(output_data->tau_scatter))*nws*nlayers,
-                                cudaMemcpyDeviceToHost));
-        HANDLE_ERROR(cudaMemcpy(output_data->sw_flux_down_per_w,
-                                vars->sw_flux_down_per_w,
-                                sizeof(*(output_data->sw_flux_down_per_w))*nws*nlevels,
-                                cudaMemcpyDeviceToHost));
-        HANDLE_ERROR(cudaMemcpy(output_data->sw_flux_up_per_w,
-                                vars->sw_flux_up_per_w,
-                                sizeof(*(output_data->sw_flux_up_per_w))*nws*nlevels,
-                                cudaMemcpyDeviceToHost));
-
-        /*Integrate the fluxes over wavenumber.*/
-        log_mesg("Integrating shortwave fluxes across wavenumbers at"
-                     " point (%d,%d,%d).",
-                 time,
-                 lon,
-                 lat);
-        for (i=0;i<nlevels;++i)
+        else if (use_o3_ctm && mol_id == O3)
         {
-            reimann_sum(&(output_data->sw_flux_up_per_w[i*nws]),
-                        nws,
-                        res,
-                        &(output_data->sw_flux_up[i]));
-            reimann_sum(&(output_data->sw_flux_down_per_w[i*nws]),
-                        nws,
-                        res,
-                        &(output_data->sw_flux_down[i]));
+            /*Calculate the ozone continuum optical depths.*/
+            log_mesg("Calculating optical depth due to the ozone"
+                         " continuum across %d layers.",
+                     num_layers);
+            HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
+                                                            &dim_block,
+                                                            calc_ozone_ctm_optical_depth,
+                                                            0,
+                                                            ((int)num_lines)));
+            dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
+            calc_ozone_ctm_optical_depth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_wpoints,
+                                                                                                     num_layers,
+                                                                                                     o3_cc->cross_section,
+                                                                                                     Ns,
+                                                                                                     tau);
         }
     }
-
     return SUCCESS;
 }
-#endif

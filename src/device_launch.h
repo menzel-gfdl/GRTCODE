@@ -1,68 +1,37 @@
 #ifndef DEVICE_LAUNCH_H_
 #define DEVICE_LAUNCH_H_
 
+#include <stdint.h>
 #include "floating_point_type.h"
-#include "model_fields.h"
-#include "parseHITRANfile.h"
 #include "ozone_continuum.h"
-#include "output_fields.h"
-#include "solar_flux.h"
+#include "parse_HITRAN_file.h"
 #include "water_vapor_continuum.h"
 
-typedef struct WorkVars
-{
-    fp_t *P;
-    fp_t *T;
-    fp_t *x;
-    fp_t *Pavg;
-    fp_t *Tavg;
-    fp_t *N;
-    fp_t *Ns;
-    fp_t *Psavg;
-    fp_t *GAMMA;
-    fp_t *PSHIFT;
-    fp_t *S;
-    line_params_t *LINES;
-    fp_t *tau_gas;
-    fp_t *tau_scatter;
-    fp_t *lw_flux_down_per_w;
-    fp_t *lw_flux_up_per_w;
-    fp_t *sw_flux_down_per_w;
-    fp_t *sw_flux_up_per_w;
-} WorkVars_t;
 
-#ifdef __NVCC__
-
-
-int alloc_work_vars(WorkVars_t *vars,
-                    int const nlevels,
-                    int const nlines,
-                    int const nws);
-
-
-int free_work_vars(WorkVars_t *vars);
-
-
-int launch(WorkVars_t * const vars,
-           req_model_fields_t * const input_data,
-           SolarFlux_t const * const solar_flux,
-           int const time,
-           int const lon,
-           int const lat,
-           int const nmols,
-           line_params_t ** const line_params,
-           unsigned int const nws,
-           fp_t const w,
-           double const res,
-           int const breadth,
-           int const h2o_ctm,
-           WaterVaporContinuumCoefs_t * const h2o_continuum,
-           int const o3_ctm,
-           OzoneContinuumCoefs_t const * const o3_continuum,
-           OutputFields_t * const output_data);
-
-
-#endif
+int launch(int const num_levels,
+           fp_t const * const P,
+           fp_t const * const T,
+           fp_t const * const x,
+           fp_t * const Pavg,
+           fp_t * const Tavg,
+           fp_t * const N,
+           fp_t * const Ns,
+           fp_t * const Psavg,
+           fp_t * const gamma,
+           fp_t * const Pshift,
+           fp_t * const s,
+           LineParams_t *lines,
+           int const num_molecules,
+           LineParams_t ** const line_params,
+           double const w0,
+           double const wres,
+           uint64_t const num_wpoints,
+           double const wcutoff,
+           int const use_h2o_ctm,
+           WaterVaporContinuumCoefs_t * const h2o_cc,
+           int const use_o3_ctm,
+           OzoneContinuumCoefs_t const * const o3_cc,
+           fp_t * const tau);
 
 
 #endif

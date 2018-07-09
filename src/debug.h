@@ -1,18 +1,57 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "netcdf.h"
-#include "radiation_solvers.h"
 
 
 enum return_codes
 {
-    SUCCESS = 0,
-    ERR
+    SUCCESS,
+    INVALID_ERR,
+    DIVBYZERO_ERR,
+    OVERFLOW_ERR,
+    UNDERFLOW_ERR,
+    SENTINEL_ERR,
+    NULL_ERR,
+    NON_NULL_ERR,
+    RANGE_ERR,
+    VALUE_ERR,
+    COMPILER_ERR,
+    IO_ERR
+/*
+    SUCCESS = GRT_SUCCESS,
+    INVALID_ERR = GRT_INVALID,
+    DIVBYZERO_ERR = GRT_DIVBYZERO,
+    OVERFLOW_ERR = GRT_OVERFLOW,
+    UNDERFLOW_ERR = GRT_UNDERFLOW,
+    SENTINEL_ERR = GRT_SENTINEL,
+    NULL_ERR = GRT_NULL,
+    NON_NULL_ERR = GRT_NON_NULL,
+    RANGE_ERR = GRT_OUT_OF_RANGE,
+    VALUE_ERR = GRT_VALUE_ERR,
+    COMPILER_ERR = GRT_COMPILER_ERR,
+    IO_ERR = GRT_IO_ERR
+*/
 };
+
+
+#ifdef __CUDA_ARCH__
+#undef DEBUG
+#undef VERBOSE
+#undef FAST
+#else
+#ifdef DEBUG
+#define VERBOSE
+#undef FAST
+#endif
+#endif
+
+
+/*Macros that provide debugging information.*/
+#ifdef VERBOSE
 
 
 #define backtrace() {\
@@ -30,6 +69,25 @@ enum return_codes
     backtrace();}
 
 
+#define log_warn(mesg,...) {\
+    fprintf(stderr, \
+            "[Warn] (%s:%d)" mesg "\n", \
+            __FILE__, \
+            __LINE__, \
+            __VA_ARGS__);}
+
+
+#else
+
+
+#define backtrace() {}
+#define log_err(mesg,...) {}
+#define log_warn(mesg,...) {}
+
+
+#endif
+
+
 #define log_mesg(mesg,...) {\
     fprintf(stderr, \
             "[%s:%d]: " mesg "\n", \
@@ -38,19 +96,11 @@ enum return_codes
             __VA_ARGS__);}
 
 
-#define fatal(mesg,...) {\
+/*Macros that return error codes.*/
+#define fatal(err,mesg,...) {\
     log_err(mesg, \
             __VA_ARGS__); \
-    return ERR;}
-
-
-#ifdef __NVCC__
-#define using_gpu() {}
-#else
-#define using_gpu() {\
-    fatal("%s","you cannot make CUDA calls unless you compile with nvcc." \
-               "  To run on only a host CPU, include the -h option.");}
-#endif
+    return err;}
 
 
 #define check(val) {\
@@ -62,60 +112,96 @@ enum return_codes
     }}
 
 
+#define sentinel() {\
+    fatal(SENTINEL_ERR, \
+          "This branch should never be reached (%s,%d).", \
+          __FILE__, \
+          __LINE__)};
+
+
+/*Safety checks.*/
+#if defined(__CUDA_ARCH__) || defined(FAST)
+
+
+#define not_null(p) {}
+#define is_null(p) {}
+#define not_nan(v) {}
+#define min_check(v,min) {}
+#define max_check(v,max) {}
+#define in_range(v,min,max) {}
+
+
+#else
+
+
 #define not_null(p) {\
     if (p == NULL) \
     { \
-        fatal("null pointer at address %p.",(void *)(&p)); \
+        fatal(NULL_ERR, \
+              "null pointer at address %p.",(void *)(&p)); \
     }}
 
 
 #define is_null(p) {\
     if (p != NULL) \
     { \
-        fatal("pointer at address %p is not null.",(void *)(&p)); \
+        fatal(NON_NULL_ERR, \
+              "pointer at address %p is not null.",(void *)(&p)); \
     }}
 
 
-#define netcdf_check(val) {\
-    int e_ = val; \
-    if (e_ != NC_NOERR) \
+#define not_nan(v) {\
+    if (isnan((double)v)) \
     { \
-        fatal("netcdf returned error code %d. %s.", \
-              e_, \
-              nc_strerror(e_)); \
+        fatal(INVALID_ERR, \
+              "input value (%e) is Nan.", \
+              (double)v); \
     }}
 
 
-#ifdef use_MPI
-#define mpi_check(val) {\
-    int e_ = val; \
-    if (e_ != MPI_SUCCESS) \
+#define min_check(v,min) {\
+    not_nan(v) \
+    not_nan(min) \
+    if (v < min) \
     { \
-        char *err_str_; \
-        int err_str_len_; \
-        MPI_Error_string(e_,err_str_,&err_str_len_); \
-        fatal("mpi returned error code %d. %s.", \
-              e_, \
-              err_str_); \
+        fatal(RANGE_ERR, \
+              "value (%e) less than minimum allowed (%e).", \
+              (double)v, \
+              (double)min); \
     }}
-#else
-#define mpi_check(val) {}
+
+
+#define max_check(v,max) {\
+    not_nan(v) \
+    not_nan(max) \
+    if (v > max) \
+    { \
+        fatal(RANGE_ERR, \
+              "value (%e) greater than maximum allowed (%e).", \
+              (double)v, \
+              (double)max); \
+    }}
+
+
+#define in_range(v,min,max) {\
+    if (min > max) \
+    { \
+        fatal(RANGE_ERR, \
+              "min value (%e) greater tha max value (%e).", \
+              (double)min, \
+              (double)max); \
+    } \
+    min_check(v,min); \
+    max_check(v,max);}
+
+
 #endif
-
-
-#define rs_check(val) {\
-    int e_ = val; \
-    if (e_ != RS_SUCCESS) \
-    { \
-        fatal("radiation solvers library returned error code %d.", \
-              e_); \
-    }}
 
 
 #ifdef __NVCC__
 #define kernel_err(mesg,...) {}
 #else
-#define kernel_err(mesg,...) {log_err(mesg,__VA_ARGS__);exit(ERR);}
+#define kernel_err(mesg,...) {log_err(mesg,__VA_ARGS__);exit(1);}
 #endif
 
 
