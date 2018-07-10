@@ -23,7 +23,10 @@ TESTFOBJ = examplef.o
 TESTFX = examplef.x
 
 all: ${LIBS}
+
 test: ${TESTX} ${TESTFX}
+	./${TESTX}
+	./${TESTFX}
 
 ${STATIC_LIB}: ${OBJ}
 	ar rcs $@ $^

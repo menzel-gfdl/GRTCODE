@@ -3,9 +3,11 @@
 
 #ifdef __NVCC__
 
+
 __host__
 int get_num_gpus(int * num_devices,
                  int const verbose);
+
 
 #endif
 

@@ -17,17 +17,27 @@
         this code calculates the total optical depth of each layer
         at each point on an input spectral grid.  Typical usage of this
         library includes the following steps:\n\n
-            -# Declare a library context pointer.  This pointer will hold
-               the address of a struct that contains all data that is
-               stored/used by the library.\n\n
+
+            -# Declare library context pointer(s).  Each context pointer will
+               hold the address of a struct that contains data that is
+               required by the library.\n\nNote:\n\n
+               Each context can be associated
+               with a single GPU.  If you wish to use multiple GPUs, you must
+               create a context pointer for each GPU you wish to use and pass
+               in the appropriate device id when initalizing the context
+               pointer (i.e., by calling the @ref grt_context_init function.
+               \n\n
+
             -# Set the number of atmospheric levels per column.  Each
                atmospheric level corresponds to an interface  between
                adjacent atmospheric layers.  Thus, the number of atmospheric
                levels = the number of atmospheric layers plus one.  Since
                at least one atmospheric layer is required, the number of
                atmospheric levels must be greater than or equal to two.\n\n
+
             -# Set the upper and lower bounds and resolution of the spectral
                grid on which the optical depths will be calculated.\n\n
+
             -# Optional: Set a cutoff value for the molecular lines.  This
                value denotes how far (in terms of wavenumber) from the line
                center each molecular line is calculated out to.  By default
@@ -35,16 +45,20 @@
                center lies at the wavenumber 150 [1/cm], then it contributes
                to the optical depth at all spectral grid points in the range
                125 <= w <= 175 [1/cm].\n\n
-            -# Optional: Set a flag denoting the architecture you wish to
-               run on.  Here a value of 0 corresponds to running on your host
-               CPU, while any other value corresponds to running on your GPU.
-               If this flag is not set, the library will attempt to use your
-               default GPU (if you have one and you build with the NVIDIA
-               NVCC compiler, see Requirements below).  If no NVIDIA GPU is
-               detected, then only the host CPU will be used.  Please note
-               that if you wish to run on your GPU, it must be an NVIDIA GPU
-               and you must have CUDA installed and compile with the NVCC
-               compiler.\n\n
+
+            -# Optional: Determine the id of GPU device you wish to associate
+               with each context.  A list of NVIDIA GPUs on your system can
+               be found by running:\n\n
+               ```$ nvidia-smi --list-gpus```\n\n
+               If you do not specify a GPU id when initializing the context,
+               the library will query the system for available GPUs.  If any
+               are found, then the default (Device 0) will be used.  If you
+               wish to run only on your host CPU, pass in -1 as the GPU id
+               when calling the @ref grt_context_init function.  Please note
+               that if you wish to run a GPU, you must have a NVIDIA GPU,
+               install CUDA, and compile with the NVCC compiler (see
+               Requirements below).\n\n
+
             -# Optional: Set flags determining whether or not the continuum
                for water vapor and ozone will be included in the optical
                depth calculation.  A value of 0 corresponds to running
@@ -54,8 +68,10 @@
                By default the library will attempt to include the continua
                if the required inputs are found, otherwise they will not
                be included in the optical depth calculation.\n\n
-            -# Initialize the library by calling the @ref initialize_grt
+
+            -# Initialize the context(s) by calling the @ref grt_context_init
                function with the necessary arguments.\n\n
+
             -# Add each molecule that you want included in the optical
                depth calculation by calling the @ref add_molecule function.
                Each added molecule requires an ascii [HITRAN]
@@ -71,12 +87,14 @@
                repository. Please note that the ozone and water vapor
                continua will only be included if the ozone and water vapor
                molecules are added.\n\n
+
             -# Set the abundance [ppmv] of each added molecule by calling
                the @ref set_molecule_ppmv function.  The number of elements
                in the input abundance array must be
                equal to the number of atmospheric levels passed into the
                @ref initialize_grt function, or else the behavior is
                undefined.\n\n
+
             -# Calculate the optical depth for each layer in the column
                at each spectral grid point by calling the
                @ref calculate_optical_depth function.  The number of elements
@@ -88,6 +106,7 @@
                (returned by the @ref initialize_grt function).  If any of
                these arrays have an incorrect size, the behavior is
                undefined.\n\n
+
             -# Finalize the library by calling the @ref finalize_grt function.
                This function frees all memory allocated by the library.\n\n
 
@@ -161,7 +180,7 @@ typedef struct GrtContext
     double wres; /**< Spectral resolution [1/cm].*/
     uint64_t num_wpoints; /**< Number of spectral grid points.*/
     double wcutoff; /**< Cutoff from spectral line center [1/cm].*/
-    int use_gpu; /**< Flag telling if the lines will calculated on a GPU.*/
+    int gpu_id; /**< Id of the GPU that is associated with this context.*/
     int num_threads; /**< Number of CPU threads that will be used to calculate
                           the lines (if not using a GPU).*/
     int use_h2o_ctm; /**< Flag for using the water vapor continuum.*/
@@ -196,35 +215,37 @@ typedef struct GrtContext
 #ifdef __NVCC__
 extern "C"
 #endif
-int initialize_grt(GrtContext_t **context, /**< Library context.*/
-                   int const num_levels, /**< Number of atmospheric levels.*/
-                   double const w0, /**< Lowest wavenumber [1/cm] on spectral grid.*/
-                   double const wn, /**< Highest wavenumber [1/cm] on spectral grid.*/
-                   double const wres, /**< Spectral grid resolution [1/cm].*/
-                   uint64_t * const num_wpoints, /**< Number of points on spectral grid.*/
-                   double const * const wcutoff, /**< Cutoff [1/cm] from spectral line center.
-                                                      Default value is 25.*/
-                   int const * const use_gpu, /**< Flag to determine architecture where:\n
-                                                   0 implies run on host CPU\n
-                                                   != 0 implies run on GPU\n
-                                                   Defaults to running on the host CPU.*/
-                   int const * const num_threads, /**< If running on the host CPU,
-                                                       determines the maximum number
-                                                       of OpenMP threads that will
-                                                       be used.  Defaults to
-                                                       omp_get_max_threads (or one
-                                                       if not build with OpenMP).*/
-                   int const * const use_h2o_ctm, /**< Flag to determine if the water
-                                                       vapor continumm will be included where:\n
+int grt_context_init(GrtContext_t **context, /**< Library context.*/
+                     int const num_levels, /**< Number of atmospheric levels.*/
+                     double const w0, /**< Lowest wavenumber [1/cm] on spectral grid.*/
+                     double const wn, /**< Highest wavenumber [1/cm] on spectral grid.*/
+                     double const wres, /**< Spectral grid resolution [1/cm].*/
+                     uint64_t * const num_wpoints, /**< Number of points on spectral grid.*/
+                     double const * const wcutoff, /**< Cutoff [1/cm] from spectral line center.
+                                                        Default value is 25.*/
+                     int const * const gpu_id, /**< Id of the GPU that will be associated
+                                                    with this context.  If NULL, then
+                                                    use GPU 0 if at least one GPU
+                                                    exists on the system, or else
+                                                    set to -1 (corresponding to
+                                                    a host only run.*/
+                     int const * const num_threads, /**< If running on the host CPU,
+                                                         determines the maximum number
+                                                         of OpenMP threads that will
+                                                         be used.  Defaults to
+                                                         omp_get_max_threads (or one
+                                                         if not build with OpenMP).*/
+                     int const * const use_h2o_ctm, /**< Flag to determine if the water
+                                                         vapor continumm will be included where:\n
+                                                         0 implies no continuum\n
+                                                         != 0 implies use the continuum\n
+                                                         Defaults to running with the continuum.*/
+                     int const * const use_o3_ctm /**< Flag to determine if the ozone
+                                                       continumm will be included where:\n
                                                        0 implies no continuum\n
-                                                       != 0 implies use the continuum\n
+                                                       != 0 impiles use the continuum\n
                                                        Defaults to running with the continuum.*/
-                   int const * const use_o3_ctm /**< Flag to determine if the ozone
-                                                     continumm will be included where:\n
-                                                     0 implies no continuum\n
-                                                     != 0 impiles use the continuum\n
-                                                     Defaults to running with the continuum.*/
-                  );
+                    );
 
 
 /**
@@ -235,8 +256,8 @@ int initialize_grt(GrtContext_t **context, /**< Library context.*/
 #ifdef __NVCC__
 extern "C"
 #endif
-int finalize_grt(GrtContext_t **context /**< Library context.*/
-                );
+int grt_context_free(GrtContext_t **context /**< Library context.*/
+                    );
 
 
 /**

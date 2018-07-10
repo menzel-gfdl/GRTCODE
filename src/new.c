@@ -16,6 +16,9 @@
 #include "new.h"
 #include "ozone_continuum.h"
 #include "parse_HITRAN_file.h"
+#ifdef __NVCC__
+#include "query_gpu.cuh"
+#endif
 #include "TIPS_2011.h"
 #include "utils.h"
 #include "water_vapor_continuum.h"
@@ -37,7 +40,8 @@ int const MAX_NUM_LINES = 524288; /*2^19*/
 
 /*Optional parameter default values.*/
 double const DEFAULT_CUTOFF = 25.;
-int const DEFAULT_USE_GPU = 1;
+int const DEFAULT_GPU = 0;
+int const HOST_ONLY = -1;
 int const DEFAULT_H2O_CONTINUUM = 1;
 int const DEFAULT_O3_CONTINUUM = 1;
 
@@ -46,17 +50,17 @@ int const DEFAULT_O3_CONTINUUM = 1;
 #ifdef __NVCC__
 extern "C"
 #endif
-int initialize_grt(GrtContext_t **context,
-                   int const num_levels,
-                   double const w0,
-                   double const wn,
-                   double const wres,
-                   uint64_t * const num_wpoints,
-                   double const * const wcutoff,
-                   int const * const use_gpu,
-                   int const * const num_threads,
-                   int const * const use_h2o_ctm,
-                   int const * const use_o3_ctm)
+int grt_context_init(GrtContext_t **context,
+                     int const num_levels,
+                     double const w0,
+                     double const wn,
+                     double const wres,
+                     uint64_t * const num_wpoints,
+                     double const * const wcutoff,
+                     int const * const gpu_id,
+                     int const * const num_threads,
+                     int const * const use_h2o_ctm,
+                     int const * const use_o3_ctm)
 {
     /*Guard against bad constants.*/
     assert(MIN_NUM_LEVELS >= 2);
@@ -106,20 +110,43 @@ int initialize_grt(GrtContext_t **context,
         c.wcutoff = DEFAULT_CUTOFF;
     }
 
-    if (use_gpu != NULL)
+#ifdef __NVCC__
+    int num_devices;
+    check(get_num_gpus(&num_devices,
+                       1));
+#else
+    int num_devices = 0;
+#endif
+
+    if (gpu_id != NULL)
     {
-        c.use_gpu = *use_gpu;
+        if (*gpu_id != HOST_ONLY)
+        {
+            in_range(*gpu_id,0,num_devices);
+        }
+        c.gpu_id = *gpu_id;
     }
     else
     {
-        c.use_gpu = DEFAULT_USE_GPU;
+        if (num_devices > 0)
+        {
+            c.gpu_id = DEFAULT_GPU;
+        }
+        else
+        {
+            c.gpu_id = HOST_ONLY;
+        }
     }
-    if (c.use_gpu)
+    if (c.gpu_id != HOST_ONLY)
     {
 #ifndef __NVCC__
         fatal(COMPILER_ERR,
-              "you must build with nvcc in order to use GPUs (use_gpu=%d.)",
-              c.use_gpu);
+              "you must build with nvcc in order to use GPUs (gpu_id=%d.)",
+              c.gpu_id);
+#else
+        HANDLE_ERROR(cudaSetDevice(c.gpu_id));
+        log_mesg("Molecular lines will be calculated using GPU device %d.",
+                 c.gpu_id);
 #endif
     }
 
@@ -159,7 +186,7 @@ int initialize_grt(GrtContext_t **context,
                                               c.wres));
         check(malloc_ptr((void **) (&c.h2o_cc),
                          sizeof(*(c.h2o_cc))));
-        if (c.use_gpu)
+        if (c.gpu_id != HOST_ONLY)
         {
             check(put_water_vapor_coefs_on_device(&h2o_cc,
                                                   c.h2o_cc));
@@ -191,7 +218,7 @@ int initialize_grt(GrtContext_t **context,
                                         c.wres));
         check(malloc_ptr((void **) (&c.o3_cc),
                          sizeof(*(c.o3_cc))));
-        if (c.use_gpu)
+        if (c.gpu_id != HOST_ONLY)
         {
             check(put_ozone_coefs_on_device(&o3_cc,
                                             c.o3_cc));
@@ -209,7 +236,7 @@ int initialize_grt(GrtContext_t **context,
     check(malloc_ptr((void **)(&(c.line_params)),
                      sizeof(*(c.line_params))*MAX_NUM_MOLECULES));
     not_null(c.line_params);
-    if (c.use_gpu)
+    if (c.gpu_id != HOST_ONLY)
     {
 #ifdef __NVCC__
         size_t num_elements = c.num_levels;
@@ -289,7 +316,7 @@ int initialize_grt(GrtContext_t **context,
 #ifdef __NVCC__
 extern "C"
 #endif
-int finalize_grt(GrtContext_t **context)
+int grt_context_free(GrtContext_t **context)
 {
     not_null(context);
     GrtContext_t *c = *context;
@@ -302,9 +329,10 @@ int finalize_grt(GrtContext_t **context)
                                     flags));
     }
     free(c->line_params);
-    if (c->use_gpu)
+    if (c->gpu_id != HOST_ONLY)
     {
 #ifdef __NVCC__
+        HANDLE_ERROR(cudaSetDevice(c->gpu_id));
         HANDLE_ERROR(cudaFree(c->P));
         HANDLE_ERROR(cudaFree(c->T));
         HANDLE_ERROR(cudaFree(c->x));
@@ -335,7 +363,7 @@ int finalize_grt(GrtContext_t **context)
     }
     if (c->use_h2o_ctm)
     {
-        if (c->use_gpu)
+        if (c->gpu_id != HOST_ONLY)
         {
             check(remove_water_vapor_coefs_from_device(c->h2o_cc));
         }
@@ -347,7 +375,7 @@ int finalize_grt(GrtContext_t **context)
     }
     if (c->use_o3_ctm)
     {
-        if (c->use_gpu)
+        if (c->gpu_id != HOST_ONLY)
         {
             check(remove_ozone_coefs_from_device(c->o3_cc));
         }
@@ -423,9 +451,10 @@ int set_molecule_ppmv(GrtContext_t *context,
     in_range(molecule_id,0,context->num_molecules-1);
     int offset = molecule_id*context->num_levels;
     size_t num_bytes = sizeof(*ppmv)*context->num_levels;
-    if (context->use_gpu)
+    if (context->gpu_id != HOST_ONLY)
     {
 #ifdef __NVCC__
+        HANDLE_ERROR(cudaSetDevice(context->gpu_id));
         HANDLE_ERROR(cudaMemcpy(&(context->x[offset]),
                                 ppmv,
                                 num_bytes,
@@ -456,9 +485,10 @@ int calculate_optical_depth(GrtContext_t *context,
     not_null(pressure);
     not_null(temperature);
     not_null(optical_depth);
-    if (context->use_gpu)
+    if (context->gpu_id != HOST_ONLY)
     {
 #ifdef __NVCC__
+        HANDLE_ERROR(cudaSetDevice(context->gpu_id));
         size_t num_elements = context->num_levels;
         HANDLE_ERROR(cudaMemcpy(context->P,
                                 pressure,

@@ -3,7 +3,8 @@
 
 #ifdef __NVCC__
 
-#include "cudaHelpers.cuh"
+#include "cuda_helpers.cuh"
+
 
 __host__
 int get_num_gpus(int * num_devices,
@@ -26,5 +27,6 @@ int get_num_gpus(int * num_devices,
     }
     return SUCCESS;
 }
+
 
 #endif

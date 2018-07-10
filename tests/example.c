@@ -30,26 +30,23 @@ int main(void)
     double wn = 100.;
     double wres = 0.1;
     uint64_t num_wpoints;
-    int use_gpu = 0; /*0 = host only run. use_gpu = 1 will attempt to run
-                       on the default GPU, but requires the program to be
-                       compiled with nvcc.*/
-    int use_h2o_ctm = 1;
-    int use_o3_ctm = 1;
-    check_rc(initialize_grt(&context,
-                            num_levels,
-                            w0,
-                            wn,
-                            wres,
-                            &num_wpoints,
-                            NULL,
-                            &use_gpu,
-                            NULL,
-                            &use_h2o_ctm,
-                            &use_o3_ctm));
+    int use_h2o_ctm = 0;
+    int use_o3_ctm = 0;
+    check_rc(grt_context_init(&context,
+                              num_levels,
+                              w0,
+                              wn,
+                              wres,
+                              &num_wpoints,
+                              NULL,
+                              NULL,
+                              NULL,
+                              &use_h2o_ctm,
+                              &use_o3_ctm));
 
     /*Add water vapor.*/
     char h2o_hitran[64];
-    snprintf(h2o_hitran,64,"h2o_hit12.par");
+    snprintf(h2o_hitran,64,"HITRAN_FILES/01_hit12.par");
     int h2o;
     double min_line_center_wavenumber = 4.;
     double max_line_center_wavenumber = 8.;
@@ -97,5 +94,5 @@ int main(void)
     free(optical_depth);
 
     /*Finalize library.*/
-    check_rc(finalize_grt(&context));
+    check_rc(grt_context_free(&context));
 }

@@ -13,8 +13,8 @@ module molecular_lines
     !! \include examplef.F90
 
 
-    public :: initialize_grt_f
-    public :: finalize_grt_f
+    public :: grt_context_init_f
+    public :: grt_context_free_f
     public :: add_molecule_f
     public :: set_molecule_ppmv_f
     public :: calculate_optical_depth_f
@@ -30,19 +30,19 @@ module molecular_lines
 
     interface
         !> \brief function 1
-        function initialize_grt_f(context, &
-                                  num_levels, &
-                                  w0, &
-                                  wn, &
-                                  wres, &
-                                  num_wpoints, &
-                                  wcutoff, &
-                                  use_gpu, &
-                                  num_threads, &
-                                  use_h2o_ctm, &
-                                  use_o3_ctm) &
+        function grt_context_init_f(context, &
+                                    num_levels, &
+                                    w0, &
+                                    wn, &
+                                    wres, &
+                                    num_wpoints, &
+                                    wcutoff, &
+                                    gpu_id, &
+                                    num_threads, &
+                                    use_h2o_ctm, &
+                                    use_o3_ctm) &
             result(return_code) &
-            bind(c,name="initialize_grt")
+            bind(c,name="grt_context_init")
             use iso_c_binding
             implicit none
             type(c_ptr),intent(inout) :: context
@@ -52,25 +52,25 @@ module molecular_lines
             real(kind=c_double),value,intent(in) :: wres
             integer(kind=c_int64_t),intent(inout) :: num_wpoints
             real(kind=c_double),intent(in),optional :: wcutoff
-            integer(kind=c_int),intent(in),optional :: use_gpu
+            integer(kind=c_int),intent(in),optional :: gpu_id
             integer(kind=c_int),intent(in),optional :: num_threads
             integer(kind=c_int),intent(in),optional :: use_h2o_ctm
             integer(kind=c_int),intent(in),optional :: use_o3_ctm
             integer(kind=c_int) :: return_code
-        end function initialize_grt_f
+        end function grt_context_init_f
     end interface
 
 
     !> \brief function 1
     interface
-        function finalize_grt_f(context) &
+        function grt_context_free_f(context) &
             result(return_code) &
-            bind(c,name="finalize_grt")
+            bind(c,name="grt_context_free")
             use iso_c_binding
             implicit none
             type(c_ptr),intent(inout) :: context
             integer(kind=c_int) :: return_code
-        end function finalize_grt_f
+        end function grt_context_free_f
     end interface
 
 

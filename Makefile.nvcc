@@ -13,7 +13,7 @@ OBJ = molecular_lines.o new.o device_launch.o host_launch.o \
       eval_snn_correction.o eval_pshift.o eval_gamma.o pre_eval_snn.o \
       integrate_layer.o line_shape_utils.o gas_properties.o RFM_voigt.o \
       ida_voigt.o doppler.o lorentz.o TIPS_2011.o parse_HITRAN_file.o \
-      parse_csv.o molecules.o utils.o cuda_helpers.o
+      parse_csv.o molecules.o utils.o query_gpu.o cuda_helpers.o
 LIB_NAME = molecular_lines
 STATIC_LIB = lib${LIB_NAME}.a
 SHARED_LIB = lib${LIB_NAME}.so
@@ -27,7 +27,10 @@ TESTFOBJ = examplef.o
 TESTFX = examplef.x
 
 all: ${LIBS}
+
 test: ${TESTX} ${TESTFX}
+	./${TESTX}
+	./${TESTFX}
 
 ${STATIC_LIB}: ${OBJ}
 	ar rcs $@ $^

@@ -56,8 +56,6 @@ int launch_h(int const num_levels,
     not_null(Pshift);
     not_null(s);
     not_null(line_params);
-    not_null(h2o_cc);
-    not_null(o3_cc);
     not_null(tau);
 
     /*Zero out buffers used to accumulate results.*/
@@ -68,7 +66,7 @@ int launch_h(int const num_levels,
 
     /*Calculate the total number density of air moleucles integrated across
       each layer.*/
-    log_mesg("Integration total number density across %d layers.",
+    log_mesg("Integrating total number density across %d layers.",
              num_layers);
     check(integrated_N_h(num_layers,
                          P,
@@ -189,6 +187,7 @@ int launch_h(int const num_levels,
         if (use_h2o_ctm && mol_id == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
+            not_null(h2o_cc);
             log_mesg("Calculating optical depth due to the water vapor"
                          " continuum across %d layers.",
                      num_layers);
@@ -207,6 +206,7 @@ int launch_h(int const num_levels,
         else if (use_o3_ctm && mol_id == O3)
         {
             /*Calculate the ozone continuum optical depths.*/
+            not_null(o3_cc);
             log_mesg("Calculating optical depth due to the ozone"
                          " continuum across %d layers.",
                      num_layers);

@@ -32,17 +32,17 @@ program test
     wn = 100._c_double
     wres = 0.1_c_double
     num_columns = 4
-    h2o_hitran = "h2o_hit12.par"
+    h2o_hitran = "HITRAN_FILES/01_hit12.par"
 
     !Initalize library.
-    rc = initialize_grt_f(context, &
-                          num_levels, &
-                          w0, &
-                          wn, &
-                          wres, &
-                          num_wpoints, &
-                          use_gpu=0, &
-                          use_h2o_ctm=1)
+    rc = grt_context_init_f(context, &
+                            num_levels, &
+                            w0, &
+                            wn, &
+                            wres, &
+                            num_wpoints, &
+                            use_h2o_ctm=0, &
+                            use_o3_ctm=0)
     call check_rc(rc)
 
     !Add water vapor.
@@ -90,7 +90,7 @@ program test
     deallocate(optical_depth)
 
     !Finalize library.
-    rc = finalize_grt_f(context)
+    rc = grt_context_free_f(context)
     call check_rc(rc)
 
 
