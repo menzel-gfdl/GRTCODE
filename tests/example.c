@@ -46,7 +46,7 @@ int main(void)
 
     /*Add water vapor.*/
     char h2o_hitran[64];
-    snprintf(h2o_hitran,64,"HITRAN_FILES/01_hit12.par");
+    snprintf(h2o_hitran,64,"HITRAN_files/01_hit12.par");
     int h2o;
     double min_line_center_wavenumber = 4.;
     double max_line_center_wavenumber = 8.;

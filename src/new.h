@@ -84,7 +84,7 @@
                (http://dx.doi.org/10.1016/j.jqsrt.2013.07.002).
                Example HITRAN database files
                for a select set of molecules are included with this library in
-               a directory labeled HITRAN_FILES in the base of this
+               a directory labeled HITRAN_files in the base of this
                repository.\n\n
                \attention Ozone and water vapor continua will only be
                    included in the optical depth calculation if the ozone

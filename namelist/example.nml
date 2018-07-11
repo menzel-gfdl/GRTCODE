@@ -1,0 +1,6 @@
+&molecular_lines_nml
+num_levels = 48
+w0 = 1.
+wn = 2000.
+wres = 1.
+/

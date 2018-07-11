@@ -1,6 +1,6 @@
 program test
     use iso_c_binding
-    use molecular_lines
+    use molecular_lines_f
     implicit none
 
 #ifdef DOUBLE_PRECISION
@@ -36,9 +36,9 @@ program test
     wn = 500._c_double
     wres = 0.1_c_double
     num_columns = 4
-    h2o_hitran = "HITRAN_FILES/01_hit12.par"
+    h2o_hitran = "HITRAN_files/01_hit12.par"
     h2o_ctm_dir = "water_vapor_continuum"
-    o3_hitran = "HITRAN_FILES/03_hit12.par"
+    o3_hitran = "HITRAN_files/03_hit12.par"
     o3_ctm_dir = "ozone_continuum"
 
     !Initalize a context.

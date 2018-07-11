@@ -1,5 +1,5 @@
 !> @file
-module molecular_lines
+module molecular_lines_f
     use iso_c_binding
     implicit none
     private
@@ -12,7 +12,6 @@ module molecular_lines
     !!     documentation for further details.
     !! \section Example
     !! \include examplef.F90
-    public :: GrtContext_t
     public :: grt_context_init_f
     public :: grt_context_free_f
     public :: add_molecule_f
@@ -28,9 +27,9 @@ module molecular_lines
 #endif
 
 
-    !> @ingroup lowlevelfortranapi
-    !! @brief Library context.
-    type GrtContext_t
+    !> Library context
+    !! @ingroup lowlevelfortranapi
+    type,public :: GrtContext_t
         private
         type(c_ptr) :: p !< c pointer containing the address of a struct
                          !! where all data required by the context is
@@ -346,95 +345,4 @@ module molecular_lines
         end subroutine grt_errstr_f
 
 
-
-
-
-
-
-
-
-
-
-#ifdef FOO
-    !> \defgroup highlevelfortranapi High Level Fortran API
-    !! \section Overview
-    !!     The high level fortran API provides a more simplified interface,
-    !!     at the expense of more fine-grained control.
-
-
-    !Namelist variables.
-    integer(kind=c_int) :: num_levels = 60
-    real(kind=c_double) :: w0 = 1._c_double
-    real(kind=c_double) :: wn = 50000._c_double
-    real(kind=c_double) :: wres = 0.1_c_double
-    namelist /grt_nml/ num_levels, &
-                       w0, &
-                       wn, &
-                       wres
-
-
-    !Private variables.
-    type(c_ptr) :: context
-
-
-    subroutine check_rc(rc)
-        integer(kind=c_int),intent(in) :: rc
-        if (rc .ne. 0) then
-            stop 1
-        endif
-    end subroutine check_rc
-
-
-    subroutine grt_init(hitran_filepaths, &
-                        molecule_ids, &
-                        num_wpoints)
-        character(len=*),dimension(:),intent(in) :: hitran_filepaths
-        integer(kind=c_int),dimension(:),intent(in) :: molecule_ids
-        integer(kind=c_int64_t),intent(inout) :: num_wpoints
-        character(kind=c_char,len=1024) :: buf
-        integer(kind=c_int) :: rc
-        integer(kind=c_int) :: i
-        if (size(hitran_filepaths) .ne. size(molecule_ids)) then
-            stop 1
-        endif
-        do i = 10,99
-            inquire()
-            open(unit=i,file="grt_nml",action="read")
-            read(i,grt_nml)
-            close(i)
-            exit
-        enddo
-        if (i .eq. 100) then
-            stop 1
-        endif
-
-
-        rc = initialize_grt(context, &
-                            num_levels, &
-                            w0, &
-                            wn, &
-                            wres, &
-                            num_wpoints)
-        call check_rc(rc)
-        do i = 1,size(hitran_filepaths)
-            buf = ""
-            buf = trim(hitran_filepaths(i))//c_null_char
-            rc = add_molecule(context, &
-                              buf, &
-                              molecule_ids(i))
-            call check_rc(rc)
-        enddo
-
-    end subroutine grt_init
-
-
-    subroutine grt_end()
-        integer(kind=c_int) :: rc
-        rc = finalize_grt(context)
-        call check_rc(rc)
-    end subroutine grt_end
-
-#endif
-
-
-end module molecular_lines
+end module molecular_lines_f
