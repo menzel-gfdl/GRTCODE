@@ -14,6 +14,7 @@ typedef struct OzoneContinuumCoefs
 
 /*Read in the ozone continuum coefficients.*/
 int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
+                              char const * const o3_ctm_dir,
                               uint64_t const num_wpoints,
                               double const w0,
                               double const res);

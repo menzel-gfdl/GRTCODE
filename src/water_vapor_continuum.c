@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef _OPENMP
@@ -17,30 +18,62 @@
 
 /*Read in the water vapor continuum coefficients.*/
 int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
+                                    char const * const h2o_ctm_dir,
                                     uint64_t const num_wpoints,
                                     double const w0,
                                     double const res)
 {
     not_null(cc);
+    not_null(h2o_ctm_dir);
 
     /*Set file names.*/
     char *filepath[NUM_COEFS];
-    filepath[MTCKD25_F296] = "INPUT/water_vapor_continuum/296MTCKD25_F.csv";
-    filepath[MTCKD25_S296] = "INPUT/water_vapor_continuum/296MTCKD25_S.csv";
-    filepath[CKDF] = "INPUT/water_vapor_continuum/CKDF.csv";
-    filepath[CKDS] = "INPUT/water_vapor_continuum/CKDS.csv";
     int num_vals[NUM_COEFS];
-    num_vals[MTCKD25_F296] = 1;
-    num_vals[MTCKD25_S296] = 1;
-    num_vals[CKDF] = 3;
-    num_vals[CKDS] = 3;
+    size_t s = strlen(h2o_ctm_dir) + 64;
+    int i;
+    for (i=0;i<NUM_COEFS;++i)
+    {
+        check(malloc_ptr((void **)(&(filepath[i])),
+                         sizeof(**filepath)*s));
+        switch (i)
+        {
+            case MTCKD25_F296:
+                snprintf(filepath[i],
+                         s,
+                         "%s/296MTCKD25_F.csv",
+                         h2o_ctm_dir);
+                num_vals[i] = 1;
+                break;
+            case MTCKD25_S296:
+                snprintf(filepath[i],
+                         s,
+                         "%s/296MTCKD25_S.csv",
+                         h2o_ctm_dir);
+                num_vals[i] = 1;
+                break;
+            case CKDF:
+                snprintf(filepath[i],
+                         s,
+                         "%s/CKDF.csv",
+                         h2o_ctm_dir);
+                num_vals[i] = 3;
+                break;
+            case CKDS:
+                snprintf(filepath[i],
+                         s,
+                         "%s/CKDS.csv",
+                         h2o_ctm_dir);
+                num_vals[i] = 3;
+                break;
+            default:
+                sentinel();
+        }
+    }
 
     /*Allocate memory for each of the coefficient pointer.*/
     cc->coefs = NULL;
     check(malloc_ptr((void **)(&(cc->coefs)),
                      sizeof(*(cc->coefs))*NUM_COEFS));
-
-    int i;
     for (i=0;i<NUM_COEFS;++i)
     {
         /*Read in the data.*/
@@ -106,6 +139,10 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
         cc->coefs[i] = c;
     }
     cc->num_wpoints = num_wpoints;
+    for (i=0;i<NUM_COEFS;++i)
+    {
+        free(filepath[i]);
+    }
     return SUCCESS;
 }
 

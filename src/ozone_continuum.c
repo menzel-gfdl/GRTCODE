@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef _OPENMP
@@ -16,14 +17,23 @@
 
 /*Read in the ozone continuum coefficients.*/
 int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
+                              char const * const o3_ctm_dir,
                               uint64_t const num_wpoints,
                               double const w0,
                               double const res)
 {
     not_null(cc);
+    not_null(o3_ctm_dir);
 
     /*Set file name.*/
-    char *filepath = "INPUT/ozone_continuum/ozone_continuum.csv";
+    char *filepath;
+    size_t s = strlen(o3_ctm_dir) + 64;
+    check(malloc_ptr((void **)(&filepath),
+                     sizeof(*filepath)*s));
+    snprintf(filepath,
+             s,
+             "%s/ozone_continuum.csv",
+             o3_ctm_dir);
     int num_vals = 1;
 
     /*Read in the data.*/
@@ -87,6 +97,7 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     free(fbuf);
     cc->cross_section = c;
     cc->num_wpoints = num_wpoints;
+    free(filepath);
     return SUCCESS;
 }
 

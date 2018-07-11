@@ -30,8 +30,8 @@ int main(void)
     double wn = 100.;
     double wres = 0.1;
     uint64_t num_wpoints;
-    int use_h2o_ctm = 0;
-    int use_o3_ctm = 0;
+    char *h2o_ctm_dir = "water_vapor_continuum";
+    char *o3_ctm_dir = "ozone_continuum";
     check_rc(grt_context_init(&context,
                               num_levels,
                               w0,
@@ -41,8 +41,8 @@ int main(void)
                               NULL,
                               NULL,
                               NULL,
-                              &use_h2o_ctm,
-                              &use_o3_ctm));
+                              h2o_ctm_dir,
+                              o3_ctm_dir));
 
     /*Add water vapor.*/
     char h2o_hitran[64];

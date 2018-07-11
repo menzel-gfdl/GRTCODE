@@ -23,6 +23,7 @@ typedef struct WaterVaporContinuumCoefs
 
 
 int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
+                                    char const * const h2o_ctm_dir,
                                     uint64_t const num_wpoints,
                                     double const w0,
                                     double const res);

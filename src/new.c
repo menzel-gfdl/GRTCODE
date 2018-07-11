@@ -59,8 +59,8 @@ int grt_context_init(GrtContext_t **context,
                      double const * const wcutoff,
                      int const * const gpu_id,
                      int const * const num_threads,
-                     int const * const use_h2o_ctm,
-                     int const * const use_o3_ctm)
+                     char const * const h2o_ctm_dir,
+                     char const * const o3_ctm_dir)
 {
     /*Guard against bad constants.*/
     assert(MIN_NUM_LEVELS >= 2);
@@ -168,19 +168,20 @@ int grt_context_init(GrtContext_t **context,
     }
 
     /*Pepare water vapor continuum.*/
-    if (use_h2o_ctm != NULL)
+    if (h2o_ctm_dir != NULL)
     {
-        c.use_h2o_ctm = *use_h2o_ctm;
+        c.use_h2o_ctm = 1;
     }
     else
     {
-        c.use_h2o_ctm = DEFAULT_H2O_CONTINUUM;
+        c.use_h2o_ctm = 0;
     }
     if (c.use_h2o_ctm)
     {
         /*Read in the water vapor continuum coefficients.*/
         WaterVaporContinuumCoefs_t h2o_cc;
         check(get_water_vapor_continuum_coefs(&h2o_cc,
+                                              h2o_ctm_dir,
                                               c.num_wpoints,
                                               c.w0,
                                               c.wres));
@@ -200,19 +201,20 @@ int grt_context_init(GrtContext_t **context,
     }
 
     /*Prepare ozone continuum.*/
-    if (use_o3_ctm != NULL)
+    if (o3_ctm_dir != NULL)
     {
-        c.use_o3_ctm = *use_o3_ctm;
+        c.use_o3_ctm = 1;
     }
     else
     {
-        c.use_o3_ctm = DEFAULT_O3_CONTINUUM;
+        c.use_o3_ctm = 0;
     }
     if (c.use_o3_ctm)
     {
         /*Read in the ozone continuum coefficients.*/
         OzoneContinuumCoefs_t o3_cc;
         check(get_ozone_continuum_coefs(&o3_cc,
+                                        o3_ctm_dir,
                                         c.num_wpoints,
                                         c.w0,
                                         c.wres));
