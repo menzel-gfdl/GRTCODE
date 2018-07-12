@@ -42,8 +42,6 @@ int const MAX_NUM_LINES = 524288; /*2^19*/
 double const DEFAULT_CUTOFF = 25.;
 int const DEFAULT_GPU = 0;
 int const HOST_ONLY = -1;
-int const DEFAULT_H2O_CONTINUUM = 1;
-int const DEFAULT_O3_CONTINUUM = 1;
 
 
 /*Initialize the library.*/
@@ -55,7 +53,6 @@ int grt_context_init(GrtContext_t **context,
                      double const w0,
                      double const wn,
                      double const wres,
-                     uint64_t * const num_wpoints,
                      double const * const wcutoff,
                      int const * const gpu_id,
                      int const * const num_threads,
@@ -96,8 +93,6 @@ int grt_context_init(GrtContext_t **context,
               w0);
     }
     c.num_wpoints = (wn-w0)/wres + 1.;
-    not_null(num_wpoints);
-    *num_wpoints = c.num_wpoints;
 
     /*Set optional parameters.*/
     if (wcutoff != NULL)
@@ -397,11 +392,11 @@ int grt_context_free(GrtContext_t **context)
 #ifdef __NVCC__
 extern "C"
 #endif
-int add_molecule(GrtContext_t *context,
-                 char const * const hitran_filepath,
-                 int * const molecule_id,
-                 double const * const min_line_center_wavenumber,
-                 double const * const max_line_center_wavenumber)
+int grt_add_molecule(GrtContext_t *context,
+                     char const * const hitran_filepath,
+                     int * const molecule_id,
+                     double const * const min_line_center_wavenumber,
+                     double const * const max_line_center_wavenumber)
 {
     not_null(context);
     not_null(hitran_filepath);
@@ -444,9 +439,9 @@ int add_molecule(GrtContext_t *context,
 #ifdef __NVCC__
 extern "C"
 #endif
-int set_molecule_ppmv(GrtContext_t *context,
-                      int const molecule_id,
-                      fp_t const * const ppmv)
+int grt_set_molecule_ppmv(GrtContext_t *context,
+                          int const molecule_id,
+                          fp_t const * const ppmv)
 {
     not_null(context);
     not_null(ppmv);
@@ -478,10 +473,10 @@ int set_molecule_ppmv(GrtContext_t *context,
 #ifdef __NVCC__
 extern "C"
 #endif
-int calculate_optical_depth(GrtContext_t *context,
-                            fp_t const * const pressure,
-                            fp_t const * const temperature,
-                            fp_t *optical_depth)
+int grt_calculate_optical_depth(GrtContext_t *context,
+                                fp_t const * const pressure,
+                                fp_t const * const temperature,
+                                fp_t *optical_depth)
 {
     not_null(context);
     not_null(pressure);
@@ -563,6 +558,38 @@ int calculate_optical_depth(GrtContext_t *context,
 }
 
 
+/*Get the number of molecules that have been added to the context.*/
+#ifdef __NVCC__
+extern "C"
+#endif
+int grt_get_num_molecules(GrtContext_t const * const context,
+                          int * const n)
+{
+    not_null(context);
+    not_null(n);
+    *n = context->num_molecules;
+    return SUCCESS;
+}
+
+
+/*Get the number of spectral grid points for the input context.*/
+#ifdef __NVCC__
+extern "C"
+#endif
+int grt_get_spectral_grid_size(GrtContext_t const * const context,
+                               uint64_t * const n)
+{
+    not_null(context);
+    not_null(n);
+    *n = context->num_wpoints;
+    return SUCCESS;
+}
+
+
+/*Return a message for an input return code.*/
+#ifdef __NVCC__
+extern "C"
+#endif
 int grt_errstr(int const code,
                char * const buf,
                int const buf_size)

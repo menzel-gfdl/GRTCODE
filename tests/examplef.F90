@@ -16,6 +16,7 @@ program test
     real(kind=c_double) :: wres
     integer(kind=c_int64_t) :: num_wpoints
     integer(kind=c_int) :: rc
+    integer(kind=c_int) :: num_layers
     integer(kind=c_int) :: num_columns
     character(kind=c_char,len=64) :: h2o_hitran
     integer(kind=c_int) :: h2o
@@ -47,32 +48,35 @@ program test
                             w0, &
                             wn, &
                             wres, &
-                            num_wpoints, &
                             h2o_ctm_dir=trim(h2o_ctm_dir), &
                             o3_ctm_dir=trim(o3_ctm_dir))
     call check_rc(rc)
 
     !Add water vapor to the context.
-    rc = add_molecule_f(context, &
-                        trim(h2o_hitran), &
-                        h2o, &
-                        min_line_center_wavenumber=1._c_double, &
-                        max_line_center_wavenumber=300._c_double)
+    rc = grt_add_molecule_f(context, &
+                            trim(h2o_hitran), &
+                            h2o, &
+                            min_line_center_wavenumber=1._c_double, &
+                            max_line_center_wavenumber=300._c_double)
     call check_rc(rc)
 
     !Add ozone to the context.
-    rc = add_molecule_f(context, &
-                        trim(o3_hitran), &
-                        o3, &
-                        min_line_center_wavenumber=200._c_double, &
-                        max_line_center_wavenumber=500._c_double)
+    rc = grt_add_molecule_f(context, &
+                            trim(o3_hitran), &
+                            o3, &
+                            min_line_center_wavenumber=200._c_double, &
+                            max_line_center_wavenumber=500._c_double)
     call check_rc(rc)
 
     !Mimic getting input data.
+    rc = grt_get_spectral_grid_size_f(context, &
+                                      num_wpoints)
+    call check_rc(rc)
+    num_layers = num_levels - 1
     allocate(pressure(num_levels))
     allocate(temperature(num_levels))
     allocate(ppmv(num_levels))
-    allocate(optical_depth(num_wpoints,(num_levels-1)))
+    allocate(optical_depth(num_wpoints,num_layers))
 
     !Mimic looping over columns.
     do i = 1,num_columns
@@ -85,25 +89,25 @@ program test
         enddo
 
         !Set water vapor ppmv.
-        rc = set_molecule_ppmv_f(context, &
-                                 h2o, &
-                                 ppmv)
+        rc = grt_set_molecule_ppmv_f(context, &
+                                     h2o, &
+                                     ppmv)
         call check_rc(rc)
 
         !Set ozone ppmv.
         do j = 1,num_levels
             ppmv(j) = 600. + 0.3*real(j,kind=FP)
         enddo
-        rc = set_molecule_ppmv_f(context, &
-                                 o3, &
-                                 ppmv)
+        rc = grt_set_molecule_ppmv_f(context, &
+                                     o3, &
+                                     ppmv)
         call check_rc(rc)
 
         !Calculate the optical depths.
-        rc = calculate_optical_depth_f(context, &
-                                       pressure, &
-                                       temperature, &
-                                       optical_depth)
+        rc = grt_calculate_optical_depth_f(context, &
+                                           pressure, &
+                                           temperature, &
+                                           optical_depth)
         call check_rc(rc)
     enddo
 

@@ -14,9 +14,11 @@ module molecular_lines_f
     !! \include examplef.F90
     public :: grt_context_init_f
     public :: grt_context_free_f
-    public :: add_molecule_f
-    public :: set_molecule_ppmv_f
-    public :: calculate_optical_depth_f
+    public :: grt_add_molecule_f
+    public :: grt_set_molecule_ppmv_f
+    public :: grt_calculate_optical_depth_f
+    public :: grt_get_num_molecules_f
+    public :: grt_get_spectral_grid_size_f
     public :: grt_errstr_f
 
 
@@ -43,7 +45,6 @@ module molecular_lines_f
                                   w0, &
                                   wn, &
                                   wres, &
-                                  num_wpoints, &
                                   wcutoff, &
                                   gpu_id, &
                                   num_threads, &
@@ -58,7 +59,6 @@ module molecular_lines_f
             real(kind=c_double),value,intent(in) :: w0
             real(kind=c_double),value,intent(in) :: wn
             real(kind=c_double),value,intent(in) :: wres
-            integer(kind=c_int64_t),intent(inout) :: num_wpoints
             real(kind=c_double),intent(in),optional :: wcutoff
             integer(kind=c_int),intent(in),optional :: gpu_id
             integer(kind=c_int),intent(in),optional :: num_threads
@@ -82,11 +82,11 @@ module molecular_lines_f
 
 
     interface
-        function add_molecule(context, &
-                              hitran_filepath, &
-                              molecule_id, &
-                              min_line_center_wavenumber, &
-                              max_line_center_wavenumber) &
+        function grt_add_molecule(context, &
+                                  hitran_filepath, &
+                                  molecule_id, &
+                                  min_line_center_wavenumber, &
+                                  max_line_center_wavenumber) &
             result(return_code) &
             bind(c)
             use iso_c_binding
@@ -97,14 +97,14 @@ module molecular_lines_f
             real(kind=c_double),intent(in),optional :: min_line_center_wavenumber
             real(kind=c_double),intent(in),optional :: max_line_center_wavenumber
             integer(kind=c_int) :: return_code
-        end function add_molecule
+        end function grt_add_molecule
     end interface
 
 
     interface
-        function set_molecule_ppmv(context, &
-                                   molecule_id, &
-                                   ppmv) &
+        function grt_set_molecule_ppmv(context, &
+                                       molecule_id, &
+                                       ppmv) &
             result(return_code) &
             bind(c)
             use iso_c_binding
@@ -113,15 +113,15 @@ module molecular_lines_f
             integer(kind=c_int),value,intent(in) :: molecule_id
             real(kind=FP),dimension(*),intent(in) :: ppmv
             integer(kind=c_int) :: return_code
-        end function set_molecule_ppmv
+        end function grt_set_molecule_ppmv
     end interface
 
 
     interface
-        function calculate_optical_depth(context, &
-                                         pressure, &
-                                         temperature, &
-                                         optical_depth) &
+        function grt_calculate_optical_depth(context, &
+                                             pressure, &
+                                             temperature, &
+                                             optical_depth) &
             result(return_code) &
             bind(c)
             use iso_c_binding
@@ -131,7 +131,35 @@ module molecular_lines_f
             real(kind=FP),dimension(*),intent(in) :: temperature
             real(kind=FP),dimension(*),intent(inout) :: optical_depth
             integer(kind=c_int) :: return_code
-        end function calculate_optical_depth
+        end function grt_calculate_optical_depth
+    end interface
+
+
+    interface
+        function grt_get_num_molecules(context, &
+                                       n) &
+            result(return_code) &
+            bind(c)
+            use iso_c_binding
+            implicit none
+            type(c_ptr),value,intent(in) :: context
+            integer(kind=c_int),intent(inout) :: n
+            integer(kind=c_int) :: return_code
+        end function grt_get_num_molecules
+    end interface
+
+
+    interface
+        function grt_get_spectral_grid_size(context, &
+                                            n) &
+            result(return_code) &
+            bind(c)
+            use iso_c_binding
+            implicit none
+            type(c_ptr),value,intent(in) :: context
+            integer(kind=c_int64_t),intent(inout) :: n
+            integer(kind=c_int) :: return_code
+        end function grt_get_spectral_grid_size
     end interface
 
 
@@ -162,7 +190,6 @@ module molecular_lines_f
                                     w0, &
                                     wn, &
                                     wres, &
-                                    num_wpoints, &
                                     wcutoff, &
                                     gpu_id, &
                                     num_threads, &
@@ -174,8 +201,6 @@ module molecular_lines_f
             real(kind=c_double),intent(in) :: w0 !< Lowest wavenumber [1/cm] on spectral grid.
             real(kind=c_double),intent(in) :: wn !< Highest wavenumber [1/cm] on spectral grid.
             real(kind=c_double),intent(in) :: wres !< Spectral grid resolution [1/cm].
-            integer(kind=c_int64_t),intent(inout) :: num_wpoints !< Number of points on
-                                                                 !!spectral grid.
             real(kind=c_double),intent(in),optional :: wcutoff !< Cutoff [1/cm] from spectral
                                                                !! line center.  If NULL, this
                                                                !! defaults to 25 [1/cm].*/
@@ -210,7 +235,6 @@ module molecular_lines_f
                                            w0, &
                                            wn, &
                                            wres, &
-                                           num_wpoints, &
                                            wcutoff, &
                                            gpu_id, &
                                            num_threads, &
@@ -236,11 +260,11 @@ module molecular_lines_f
         !!        will be computed and summed to give the total optical optical
         !!        depth of each atmospheric layer at each spectral grid point.
         !! @return 0 if completed successfully, or else an error code.
-        function add_molecule_f(context, &
-                                hitran_filepath, &
-                                molecule_id, &
-                                min_line_center_wavenumber, &
-                                max_line_center_wavenumber) &
+        function grt_add_molecule_f(context, &
+                                    hitran_filepath, &
+                                    molecule_id, &
+                                    min_line_center_wavenumber, &
+                                    max_line_center_wavenumber) &
             result(return_code)
             type(GrtContext_t),intent(in) :: context !< Library context.
             character(len=*),intent(in) :: hitran_filepath !< Path to HITRAN ascii file containing
@@ -256,20 +280,20 @@ module molecular_lines_f
                                                                                   !! computed.  Defaults to 50,000 [1/cm].
             integer(kind=c_int) :: return_code
 
-            return_code = add_molecule(context%p, &
-                                       trim(hitran_filepath)//c_null_char, &
-                                       molecule_id, &
-                                       min_line_center_wavenumber, &
-                                       max_line_center_wavenumber)
-        end function add_molecule_f
+            return_code = grt_add_molecule(context%p, &
+                                           trim(hitran_filepath)//c_null_char, &
+                                           molecule_id, &
+                                           min_line_center_wavenumber, &
+                                           max_line_center_wavenumber)
+        end function grt_add_molecule_f
 
 
         !> @ingroup lowlevelfortranapi
         !! @brief Update the abundances [ppmv] for a molecule.
         !! @return 0 if completed successfully, or else an error code.
-        function set_molecule_ppmv_f(context, &
-                                     molecule_id, &
-                                     ppmv) &
+        function grt_set_molecule_ppmv_f(context, &
+                                         molecule_id, &
+                                         ppmv) &
             result(return_code)
             type(GrtContext_t),intent(in) :: context !< Library context.
             integer(kind=c_int),intent(in) :: molecule_id !< Molecule id returned by
@@ -280,20 +304,20 @@ module molecular_lines_f
                                                           !! levels.
             integer(kind=c_int) :: return_code
 
-            return_code = set_molecule_ppmv(context%p, &
-                                            molecule_id, &
-                                            ppmv)
-        end function set_molecule_ppmv_f
+            return_code = grt_set_molecule_ppmv(context%p, &
+                                                molecule_id, &
+                                                ppmv)
+        end function grt_set_molecule_ppmv_f
 
 
         !> @ingroup lowlevelfortranapi
         !! @brief Calculate the total optical depth of each atmospheric
         !!        layer at each spectral grid point.
         !! @return 0 if completed successfully, or else an error code.
-        function calculate_optical_depth_f(context, &
-                                           pressure, &
-                                           temperature, &
-                                           optical_depth) &
+        function grt_calculate_optical_depth_f(context, &
+                                               pressure, &
+                                               temperature, &
+                                               optical_depth) &
             result(return_code)
             type(GrtContext_t),value,intent(in) :: context !< Library context.
             real(kind=FP),dimension(*),intent(in) :: pressure !< Array of atmospheric pressures [atm].
@@ -315,11 +339,40 @@ module molecular_lines_f
                                                                       !! grid.)
             integer(kind=c_int) :: return_code
 
-            return_code = calculate_optical_depth(context%p, &
-                                                  pressure, &
-                                                  temperature, &
-                                                  optical_depth)
-        end function calculate_optical_depth_f
+            return_code = grt_calculate_optical_depth(context%p, &
+                                                      pressure, &
+                                                      temperature, &
+                                                      optical_depth)
+        end function grt_calculate_optical_depth_f
+
+
+        !> @ingroup lowlevelfortranapi
+        !! @brief Get the number of molecules that have been added to
+        !!        the context.
+        function grt_get_num_molecules_f(context, &
+                                         n) &
+            result(return_code)
+            type(GrtContext_t),intent(in) :: context !< Library context.
+            integer(kind=c_int),intent(inout) :: n !< Number of molecules.
+            integer(kind=c_int) :: return_code
+
+            return_code = grt_get_num_molecules(context%p, &
+                                                n)
+        end function grt_get_num_molecules_f
+
+
+        !> @ingroup lowlevelfortranapi
+        !! @brief Get the spectral grid size.
+        function grt_get_spectral_grid_size_f(context, &
+                                              n) &
+            result(return_code)
+            type(GrtContext_t),intent(in) :: context !< Library context.
+            integer(kind=c_int64_t),intent(inout) :: n !< Spectral grid size.
+            integer(kind=c_int) :: return_code
+
+            return_code = grt_get_spectral_grid_size(context%p, &
+                                                     n)
+        end function grt_get_spectral_grid_size_f
 
 
         !> @ingroup lowlevelfortranapi

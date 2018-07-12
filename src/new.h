@@ -34,7 +34,12 @@
                (lower bound, upper bound, and resolution) for the
                spectral grid on which the optical depths will be calculated.
                \n\n
-               \attention Each atmospheric level corresponds to an interface
+               \attention You must call this function before calling any
+                   other function included in this library.  Failure to do
+                   so will result in undefined behavior.
+
+               \n
+               \note Each atmospheric level corresponds to an interface
                    between adjacent atmospheric layers or the lower/upper
                    edge of the atmosphere.  Thus, the number of atmospheric
                    levels = the number of atmospheric layers plus one.
@@ -74,7 +79,7 @@
                  If you wish to run without either continuum, instead pass
                  in the value NULL.\n\n
             -# Add each molecule that you want included in the optical
-               depth calculation by calling the @ref add_molecule function.
+               depth calculation by calling the @ref grt_add_molecule function.
                Each added molecule requires an ascii [HITRAN]
                (http://hitran.org) database file
                containing the necessary molecular line parameters.  The
@@ -92,7 +97,7 @@
 
                \n
             -# Set the abundance [ppmv] of each added molecule by calling
-               the @ref set_molecule_ppmv function.\n\n
+               the @ref grt_set_molecule_ppmv function.\n\n
                \attention The input abundance array must be contiguous and
                    its size (number of elements) must be equal to the number
                    of atmospheric levels passed into the @ref grt_context_init
@@ -101,7 +106,7 @@
                \n
             -# Calculate the optical depth for each layer in the column
                at each spectral grid point by calling the
-               @ref calculate_optical_depth function.\n\n
+               @ref grt_calculate_optical_depth function.\n\n
                \attention All input arrays must be contiguous.  In addition,
                    the number of elements in the input pressure [atm] and
                    temperature [K] arrays must be equal to the number of
@@ -228,8 +233,6 @@ int grt_context_init(GrtContext_t **context, /**< Library context.*/
                      double const w0, /**< Lowest wavenumber [1/cm] on spectral grid.*/
                      double const wn, /**< Highest wavenumber [1/cm] on spectral grid.*/
                      double const wres, /**< Spectral grid resolution [1/cm].*/
-                     uint64_t * const num_wpoints, /**< Number of points on
-                                                        spectral grid.*/
                      double const * const wcutoff, /**< Cutoff [1/cm] from spectral
                                                         line center.  If NULL, this
                                                         defaults to 25 [1/cm].*/
@@ -282,19 +285,19 @@ int grt_context_free(GrtContext_t **context /**< Library context.*/
 #ifdef __NVCC__
 extern "C"
 #endif
-int add_molecule(GrtContext_t *context, /**< Library context.*/
-                 char const * const hitran_filepath, /**< Path to HITRAN ascii file containing
-                                                          molecular line parameters.*/
-                 int * const molecule_id, /**< Id that is associated with the molecule. */
-                 double const * const min_line_center_wavenumber, /**< Lower bound [1/cm] of spectral range.
-                                                                       Only lines with line center wavenumbers
-                                                                       greater than or eqaul to this will be
-                                                                       computed.  Defaults to 1 [1/cm].*/
-                 double const * const max_line_center_wavenumber /**< Upper bound [1/cm] of spectral range.
-                                                                      Only lines with line center wavenumbers
-                                                                      less than or equal to this will be
-                                                                      computed.  Defaults to 50,000 [1/cm].*/
-                );
+int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
+                     char const * const hitran_filepath, /**< Path to HITRAN ascii file containing
+                                                              molecular line parameters.*/
+                     int * const molecule_id, /**< Id that is associated with the molecule. */
+                     double const * const min_line_center_wavenumber, /**< Lower bound [1/cm] of spectral range.
+                                                                           Only lines with line center wavenumbers
+                                                                           greater than or eqaul to this will be
+                                                                           computed.  Defaults to 1 [1/cm].*/
+                     double const * const max_line_center_wavenumber /**< Upper bound [1/cm] of spectral range.
+                                                                          Only lines with line center wavenumbers
+                                                                          less than or equal to this will be
+                                                                          computed.  Defaults to 50,000 [1/cm].*/
+                    );
 
 
 /**
@@ -305,14 +308,14 @@ int add_molecule(GrtContext_t *context, /**< Library context.*/
 #ifdef __NVCC__
 extern "C"
 #endif
-int set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
-                      int const molecule_id, /**< Molecule id returned by
-                                                  @ref add_molecule.*/
-                      fp_t const * const ppmv /**< Array of molecular abundances [ppmv].
-                                                   The size of this array must be
-                                                   eqaul to the number of atmospheric
-                                                   levels.*/
-                     );
+int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
+                          int const molecule_id, /**< Molecule id returned by
+                                                      @ref add_molecule.*/
+                          fp_t const * const ppmv /**< Array of molecular abundances [ppmv].
+                                                       The size of this array must be
+                                                       eqaul to the number of atmospheric
+                                                       levels.*/
+                         );
 
 
 /**
@@ -324,25 +327,51 @@ int set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
 #ifdef __NVCC__
 extern "C"
 #endif
-int calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
-                            fp_t const * const pressure, /**< Array of atmospheric pressures [atm].
-                                                              The size of this array must be
-                                                              eqaul to the number of atmospheric
-                                                              levels.*/
-                            fp_t const * const temperature, /**< Array of atmospheric temperatures [K].
-                                                                 The size of this array must be
-                                                                 eqaul to the number of atmospheric
-                                                                 levels.*/
-                            fp_t *optical_depth /**< Array of atmospheric optical depths.
-                                                     The size of this array must be equal
-                                                     to the number of atmospheric layers
-                                                     times the number of spectral grid
-                                                     points.  Memory is layed out as
-                                                     (layer,wavenumber) (i.e., the
-                                                     fastest changing dimension is the
-                                                     one corresponding to the spectral
-                                                     grid.)*/
-                           );
+int grt_calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
+                                fp_t const * const pressure, /**< Array of atmospheric pressures [atm].
+                                                                  The size of this array must be
+                                                                  eqaul to the number of atmospheric
+                                                                  levels.*/
+                                fp_t const * const temperature, /**< Array of atmospheric temperatures [K].
+                                                                     The size of this array must be
+                                                                     eqaul to the number of atmospheric
+                                                                     levels.*/
+                                fp_t *optical_depth /**< Array of atmospheric optical depths.
+                                                         The size of this array must be equal
+                                                         to the number of atmospheric layers
+                                                         times the number of spectral grid
+                                                         points.  Memory is layed out as
+                                                         (layer,wavenumber) (i.e., the
+                                                         fastest changing dimension is the
+                                                         one corresponding to the spectral
+                                                         grid.)*/
+                               );
+
+
+/**
+    @ingroup capi
+    @brief Get the number of molecules that have been added to the context.
+    @return 0 if completed successfully, or else an error code.
+*/
+#ifdef __NVCC__
+extern "C"
+#endif
+int grt_get_num_molecules(GrtContext_t const * const context, /**< Library context.*/
+                          int * const n /**< Number of molecules.*/
+                         );
+
+
+/**
+    @ingroup capi
+    @brief Get the number of spectral grid points for the input context.
+    @return 0 if completed successfully, or else an error code.
+*/
+#ifdef __NVCC__
+extern "C"
+#endif
+int grt_get_spectral_grid_size(GrtContext_t const * const context, /**< Library context.*/
+                               uint64_t * const n /**< Spectral grid size.*/
+                              );
 
 
 /**

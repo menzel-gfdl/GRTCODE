@@ -37,8 +37,8 @@ program test
                               o3_ctm_dir=trim(o3_ctm_dir))
 
     !Allocate data arrays.
-    num_levels = grt_get_num_levels()
-    num_wpoints = grt_get_spectral_grid_size()
+    num_levels = grt_get_num_levels_fhl()
+    num_wpoints = grt_get_spectral_grid_size_fhl()
     num_molecules = size(hitran_files)
     num_layers = num_levels - 1
     allocate(pressure(num_levels))
@@ -64,10 +64,10 @@ program test
         enddo
 
         !Calculate the optical depths.
-        call calculate_optical_depth_fhl(pressure, &
-                                         temperature, &
-                                         ppmv, &
-                                         optical_depth)
+        call grt_calculate_optical_depth_fhl(pressure, &
+                                             temperature, &
+                                             ppmv, &
+                                             optical_depth)
     enddo
 
     !Clean up.

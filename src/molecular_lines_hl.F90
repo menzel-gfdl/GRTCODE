@@ -19,9 +19,9 @@ module molecular_lines_fhl
     !! \include example_fhl.F90
     public :: grt_context_init_fhl
     public :: grt_context_free_fhl
-    public :: calculate_optical_depth_fhl
-    public :: grt_get_num_levels
-    public :: grt_get_spectral_grid_size
+    public :: grt_calculate_optical_depth_fhl
+    public :: grt_get_num_levels_fhl
+    public :: grt_get_spectral_grid_size_fhl
 
 
 #ifdef DOUBLE_PRECISION
@@ -33,8 +33,6 @@ module molecular_lines_fhl
 
     !Private module variables
     type(GrtContext_t) :: context
-    integer(kind=c_int),dimension(:),allocatable :: molecule_ids
-    integer(kind=c_int64_t) :: spectral_grid_size
 
 
     !!> Namelist variables.
@@ -99,24 +97,29 @@ module molecular_lines_fhl
 
         !> @ingroup highlevelfortranapi
         !! @brief Return the number of atmospheric levels.
-        function grt_get_num_levels() result(n)
+        function grt_get_num_levels_fhl() result(n)
 
             !Inputs/outputs
             integer(kind=c_int) :: n
 
             n = num_levels
-        end function grt_get_num_levels
+        end function grt_get_num_levels_fhl
 
 
         !> @ingroup highlevelfortranapi
         !! @brief Return the size of the spectral grid.
-        function grt_get_spectral_grid_size() result(n)
+        function grt_get_spectral_grid_size_fhl() result(n)
 
             !Inputs/outputs
             integer(kind=c_int64_t) :: n
 
-            n = spectral_grid_size
-        end function grt_get_spectral_grid_size
+            !Local variables
+            integer(kind=c_int) :: return_code
+
+            return_code = grt_get_spectral_grid_size_f(context, &
+                                                       n)
+            call check_rc(return_code)
+        end function grt_get_spectral_grid_size_fhl
 
 
         !> @ingroup highlevelfortranapi
@@ -167,6 +170,7 @@ module molecular_lines_fhl
             logical :: nml_exists
             logical :: in_use
             integer(kind=c_int) :: io_status
+            integer(kind=c_int) :: mol_id
             integer(kind=c_int) :: i
 
             call omp_thread_trap()
@@ -212,7 +216,6 @@ module molecular_lines_fhl
                                              w0, &
                                              wn, &
                                              wres, &
-                                             spectral_grid_size, &
                                              wcutoff, &
                                              gpu_id, &
                                              num_threads, &
@@ -222,11 +225,10 @@ module molecular_lines_fhl
 
             !Add the molecules associated with the input HITRAN files to
             !the library context.
-            allocate(molecule_ids(size(hitran_filepaths)))
             do i = 1,size(hitran_filepaths)
-                return_code = add_molecule_f(context, &
-                                             hitran_filepaths(i), &
-                                             molecule_ids(i))
+                return_code = grt_add_molecule_f(context, &
+                                                 hitran_filepaths(i), &
+                                                 mol_id)
                 call check_rc(return_code)
             enddo
         end subroutine grt_context_init_fhl
@@ -240,7 +242,6 @@ module molecular_lines_fhl
             integer(kind=c_int) :: return_code
 
             call omp_thread_trap()
-            deallocate(molecule_ids)
             return_code = grt_context_free_f(context)
             call check_rc(return_code)
         end subroutine grt_context_free_fhl
@@ -250,10 +251,10 @@ module molecular_lines_fhl
         !! @brief Calculate the total optical depth of each atmospheric
         !!        layer at each spectral grid point.
         !! @return 0 if completed successfully, or else an error code.
-        subroutine calculate_optical_depth_fhl(pressure, &
-                                               temperature, &
-                                               ppmv, &
-                                               optical_depth)
+        subroutine grt_calculate_optical_depth_fhl(pressure, &
+                                                   temperature, &
+                                                   ppmv, &
+                                                   optical_depth)
 
             !Inputs/outputs
             real(kind=FP),dimension(:),intent(in) :: pressure !< Array of atmospheric pressures [atm].
@@ -278,18 +279,23 @@ module molecular_lines_fhl
             !Local variables
             integer(kind=c_int) :: return_code
             integer(kind=c_int) :: i
+            integer(kind=c_int) :: num_mols
 
             call omp_thread_trap()
+            return_code = grt_get_num_molecules_f(context, &
+                                                  num_mols)
+            call check_rc(return_code)
+
             if (size(ppmv,1) .ne. num_levels .or. size(ppmv,2) .ne. &
-                size(molecule_ids)) then
+                num_mols) then
                 call error("input ppmv array must be of size" &
                            //"(num_levels,num_molecules).")
                 stop 1
             endif
-            do i = 1,size(molecule_ids)
-                return_code = set_molecule_ppmv_f(context, &
-                                                  molecule_ids(i), &
-                                                  ppmv(:,i))
+            do i = 1,num_mols
+                return_code = grt_set_molecule_ppmv_f(context, &
+                                                      i-1, &
+                                                      ppmv(:,i))
                 call check_rc(return_code)
             enddo
             if (size(pressure) .ne. num_levels .or. size(temperature) .ne. &
@@ -298,12 +304,12 @@ module molecular_lines_fhl
                            //" be of size num_levels.")
                 stop 1
             endif
-            return_code = calculate_optical_depth_f(context, &
-                                                    pressure, &
-                                                    temperature, &
-                                                    optical_depth)
+            return_code = grt_calculate_optical_depth_f(context, &
+                                                        pressure, &
+                                                        temperature, &
+                                                        optical_depth)
             call check_rc(return_code)
-        end subroutine calculate_optical_depth_fhl
+        end subroutine grt_calculate_optical_depth_fhl
 
 
 end module molecular_lines_fhl

@@ -29,7 +29,6 @@ int main(void)
     double w0 = 2.;
     double wn = 100.;
     double wres = 0.1;
-    uint64_t num_wpoints;
     char *h2o_ctm_dir = "water_vapor_continuum";
     char *o3_ctm_dir = "ozone_continuum";
     check_rc(grt_context_init(&context,
@@ -37,7 +36,6 @@ int main(void)
                               w0,
                               wn,
                               wres,
-                              &num_wpoints,
                               NULL,
                               NULL,
                               NULL,
@@ -50,18 +48,22 @@ int main(void)
     int h2o;
     double min_line_center_wavenumber = 4.;
     double max_line_center_wavenumber = 8.;
-    check_rc(add_molecule(context, 
-                          h2o_hitran, 
-                          &h2o, 
-                          &min_line_center_wavenumber,
-                          &max_line_center_wavenumber));
+    check_rc(grt_add_molecule(context, 
+                              h2o_hitran, 
+                              &h2o, 
+                              &min_line_center_wavenumber,
+                              &max_line_center_wavenumber));
 
     /*Mimic looping over columns.*/
+    uint64_t num_wpoints;
+    check_rc(grt_get_spectral_grid_size(context,
+                                        &num_wpoints));
+    int num_layers = num_levels - 1;
     FP_t *pressure = (FP_t *)malloc(sizeof(*pressure)*num_levels);
     FP_t *temperature = (FP_t *)malloc(sizeof(*temperature)*num_levels);
     FP_t *ppmv = (FP_t *)malloc(sizeof(*ppmv)*num_levels);
     FP_t *optical_depth = (FP_t *)malloc(sizeof(*optical_depth)*
-                                         num_wpoints*(num_levels-1));
+                                         num_wpoints*num_layers);
     int num_columns = 4;
     int i;
     for (i=0;i<num_columns;++i)
@@ -76,15 +78,15 @@ int main(void)
         }
 
         /*Set water vapor ppmv.*/
-        check_rc(set_molecule_ppmv(context, 
-                                   h2o, 
-                                   ppmv));
+        check_rc(grt_set_molecule_ppmv(context, 
+                                       h2o, 
+                                       ppmv));
 
         /*Calculate the optical depths.*/
-        check_rc(calculate_optical_depth(context, 
-                                         pressure, 
-                                         temperature, 
-                                         optical_depth));
+        check_rc(grt_calculate_optical_depth(context, 
+                                             pressure, 
+                                             temperature, 
+                                             optical_depth));
     }
 
     /*Clean up.*/
