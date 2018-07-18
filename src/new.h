@@ -122,49 +122,6 @@
             -# Release the memory allocated by the context(s) by calling the
                @ref finalize_grt function.\n\n
 
-    \section Requirements
-        This library requires a c and fortran compiler, such as the freely
-        available gcc and gfortran.  The c compiler must support the c99
-        standard, and the fortran compiler must support this [Fortran 2012
-        Technical Specification] (https://www.iso.org/standard/45136.html).
-        In order to run on a NVIDIA GPU,
-        CUDA must also be installed and the library must be built using the
-        included NVCC compiler.  This library also requires make and install.
-
-    \section Code
-        The source code currently resides in this [Gitlab repository]
-        (https://gitlab.gfdl.noaa.gov/Raymond.Menzel/grtcodev2), on branch
-        modular_lines.  To obtain the code, run:\n\n
-        ```$ git clone
-             https://gitlab.gfdl.noaa.gov/Raymond.Menzel/grtcodev2.git .```\n
-        ```$ git checkout modular_lines```
-
-    \section Building
-        The library provides two Makefiles, one called Makefile for building
-        for CPU only runs and one called Makefile.nvcc for building for GPU
-        runs.  The CPU-only makefile assumes gcc and gfortran as the default
-        compilers, but those can be overwritten by setting CC="your c compiler"
-        and FC="your fortran compiler" when running make.  Note that the
-        CFLAGS and FFLAGS will most likely also need to be overridden.
-        For example, to build for CPU-only runs using the default settings,
-        simply run:\n\n
-        ```$ make```\n\n
-        or to build with the intel compilers, run:\n\n
-        ```$ make CC=icc CFLAGS=-O3 FC=ifort FFLAGS=-O3```\n\n
-        To build for GPU runs with CUDA installed and the NVCC compiler
-        in your path, simply run:\n\n
-        ```$ make -f Makefile.nvcc```\n\n
-        After building the library, run: \n\n
-        ```$ make test```\n\n and/or\n\n
-        ```$ make -f Makefile.nvcc test```\n\n
-        to run some tests to make sure everything is working.  Lastly,
-        run:\n\n
-        ```$ make install```\n\n or\n\n
-        ```$ make -f Makefile.nvcc install```\n\n
-        to install the library.  PREFIX can be used to select the directory
-        where the library will be installed, or else the library will be
-        installed in the current directory.
-
     \section Example
         Here is a simple example demonstrating how to use this library.
         \include example.c
