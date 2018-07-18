@@ -10,13 +10,37 @@ module molecular_lines_fhl
 
 
     !> \defgroup highlevelfortranapi High Level Fortran API
+    !! \brief This module provides Fortran functions that calculate optical
+    !!     depths from molecular lines in each layer of an atmospheric column.
+    !!      To use this module, include the line:\n\n
+    !!      ```use molecular_lines_fhl```\n\n
+    !!      in your fortran application.
     !! \section Overview
     !!     The high level fortran API provides simplified interfaces, at the
     !!     cost of thread-safety and more fine-grained control.  The goal
     !!     of this API is to make the library more accessible to users
     !!     familiar with Fortran paradigms currently used in GCMs.
+    !! \section Namelist
+    !!     Runtime arguments can be supplied via a Fortran namelist titled
+    !!     <c>molecular_lines_nml</c>.  A path to the file containing
+    !!     the namelist may be passed as an optional argument to the
+    !!     @ref grt_context_init_fhl routine.  An example namelist is
+    !!     included in a directory named namelist in the base directory of
+    !!     this repository.  If no path is provided, default
+    !!     values are used.
+    !!     \param num_levels <b> Integer(kind=c_int) </b> number of
+    !!                       atmospheric levels.  Defaults to 60.
+    !!     \param w0 <b> Real(kind=c_double) </b> lower bound [1/cm] of
+    !!               spectral grid.  Defaults to 1.
+    !!     \param wn <b> Real(kind=c_double) </b> upper bound [1/cm] of
+    !!               spectral grid.  Defaults to 3250.
+    !!     \param wres <b> Real(kind=c_double) </b> resolution [1/cm] of
+    !!                 spectral grid.  Defaults to 0.1.
     !! \section Example
-    !! \include example_fhl.F90
+    !! \include examplef_hl.F90
+
+
+    !Public routines
     public :: grt_context_init_fhl
     public :: grt_context_free_fhl
     public :: grt_calculate_optical_depth_fhl
@@ -35,11 +59,11 @@ module molecular_lines_fhl
     type(GrtContext_t) :: context
 
 
-    !!> Namelist variables.
-    integer(kind=c_int) :: num_levels = 60 !< Number of atmospheric levels.
-    real(kind=c_double) :: w0 = 1._c_double !< Lower bound of spectral grid.
-    real(kind=c_double) :: wn = 50000._c_double !< Upper bound of spectral grid.
-    real(kind=c_double) :: wres = 0.1_c_double !< Resolution of spectral grid.
+    !Namelist variables.
+    integer(kind=c_int) :: num_levels = 60 !Number of atmospheric levels.
+    real(kind=c_double) :: w0 = 1._c_double !Lower bound of spectral grid.
+    real(kind=c_double) :: wn = 3250._c_double !Upper bound of spectral grid.
+    real(kind=c_double) :: wres = 0.1_c_double !Resolution of spectral grid.
     namelist /molecular_lines_nml/ num_levels, &
                                    w0, &
                                    wn, &
@@ -139,7 +163,7 @@ module molecular_lines_fhl
             character(len=*),intent(in),optional :: namelist_filepath !< Path to namelist file.
             real(kind=c_double),intent(in),optional :: wcutoff !< Cutoff [1/cm] from spectral
                                                                !! line center.  If NULL, this
-                                                               !! defaults to 25 [1/cm].*/
+                                                               !! defaults to 25 [1/cm].
             integer(kind=c_int),intent(in),optional :: gpu_id !< Id of the GPU that will be associated
                                                               !! with this context.  If NULL, then
                                                               !! use GPU 0 if at least one GPU
@@ -259,11 +283,11 @@ module molecular_lines_fhl
             !Inputs/outputs
             real(kind=FP),dimension(:),intent(in) :: pressure !< Array of atmospheric pressures [atm].
                                                               !! The size of this array must be
-                                                              !! eqaul to the number of atmospheric
+                                                              !! equal to the number of atmospheric
                                                               !! levels.
             real(kind=FP),dimension(:),intent(in) :: temperature !< Array of atmospheric temperatures [K].
                                                                  !! The size of this array must be
-                                                                 !! eqaul to the number of atmospheric
+                                                                 !! equal to the number of atmospheric
                                                                  !! levels.
             real(kind=FP),dimension(:,:),intent(in) :: ppmv !< Array of molecular abundances [ppmv].
                                                             !! This array must be of size (num_layers,molecules).
