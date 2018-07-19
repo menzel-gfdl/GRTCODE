@@ -1,6 +1,6 @@
 /** @file */
-#ifndef NEW_H_
-#define NEW_H_
+#ifndef MOLECULAR_LINES_H_
+#define MOLECULAR_LINES_H_
 
 #include <stdint.h>
 #include "floating_point_type.h"

@@ -13,7 +13,7 @@
 #include "debug.h"
 #include "device_launch.h"
 #include "host_launch.h"
-#include "new.h"
+#include "molecular_lines.h"
 #include "ozone_continuum.h"
 #include "parse_HITRAN_file.h"
 #ifdef __NVCC__
