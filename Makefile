@@ -27,7 +27,8 @@ OBJ = ${LIB_NAME}_fhl.o \
       parse_HITRAN_file.o \
       parse_csv.o \
       molecules.o \
-      utils.o
+      utils.o \
+      verbosity.o
 STATIC_LIB = lib${LIB_NAME}.a
 SHARED_LIB = lib${LIB_NAME}.so
 LIB_MODS = ${LIB_NAME}_f.mod ${LIB_NAME}_fhl.mod
