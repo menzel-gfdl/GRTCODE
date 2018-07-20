@@ -66,14 +66,14 @@ int launch_h(int const num_levels,
 
     /*Calculate the total number density of air moleucles integrated across
       each layer.*/
-    log_mesg("Integrating total number density across %d layers.",
+    log_info("Integrating total number density across %d layers.",
              num_layers);
     check(integrated_N_h(num_layers,
                          P,
                          N));
 
     /*Calculate integrated average layer quantities.*/
-    log_mesg("Calculating Curtis-Godson pressure and temperature across"
+    log_info("Calculating Curtis-Godson pressure and temperature across"
                  " %d layers.",
              num_layers);
     check(Curtis_Godson_PT_h(num_layers,
@@ -96,7 +96,7 @@ int launch_h(int const num_levels,
                sizeof(*snn_ref)*num_lines);
 
         /*Calculate the initial Snn_ref correction.*/
-        log_mesg("Launching kernel pre_eval_snn_h across %d layers"
+        log_info("Launching kernel pre_eval_snn_h across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -110,7 +110,7 @@ int launch_h(int const num_levels,
 
         /*Calculate the integrated average layer partial pressure.*/
         fp_t const *xp = &(x[mol*num_levels]);
-        log_mesg("Calculating Curtis-Godson partial pressure and abundance"
+        log_info("Calculating Curtis-Godson partial pressure and abundance"
                      " across %d layers for molecule %d.",
                  num_layers,
                  mol);
@@ -122,7 +122,7 @@ int launch_h(int const num_levels,
                              Ns);
 
         /*Calcluate the lorentz half-width at half-max (HWHM).*/
-        log_mesg("Launching kernel eval_gamma_h across %d layers"
+        log_info("Launching kernel eval_gamma_h across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -138,7 +138,7 @@ int launch_h(int const num_levels,
 
         /*Calcluate the shift in the line center frequency due to the
           pressure.*/
-        log_mesg("Launching kernel eval_pshift_h across %d layers"
+        log_info("Launching kernel eval_pshift_h across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -150,7 +150,7 @@ int launch_h(int const num_levels,
                       Pshift);
 
         /*Calculate the remainder of the Snn_ref correction.*/
-        log_mesg("Launching kernel eval_snn_correction_h across %d layers"
+        log_info("Launching kernel eval_snn_correction_h across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -166,7 +166,7 @@ int launch_h(int const num_levels,
 
         /*Calculate the molecule's optical depths and add them to existing
           values.*/
-        log_mesg("Launching kernel eval_profile_h across %d layers"
+        log_info("Launching kernel eval_profile_h across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -188,7 +188,7 @@ int launch_h(int const num_levels,
         {
             /*Calculate the water vapor continuum optical depths.*/
             not_null(h2o_cc);
-            log_mesg("Calculating optical depth due to the water vapor"
+            log_info("Calculating optical depth due to the water vapor"
                          " continuum across %d layers.",
                      num_layers);
             calc_water_vapor_ctm_optical_depth_h(num_wpoints,
@@ -207,7 +207,7 @@ int launch_h(int const num_levels,
         {
             /*Calculate the ozone continuum optical depths.*/
             not_null(o3_cc);
-            log_mesg("Calculating optical depth due to the ozone"
+            log_info("Calculating optical depth due to the ozone"
                          " continuum across %d layers.",
                      num_layers);
             calc_ozone_ctm_optical_depth_h(num_wpoints,

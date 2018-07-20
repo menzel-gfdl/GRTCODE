@@ -287,7 +287,7 @@ int parse_hitran_file(LineParams_t ** const line_params,
     not_null(filename);
 
     /*Open the file.*/
-    log_mesg("Opening and reading HITRAN line parameters from file %s.",
+    log_info("Opening and reading HITRAN line parameters from file %s.",
              filename);
     FILE *fp = NULL;
     open_file(fp,

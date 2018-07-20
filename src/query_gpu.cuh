@@ -5,8 +5,7 @@
 
 
 __host__
-int get_num_gpus(int * num_devices,
-                 int const verbose);
+int get_num_gpus(int * num_devices);
 
 
 #endif

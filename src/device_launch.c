@@ -55,14 +55,14 @@ int launch(int const num_levels,
 
     /*Calculate the total number density of air moleucles integrated across
       each layer.*/
-    log_mesg("Integration total number density across %d layers.",
+    log_info("Integration total number density across %d layers.",
              num_layers);
     integrated_N<<<1,num_layers,0,0>>>(num_layers,
                                        P,
                                        N);
 
     /*Calculate integrated average layer quantities.*/
-    log_mesg("Calculating Curtis-Godson pressure and temperature across"
+    log_info("Calculating Curtis-Godson pressure and temperature across"
                  " %d layers.",
              num_layers);
     Curtis_Godson_PT<<<1,num_layers,0,0>>>(num_layers,
@@ -115,7 +115,7 @@ int launch(int const num_levels,
                                 cudaMemcpyHostToDevice));
 
         /*Calculate the initial Snn_ref correction.*/
-        log_mesg("Launching kernel pre_eval_snn across %d layers"
+        log_info("Launching kernel pre_eval_snn across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -134,7 +134,7 @@ int launch(int const num_levels,
 
         /*Calculate the integrated average layer partial pressure.*/
         fp_t const *xp = &(x[mol*num_levels]);
-        log_mesg("Calculating Curtis-Godson partial pressure and abundance"
+        log_info("Calculating Curtis-Godson partial pressure and abundance"
                      " across %d layers for molecule %d.",
                  num_layers,
                  mol);
@@ -146,7 +146,7 @@ int launch(int const num_levels,
                                                  Ns);
 
         /*Calcluate the lorentz half-width at half-max (HWHM).*/
-        log_mesg("Launching kernel eval_gamma across %d layers"
+        log_info("Launching kernel eval_gamma across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -168,7 +168,7 @@ int launch(int const num_levels,
 
         /*Calcluate the shift in the line center frequency due to the
           pressure.*/
-        log_mesg("Launching kernel eval_pshift across %d layers"
+        log_info("Launching kernel eval_pshift across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -186,7 +186,7 @@ int launch(int const num_levels,
                                                                                 Pshift);
 
         /*Calculate the remainder of the Snn_ref correction.*/
-        log_mesg("Launching kernel eval_snn_correction across %d layers"
+        log_info("Launching kernel eval_snn_correction across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -208,7 +208,7 @@ int launch(int const num_levels,
 
         /*Calculate the molecule's optical depths and add them to existing
           values.*/
-        log_mesg("Launching kernel eval_profile across %d layers"
+        log_info("Launching kernel eval_profile across %d layers"
                      " for molecule %d.",
                  num_layers,
                  mol);
@@ -235,7 +235,7 @@ int launch(int const num_levels,
         if (use_h2o_ctm && mol_id == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
-            log_mesg("Calculating optical depth due to the water vapor"
+            log_info("Calculating optical depth due to the water vapor"
                          " continuum across %d layers.",
                      num_layers);
             HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
@@ -259,7 +259,7 @@ int launch(int const num_levels,
         else if (use_o3_ctm && mol_id == O3)
         {
             /*Calculate the ozone continuum optical depths.*/
-            log_mesg("Calculating optical depth due to the ozone"
+            log_info("Calculating optical depth due to the ozone"
                          " continuum across %d layers.",
                      num_layers);
             HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,

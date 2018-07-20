@@ -14,6 +14,7 @@
 #include "device_launch.h"
 #include "host_launch.h"
 #include "molecular_lines.h"
+#include "molecules.h"
 #include "ozone_continuum.h"
 #include "parse_HITRAN_file.h"
 #ifdef __NVCC__
@@ -73,11 +74,17 @@ int grt_context_init(GrtContext_t **context,
     assert(MIN_CUTOFF >= 1.);
     assert(MAX_CUTOFF >= MIN_CUTOFF);
 
-    /*Define the problem size.*/
+    /*Set the size of the atmospheric column.*/
     GrtContext_t c;
     in_range(num_levels,MIN_NUM_LEVELS,MAX_NUM_LEVELS);
     c.num_levels = num_levels;
     c.num_layers = num_levels - 1;
+    log_mesg("Atmospheric column properties:\n\tnumber of levels: %d\n\t"
+                 "number of layers: %d",
+             c.num_levels,
+             c.num_layers);
+
+    /*Set the spectral grid properties.*/
     in_range(w0,MIN_WAVENUMBER,MAX_WAVENUMBER);
     c.w0 = w0;
     in_range(wn,MIN_WAVENUMBER,MAX_WAVENUMBER);
@@ -93,8 +100,15 @@ int grt_context_init(GrtContext_t **context,
               w0);
     }
     c.num_wpoints = (wn-w0)/wres + 1.;
+    log_mesg("Spectral grid properties:\n\tlower bound: %e [1/cm]\n\t"
+                 "upper bound: %e [1/cm]\n\tresolution: %e [1/cm]\n\t"
+                 "total size: %zu grid points",
+             c.w0,
+             c.wn,
+             c.wres,
+             c.num_wpoints);
 
-    /*Set optional parameters.*/
+    /*Set the molecular line cutoff.*/
     if (wcutoff != NULL)
     {
         in_range(*wcutoff,MIN_CUTOFF,MAX_CUTOFF);
@@ -104,21 +118,20 @@ int grt_context_init(GrtContext_t **context,
     {
         c.wcutoff = DEFAULT_CUTOFF;
     }
+    log_mesg("Using spectral line cut-off of %e [1/cm].",
+             c.wcutoff);
 
+    /*Determine whether this context will be associated with a specific
+      GPU or the host CPU.*/
 #ifdef __NVCC__
     int num_devices;
-    check(get_num_gpus(&num_devices,
-                       1));
+    check(get_num_gpus(&num_devices));
 #else
     int num_devices = 0;
 #endif
 
     if (gpu_id != NULL)
     {
-        if (*gpu_id != HOST_ONLY)
-        {
-            in_range(*gpu_id,0,num_devices);
-        }
         c.gpu_id = *gpu_id;
     }
     else
@@ -132,100 +145,83 @@ int grt_context_init(GrtContext_t **context,
             c.gpu_id = HOST_ONLY;
         }
     }
-    if (c.gpu_id != HOST_ONLY)
+
+    if (c.gpu_id == HOST_ONLY)
+    {
+        int const min_num_threads = 1;
+#ifdef _OPENMP
+        int const max_num_threads = omp_get_max_threads();
+#else
+        int const max_num_threads = min_num_threads;
+#endif
+        if (num_threads != NULL)
+        {
+            in_range(*num_threads,min_num_threads,max_num_threads);
+            c.num_threads = *num_threads;
+        }
+        else
+        {
+            c.num_threads = max_num_threads;
+        }
+        log_mesg("Using %d OpenMP threads.\n",
+                 c.num_threads);
+    }
+    else
     {
 #ifndef __NVCC__
         fatal(COMPILER_ERR,
               "you must build with nvcc in order to use GPUs (gpu_id=%d.)",
               c.gpu_id);
 #else
+        in_range(c.gpu_id,0,num_devices);
         HANDLE_ERROR(cudaSetDevice(c.gpu_id));
-        log_mesg("Molecular lines will be calculated using GPU device %d.",
+        log_mesg("Using GPU device %d.",
                  c.gpu_id);
 #endif
-    }
-
-    int const min_num_threads = 1;
-#ifdef _OPENMP
-    int const max_num_threads = omp_get_max_threads();
-#else
-    int const max_num_threads = min_num_threads;
-#endif
-
-    if (num_threads != NULL)
-    {
-        in_range(*num_threads,min_num_threads,max_num_threads);
-        c.num_threads = *num_threads;
-    }
-    else
-    {
-        c.num_threads = max_num_threads;
     }
 
     /*Pepare water vapor continuum.*/
     if (h2o_ctm_dir != NULL)
     {
+        if (strlen(h2o_ctm_dir) >= DIR_PATH_LEN - 1)
+        {
+            fatal(VALUE_ERR,
+                  "input water vapor continuum path length is too long (>= %d"
+                      " characters).",
+                  DIR_PATH_LEN-1);
+        }
         c.use_h2o_ctm = 1;
+        snprintf(c.h2o_ctm_dir,
+                 DIR_PATH_LEN,
+                 "%s",
+                 h2o_ctm_dir);
+        c.h2o_cc = NULL;
     }
     else
     {
         c.use_h2o_ctm = 0;
     }
-    if (c.use_h2o_ctm)
-    {
-        /*Read in the water vapor continuum coefficients.*/
-        WaterVaporContinuumCoefs_t h2o_cc;
-        check(get_water_vapor_continuum_coefs(&h2o_cc,
-                                              h2o_ctm_dir,
-                                              c.num_wpoints,
-                                              c.w0,
-                                              c.wres));
-        check(malloc_ptr((void **) (&c.h2o_cc),
-                         sizeof(*(c.h2o_cc))));
-        if (c.gpu_id != HOST_ONLY)
-        {
-            check(put_water_vapor_coefs_on_device(&h2o_cc,
-                                                  c.h2o_cc));
-        }
-        else
-        {
-            memcpy(c.h2o_cc,
-                   &h2o_cc,
-                   sizeof(*(c.h2o_cc)));
-        }
-    }
 
     /*Prepare ozone continuum.*/
     if (o3_ctm_dir != NULL)
     {
+        if (strlen(o3_ctm_dir) >= DIR_PATH_LEN - 1)
+        {
+            fatal(VALUE_ERR,
+                  "input ozone continuum path length is too long (>= %d"
+                      " characters).",
+                  DIR_PATH_LEN-1);
+        }
         c.use_o3_ctm = 1;
+        snprintf(c.o3_ctm_dir,
+                 DIR_PATH_LEN,
+                 "%s",
+                 o3_ctm_dir);
+        c.o3_cc = NULL;
     }
     else
     {
         c.use_o3_ctm = 0;
-    }
-    if (c.use_o3_ctm)
-    {
-        /*Read in the ozone continuum coefficients.*/
-        OzoneContinuumCoefs_t o3_cc;
-        check(get_ozone_continuum_coefs(&o3_cc,
-                                        o3_ctm_dir,
-                                        c.num_wpoints,
-                                        c.w0,
-                                        c.wres));
-        check(malloc_ptr((void **) (&c.o3_cc),
-                         sizeof(*(c.o3_cc))));
-        if (c.gpu_id != HOST_ONLY)
-        {
-            check(put_ozone_coefs_on_device(&o3_cc,
-                                            c.o3_cc));
-        }
-        else
-        {
-            memcpy(c.o3_cc,
-                   &o3_cc,
-                   sizeof(*(c.o3_cc)));
-        }
     }
 
     /*Reserve memory.*/
@@ -358,7 +354,7 @@ int grt_context_free(GrtContext_t **context)
         free(c->Pshift);
         free(c->s);
     }
-    if (c->use_h2o_ctm)
+    if (c->use_h2o_ctm && c->h2o_cc != NULL)
     {
         if (c->gpu_id != HOST_ONLY)
         {
@@ -370,7 +366,7 @@ int grt_context_free(GrtContext_t **context)
         }
         free(c->h2o_cc);
     }
-    if (c->use_o3_ctm)
+    if (c->use_o3_ctm && c->o3_cc != NULL)
     {
         if (c->gpu_id != HOST_ONLY)
         {
@@ -429,6 +425,76 @@ int grt_add_molecule(GrtContext_t *context,
                             flags,
                             w0,
                             wn));
+    char mol_name[8];
+    int m = context->line_params[index]->mol;
+    check(get_mol_name(m,
+                       mol_name,
+                       8));
+    log_mesg("Using %s (%u lines in range %e - %e [1/cm]).",
+             mol_name,
+             context->line_params[index]->num_lines,
+             w0,
+             wn);
+    if (m == H2O && context->use_h2o_ctm)
+    {
+        log_mesg("Using the %s continuum.",
+                 mol_name);
+
+        /*Read in the water vapor continuum coefficients.*/
+        WaterVaporContinuumCoefs_t h2o_cc;
+        check(get_water_vapor_continuum_coefs(&h2o_cc,
+                                              context->h2o_ctm_dir,
+                                              context->num_wpoints,
+                                              context->w0,
+                                              context->wres));
+        check(malloc_ptr((void **) (&context->h2o_cc),
+                         sizeof(*(context->h2o_cc))));
+        if (context->gpu_id != HOST_ONLY)
+        {
+#ifdef __NVCC__
+            HANDLE_ERROR(cudaSetDevice(context->gpu_id));
+#endif
+            check(put_water_vapor_coefs_on_device(&h2o_cc,
+                                                  context->h2o_cc));
+        }
+        else
+        {
+            memcpy(context->h2o_cc,
+                   &h2o_cc,
+                   sizeof(*(context->h2o_cc)));
+        }
+    }
+
+    if (m == O3 && context->use_o3_ctm)
+    {
+        log_mesg("Using the %s continuum.",
+                 mol_name);
+
+        /*Read in the ozone continuum coefficients.*/
+        OzoneContinuumCoefs_t o3_cc;
+        check(get_ozone_continuum_coefs(&o3_cc,
+                                        context->o3_ctm_dir,
+                                        context->num_wpoints,
+                                        context->w0,
+                                        context->wres));
+        check(malloc_ptr((void **) (&context->o3_cc),
+                         sizeof(*(context->o3_cc))));
+        if (context->gpu_id != HOST_ONLY)
+        {
+#ifdef __NVCC__
+            HANDLE_ERROR(cudaSetDevice(context->gpu_id));
+#endif
+            check(put_ozone_coefs_on_device(&o3_cc,
+                                            context->o3_cc));
+        }
+        else
+        {
+            memcpy(context->o3_cc,
+                   &o3_cc,
+                   sizeof(*(context->o3_cc)));
+        }
+    }
+
     not_null(molecule_id);
     *molecule_id = index;
     return SUCCESS;
@@ -484,6 +550,11 @@ int grt_calculate_optical_depth(GrtContext_t *context,
     not_null(optical_depth);
     if (context->gpu_id != HOST_ONLY)
     {
+        log_mesg("Calculating optical depths for %d molecules in %d"
+                     " atmospheric layers on GPU %d.",
+                 context->num_molecules,
+                 context->num_levels-1,
+                 context->gpu_id);
 #ifdef __NVCC__
         HANDLE_ERROR(cudaSetDevice(context->gpu_id));
         size_t num_elements = context->num_levels;
@@ -528,6 +599,10 @@ int grt_calculate_optical_depth(GrtContext_t *context,
     }
     else
     {
+        log_mesg("Calculating optical depths for %d molecules in %d"
+                     " atmospheric layers on the host CPU.",
+                 context->num_molecules,
+                 context->num_levels-1);
         check(launch_h(context->num_levels,
                        pressure,
                        temperature,

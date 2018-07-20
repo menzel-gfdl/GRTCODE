@@ -1,7 +1,7 @@
 CXX = g++
 NVCC = nvcc
 CFLAGS = -g -Wall -Wextra -fopenmp -Wno-variadic-macros \
-         -Wno-long-long
+         -Wno-long-long -DVERBOSE
 NVCCFLAGS = -ccbin ${CXX} --compiler-options "${CFLAGS}" -g -O3
 NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 CPPFLAGS =
@@ -33,6 +33,7 @@ OBJ = ${LIB_NAME}_fhl.o \
       parse_csv.o \
       molecules.o \
       utils.o \
+      verbosity.o \
       query_gpu.o \
       cuda_helpers.o
 STATIC_LIB = lib${LIB_NAME}.a
@@ -52,8 +53,8 @@ all: ${LIBS}
 
 test: ${TESTX} ${TESTFX} ${TESTFX_HL}
 	./${TESTX}
-	./${TESTFX}
-	./${TESTFX_HL}
+#	./${TESTFX}
+#	./${TESTFX_HL}
 
 ${STATIC_LIB}: ${OBJ}
 	ar rcs $@ $^

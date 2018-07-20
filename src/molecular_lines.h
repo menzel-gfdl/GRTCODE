@@ -135,6 +135,9 @@
 */
 
 
+#define DIR_PATH_LEN 256
+
+
 /** @ingroup capi
     @brief Library context.*/
 typedef struct GrtContext
@@ -154,9 +157,11 @@ typedef struct GrtContext
     int num_threads; /**< Number of CPU threads that will be used to calculate
                           the lines (if not using a GPU).*/
     int use_h2o_ctm; /**< Flag for using the water vapor continuum.*/
+    char h2o_ctm_dir[DIR_PATH_LEN];
     WaterVaporContinuumCoefs_t *h2o_cc; /**< Structure containing water vapor
                                              continuum coefficients.*/
     int use_o3_ctm; /**< Flag for using the ozone continuum.*/
+    char o3_ctm_dir[DIR_PATH_LEN];
     OzoneContinuumCoefs_t *o3_cc; /**< Structure containing ozone continuum
                                        coefficients.*/
     fp_t *P; /**< Pressure [atm] at each level.*/

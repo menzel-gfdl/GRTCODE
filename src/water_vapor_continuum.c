@@ -77,7 +77,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
     for (i=0;i<NUM_COEFS;++i)
     {
         /*Read in the data.*/
-        log_mesg("Reading in water vapor continuum coefficients from"
+        log_info("Reading in water vapor continuum coefficients from"
                      " file %s.",
                  filepath[i]);
         int num_lines;

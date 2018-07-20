@@ -1,16 +1,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef _OPENMP
 #include <omp.h>
 #else
 #error "You must build this code with OpenMP."
 #endif
 #include "molecular_lines.h"
-
-
-/*Set the number GPUs you want to run on.*/
-#define NUM_GPUS 1
 
 
 /*Utility macro to catch errors from library functions.*/
@@ -33,12 +30,33 @@
 #endif
 
 
-int main(void)
+int main(int argc,char **argv)
 {
-    GrtContext_t *context[NUM_GPUS]; /*Declare library context pointers.*/
+    /*Command line argument controls how many GPUs will be used.*/
+    int num_contexts = 1;
+    int host_only = 0;
+    int const host_id = -1;
+    if (argc == 2)
+    {
+        if (strcmp("--host",argv[1]) == 0)
+        {
+            host_only = 1;
+        }
+        else
+        {
+            num_contexts = atoi(argv[1]);
+        }
+    }
+    else if (argc > 2)
+    {
+        fprintf(stderr,"Usage: %s [--host|num_gpus]\n",argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    GrtContext_t *context[num_contexts]; /*Declare library context pointers.*/
     int num_levels = 25; /*Number of atmospheric levels.*/
-    double w0 = 2.; /*Lower bound [1/cm] for the spectral grid.*/
-    double wn = 100.; /*Upper bound [1/cm] for the spectral grid.*/
+    double w0 = 1.; /*Lower bound [1/cm] for the spectral grid.*/
+    double wn = 3000.; /*Upper bound [1/cm] for the spectral grid.*/
     double wres = 0.1; /*Resoultion [1/cm] for the spectral grid.*/
     char *h2o_ctm_dir = "water_vapor_continuum"; /*Path of the directory
                                                    that contains the
@@ -47,35 +65,43 @@ int main(void)
     char *o3_ctm_dir = "ozone_continuum"; /*Path of the directory
                                             that contains the
                                             ozone continuum input file.*/
-    int h2o[NUM_GPUS]; /*Water vapor molecule id.  Set by the library.*/
-    int o3[NUM_GPUS]; /*Ozone molecule id.  Set by the library.*/
+    int h2o[num_contexts]; /*Water vapor molecule id.  Set by the library.*/
+    int o3[num_contexts]; /*Ozone molecule id.  Set by the library.*/
     int i;
 
-#pragma omp parallel for num_threads(NUM_GPUS) \
-                         default(none) \
-                         shared(context,num_levels,w0,wn,wres, \
-                                h2o_ctm_dir,o3_ctm_dir,h2o,o3,stderr) \
-                         private(i) /*is watching you.*/
-    for (i=0;i<NUM_GPUS;++i)
+    for (i=0;i<num_contexts;++i)
     {
-        int gpu_id = omp_get_thread_num();
-        GrtContext_t *c = context[gpu_id];
+        /*Determine the GPU id for the context.*/
+        int const *g;
+        if (argc == 1)
+        {
+            g = NULL;
+        }
+        else if (host_only)
+        {
+            g = &host_id;
+        }
+        else
+        {
+            g = &i;
+        }
 
         /*Initalize library context pointers.*/
+        GrtContext_t *c;
         check_rc(grt_context_init(&c,
                                   num_levels,
                                   w0,
                                   wn,
                                   wres,
                                   NULL,
-                                  &gpu_id,
+                                  g,
                                   NULL,
                                   h2o_ctm_dir,
                                   o3_ctm_dir));
-
-        char hitran_path[128];
+        context[i] = c;
 
         /*Set path to the water vapor HITRAN database input file.*/
+        char hitran_path[128];
         snprintf(hitran_path,128,"HITRAN_files/water_vapor.hitran12.par");
 
         /*Only water vapor lines with line centers in the range 1 - 1000 [1/cm]
@@ -84,9 +110,9 @@ int main(void)
         double max_line_center_wavenumber = 1000.;
 
         /*Add water vapor to the library context.*/
-        check_rc(grt_add_molecule(c, 
-                                  hitran_path, 
-                                  &(h2o[gpu_id]), 
+        check_rc(grt_add_molecule(c,
+                                  hitran_path,
+                                  &(h2o[i]),
                                   &min_line_center_wavenumber,
                                   &max_line_center_wavenumber));
 
@@ -94,9 +120,9 @@ int main(void)
         snprintf(hitran_path,128,"HITRAN_files/ozone.hitran12.par");
 
         /*Add ozone to the library context.*/
-        check_rc(grt_add_molecule(c, 
-                                  hitran_path, 
-                                  &(o3[gpu_id]), 
+        check_rc(grt_add_molecule(c,
+                                  hitran_path,
+                                  &(o3[i]),
                                   NULL,
                                   NULL));
     }
@@ -111,7 +137,7 @@ int main(void)
                                        atmospheric levels - 1.*/
 
     /*Allocate necessary arrays.*/
-    int num_columns = 2*NUM_GPUS;
+    int num_columns = 2*num_contexts;
     FP_t *pressure = (FP_t *)malloc(sizeof(*pressure)*num_levels*num_columns);
     FP_t *temperature = (FP_t *)malloc(sizeof(*temperature)*num_levels*
                                        num_columns);
@@ -120,16 +146,16 @@ int main(void)
                                          num_wpoints*num_layers*num_columns);
 
     /*Loop over some columns.*/
-#pragma omp parallel for num_threads(NUM_GPUS) \
+#pragma omp parallel for num_threads(num_contexts) \
                          default(none) \
                          shared(context,num_levels,num_columns,num_wpoints, \
-                                pressure,temperature,ppmv,h2o,o3,stderr,\
+                                pressure,temperature,ppmv,h2o,o3,stderr, \
                                 optical_depth) \
-                         private(i)
+                         private(i) /*is watching you, seeing your every move.*/
     for (i=0;i<num_columns;++i)
     {
-        int gpu_id = omp_get_thread_num();
-        GrtContext_t *c = context[gpu_id];
+        int g = omp_get_thread_num();
+        GrtContext_t *c = context[g];
         int offset = i*num_columns;
 
         /*Make up some data for the column.*/
@@ -143,8 +169,8 @@ int main(void)
         }
 
         /*Set the water vapor abundance for the library context.*/
-        check_rc(grt_set_molecule_ppmv(c, 
-                                       h2o[gpu_id], 
+        check_rc(grt_set_molecule_ppmv(c,
+                                       h2o[g],
                                        &(ppmv[offset])));
 
         /*Make up some more data for the column.*/
@@ -154,14 +180,14 @@ int main(void)
         }
 
         /*Set the water vapor abundance for the library context.*/
-        check_rc(grt_set_molecule_ppmv(c, 
-                                       o3[gpu_id], 
+        check_rc(grt_set_molecule_ppmv(c,
+                                       o3[g],
                                        &(ppmv[offset])));
 
         /*Calculate the optical depths.*/
-        check_rc(grt_calculate_optical_depth(c, 
-                                             &(pressure[offset]), 
-                                             &(temperature[offset]), 
+        check_rc(grt_calculate_optical_depth(c,
+                                             &(pressure[offset]),
+                                             &(temperature[offset]),
                                              &(optical_depth[offset*num_wpoints])));
     }
 
@@ -172,13 +198,8 @@ int main(void)
     free(optical_depth);
 
     /*Free memory allocated by the library context.*/
-#pragma omp parallel for num_threads(NUM_GPUS) \
-                         default(none) \
-                         shared(context,stderr) \
-                         private(i)
-    for (i=0;i<NUM_GPUS;++i)
+    for (i=0;i<num_contexts;++i)
     {
-        int gpu_id = omp_get_thread_num();
-        check_rc(grt_context_free(&(context[gpu_id])));
+        check_rc(grt_context_free(&(context[i])));
     }
 }

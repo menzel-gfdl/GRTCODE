@@ -7,23 +7,20 @@
 
 
 __host__
-int get_num_gpus(int * num_devices,
-                 int const verbose)
+int get_num_gpus(int * num_devices)
 {
     not_null(num_devices);
     HANDLE_ERROR(cudaGetDeviceCount(num_devices));
-    if (verbose)
+    log_info("Found %d CUDA-enabled GPUS:",
+             *num_devices);
+    int i;
+    for (i=0;i<(*num_devices);++i)
     {
-        int i;
-        for (i=0;i<(*num_devices);++i)
-        {
-            cudaDeviceProp prop;
-            HANDLE_ERROR(cudaGetDeviceProperties(&prop,i));
-            fprintf(stderr,
-                    "Device number: %d\nDevice name: %s\n\n",
-                    i,
-                    prop.name);
-        }
+        cudaDeviceProp prop;
+        HANDLE_ERROR(cudaGetDeviceProperties(&prop,i));
+        log_info("\tDevice number: %d (%s)",
+                 i,
+                 prop.name);
     }
     return SUCCESS;
 }
