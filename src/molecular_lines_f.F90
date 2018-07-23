@@ -20,6 +20,8 @@ module molecular_lines_f
     public :: grt_get_num_molecules_f
     public :: grt_get_spectral_grid_size_f
     public :: grt_errstr_f
+    public :: grt_set_verbosity_f
+    public :: grt_get_verbosity_f
 
 
 #ifdef DOUBLE_PRECISION
@@ -176,6 +178,27 @@ module molecular_lines_f
             integer(kind=c_int),value,intent(in) :: buf_size
             integer(kind=c_int) :: return_code
         end function grt_errstr
+    end interface
+
+
+    interface
+        subroutine grt_set_verbosity_f(level) &
+            bind(c,name="grt_set_verbosity")
+            use iso_c_binding
+            implicit none
+            integer(kind=c_int),value,intent(in) :: level
+        end subroutine grt_set_verbosity_f
+    end interface
+
+
+    interface
+        function grt_get_verbosity_f() &
+            result(level) &
+            bind(c,name="grt_get_verbosity")
+            use iso_c_binding
+            implicit none
+            integer(kind=c_int) :: level
+        end function grt_get_verbosity_f
     end interface
 
 

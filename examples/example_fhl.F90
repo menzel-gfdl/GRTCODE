@@ -54,6 +54,9 @@ program test
     h2o_ctm_dir = "water_vapor_continuum"
     o3_ctm_dir = "ozone_continuum"
 
+    !Set verbosity.
+    call grt_set_verbosity_f(2)
+
     !Initalize the library.
     call grt_context_init_fhl(hitran_files, &
                               namelist_filepath=trim(namelist_file), &

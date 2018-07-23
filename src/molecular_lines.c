@@ -22,6 +22,7 @@
 #endif
 #include "TIPS_2011.h"
 #include "utils.h"
+#include "verbosity.h"
 #include "water_vapor_continuum.h"
 
 
@@ -45,7 +46,54 @@ int const DEFAULT_GPU = 0;
 int const HOST_ONLY = -1;
 
 
-/*Initialize the library.*/
+/*Macros.*/
+#define DIR_PATH_LEN 256
+
+
+/*Library context.*/
+struct GrtContext
+{
+    int num_levels; /**< Number of atmospheric levels.*/
+    int num_layers; /**< Number of atmospheric layers (num_levels-1).*/
+    int num_molecules; /**< Number of molecules.*/
+    LineParams_t **line_params; /**< Array of structures containg molecular
+                                     line parameters (from HITRAN database
+                                     files.)*/
+    double w0; /**< First point of the spectral grid [1/cm].*/
+    double wn; /**< Last point of the spectral grid [1/cm].*/
+    double wres; /**< Spectral resolution [1/cm].*/
+    uint64_t num_wpoints; /**< Number of spectral grid points.*/
+    double wcutoff; /**< Cutoff from spectral line center [1/cm].*/
+    int gpu_id; /**< Id of the GPU that is associated with this context.*/
+    int num_threads; /**< Number of CPU threads that will be used to calculate
+                          the lines (if not using a GPU).*/
+    int use_h2o_ctm; /**< Flag for using the water vapor continuum.*/
+    char h2o_ctm_dir[DIR_PATH_LEN];
+    WaterVaporContinuumCoefs_t *h2o_cc; /**< Structure containing water vapor
+                                             continuum coefficients.*/
+    int use_o3_ctm; /**< Flag for using the ozone continuum.*/
+    char o3_ctm_dir[DIR_PATH_LEN];
+    OzoneContinuumCoefs_t *o3_cc; /**< Structure containing ozone continuum
+                                       coefficients.*/
+    fp_t *P; /**< Pressure [atm] at each level.*/
+    fp_t *T; /**< Temperatture [K] at each level.*/
+    fp_t *x; /**< Molecular abundance at each level.*/
+    fp_t *Pavg; /**< Pressure [atm] in each layer.*/
+    fp_t *Tavg; /**< Temperature [K] in each layer.*/
+    fp_t *N; /**< Total number of molecules [1/cm^2] in each layer.*/
+    fp_t *Ns; /**< Number of molecules [1/cm^2] (of a particular species) in
+                   each layer.*/
+    fp_t *Psavg; /**< Molecular partial pressure [atm] in each layer.*/
+    fp_t *snn_ref; /**< */
+    fp_t *gamma; /**< */
+    fp_t *Pshift; /**< */
+    fp_t *s; /**< */
+    fp_t *tau; /**< Optical depths (layer,wavenumber).*/
+    LineParams_t *lines; /**< Molecular line parameters.*/
+};
+
+
+/*Initialize a library context.*/
 #ifdef __NVCC__
 extern "C"
 #endif
@@ -163,7 +211,7 @@ int grt_context_init(GrtContext_t **context,
         {
             c.num_threads = max_num_threads;
         }
-        log_mesg("Using %d OpenMP threads.\n",
+        log_mesg("Using %d OpenMP threads.",
                  c.num_threads);
     }
     else
@@ -738,4 +786,24 @@ int grt_errstr(int const code,
                      code);
     }
     return SUCCESS;
+}
+
+
+/*Set the verbosity level for the library.*/
+#ifdef __NVCC__
+extern "C"
+#endif
+void grt_set_verbosity(int const level)
+{
+    set_verbosity(level);
+}
+
+
+/*Get the verbosity level for the library.*/
+#ifdef __NVCC__
+extern "C"
+#endif
+int grt_get_verbosity(void)
+{
+    return get_verbosity();
 }

@@ -4,10 +4,10 @@
 
 enum verbosity
 {
-    ERROR,
-    WARN,
-    INFO,
     NONE,
+    INFO,
+    WARN,
+    ERROR
 };
 
 

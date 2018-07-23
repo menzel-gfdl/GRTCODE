@@ -4,15 +4,12 @@
 
 #include <stdint.h>
 #include "floating_point_type.h"
-#include "ozone_continuum.h"
-#include "parse_HITRAN_file.h"
-#include "water_vapor_continuum.h"
 
 
 /**
-    \defgroup capi C API
-    \brief foobar
-    \section Overview
+    @defgroup capi C API
+    @brief foobar
+    @section Overview
         Given an atmospheric column made up of at least one layer,
         this code calculates the total optical depth of each layer
         at each point on an input spectral grid.  Typical usage of this
@@ -20,7 +17,7 @@
             -# Declare library context pointer(s).  Each context pointer will
                hold the address of a struct that contains data that is
                required by the library.\n\n
-               \note Each context can be associated with a single GPU.  If
+               @note Each context can be associated with a single GPU.  If
                    you wish to use multiple GPUs, you must create a context
                    pointer for each GPU you wish to use and pass
                    in the appropriate device id when initalizing the context
@@ -34,12 +31,12 @@
                (lower bound, upper bound, and resolution) for the
                spectral grid on which the optical depths will be calculated.
                \n\n
-               \attention You must call this function before calling any
+               @attention You must call this function before calling any
                    other function included in this library.  Failure to do
                    so will result in undefined behavior.
 
                \n
-               \note Each atmospheric level corresponds to an interface
+               @note Each atmospheric level corresponds to an interface
                    between adjacent atmospheric layers or the lower/upper
                    edge of the atmosphere.  Thus, the number of atmospheric
                    levels = the number of atmospheric layers plus one.
@@ -59,7 +56,10 @@
                - The id of the GPU device you wish to associate with this
                  context.  A list of NVIDIA GPUs on your system can be
                  found by running:\n\n
-                 ```$ nvidia-smi --list-gpus```\n\n
+                 ```
+                 $ nvidia-smi --list-gpus
+                 ```
+                 \n\n
                  If you do not specify a GPU id when initializing the context,
                  the library will query the system for available GPUs.  If any
                  are found, then the first device (device 0) will be used.
@@ -91,14 +91,14 @@
                for a select set of molecules are included with this library in
                a directory labeled HITRAN_files in the base of this
                repository.\n\n
-               \attention Ozone and water vapor continua will only be
+               @attention Ozone and water vapor continua will only be
                    included in the optical depth calculation if the ozone
                    and water vapor molecules are added.
 
                \n
             -# Set the abundance [ppmv] of each added molecule by calling
                the @ref grt_set_molecule_ppmv function.\n\n
-               \attention The input abundance array must be contiguous and
+               @attention The input abundance array must be contiguous and
                    its size (number of elements) must be equal to the number
                    of atmospheric levels passed into the @ref grt_context_init
                    function, or else the behavior is undefined.
@@ -107,7 +107,7 @@
             -# Calculate the optical depth for each layer in the column
                at each spectral grid point by calling the
                @ref grt_calculate_optical_depth function.\n\n
-               \attention All input arrays must be contiguous.  In addition,
+               @attention All input arrays must be contiguous.  In addition,
                    the number of elements in the input pressure [atm] and
                    temperature [K] arrays must be equal to the number of
                    atmospheric levels.  The number of elements in the input
@@ -122,64 +122,25 @@
             -# Release the memory allocated by the context(s) by calling the
                @ref finalize_grt function.\n\n
 
-    \section Example
+    @section Example
         Here is a simple example demonstrating how to use this library.
-        \include example.c
+        @include example.c
         In order to build this code, copy this code into a file and
         (assuming you have gcc installed), run:\n\n
-        ```gcc <file> -o example.x -I<path to library include directory>
-           -L<path to library lib directory> -lmolecular_lines```\n\n
+        ```
+        gcc <file> -o example.x -I<path to library include directory>
+            -L<path to library lib directory> -lmolecular_lines
+        ```
+        \n\n
         To run this example on your GPU, make sure that you have compiled
         the library using the NVCC compiler (i.e., by using the provided
         Makefile.nvcc).
 */
 
 
-#define DIR_PATH_LEN 256
-
-
 /** @ingroup capi
     @brief Library context.*/
-typedef struct GrtContext
-{
-    int num_levels; /**< Number of atmospheric levels.*/
-    int num_layers; /**< Number of atmospheric layers (num_levels-1).*/
-    int num_molecules; /**< Number of molecules.*/
-    LineParams_t **line_params; /**< Array of structures containg molecular
-                                     line parameters (from HITRAN database
-                                     files.)*/
-    double w0; /**< First point of the spectral grid [1/cm].*/
-    double wn; /**< Last point of the spectral grid [1/cm].*/
-    double wres; /**< Spectral resolution [1/cm].*/
-    uint64_t num_wpoints; /**< Number of spectral grid points.*/
-    double wcutoff; /**< Cutoff from spectral line center [1/cm].*/
-    int gpu_id; /**< Id of the GPU that is associated with this context.*/
-    int num_threads; /**< Number of CPU threads that will be used to calculate
-                          the lines (if not using a GPU).*/
-    int use_h2o_ctm; /**< Flag for using the water vapor continuum.*/
-    char h2o_ctm_dir[DIR_PATH_LEN];
-    WaterVaporContinuumCoefs_t *h2o_cc; /**< Structure containing water vapor
-                                             continuum coefficients.*/
-    int use_o3_ctm; /**< Flag for using the ozone continuum.*/
-    char o3_ctm_dir[DIR_PATH_LEN];
-    OzoneContinuumCoefs_t *o3_cc; /**< Structure containing ozone continuum
-                                       coefficients.*/
-    fp_t *P; /**< Pressure [atm] at each level.*/
-    fp_t *T; /**< Temperatture [K] at each level.*/
-    fp_t *x; /**< Molecular abundance at each level.*/
-    fp_t *Pavg; /**< Pressure [atm] in each layer.*/
-    fp_t *Tavg; /**< Temperature [K] in each layer.*/
-    fp_t *N; /**< Total number of molecules [1/cm^2] in each layer.*/
-    fp_t *Ns; /**< Number of molecules [1/cm^2] (of a particular species) in
-                   each layer.*/
-    fp_t *Psavg; /**< Molecular partial pressure [atm] in each layer.*/
-    fp_t *snn_ref; /**< */
-    fp_t *gamma; /**< */
-    fp_t *Pshift; /**< */
-    fp_t *s; /**< */
-    fp_t *tau; /**< Optical depths (layer,wavenumber).*/
-    LineParams_t *lines; /**< Molecular line parameters.*/
-} GrtContext_t;
+typedef struct GrtContext GrtContext_t;
 
 
 /**
@@ -349,6 +310,31 @@ int grt_errstr(int const code, /**< Code returned from one of the
                char * const buf, /**< Buffer where message will be stored.*/
                int const buf_size /**< Size of the input message buffer.*/
               );
+
+
+/**
+    @ingroup capi
+    @brief Set the verbosity level for the library.
+*/
+#ifdef __NVCC__
+extern "C"
+#endif
+void grt_set_verbosity(int const level /**< Verbosity level.  Levels range
+                                            from 0 (least verbose) to 3
+                                            (most verbose).  The default
+                                            level is 0.*/
+                      );
+
+
+/**
+    @ingroup capi
+    @brief Get the verbosity level for the library.
+    @return Current verbosity level.
+*/
+#ifdef __NVCC__
+extern "C"
+#endif
+int grt_get_verbosity(void);
 
 
 #endif

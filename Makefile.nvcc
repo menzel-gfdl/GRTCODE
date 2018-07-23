@@ -42,8 +42,8 @@ LIB_MODS = ${LIB_NAME}_f.mod ${LIB_NAME}_fhl.mod
 LIBS = ${STATIC_LIB} ${SHARED_LIB}
 PREFIX = .
 
-TESTOBJ = example.multi_gpu.o
-TESTX = example.multi_gpu.x
+TESTOBJ = example.o
+TESTX = example.x
 TESTFOBJ = example_f.o
 TESTFX = example_f.x
 TESTFOBJ_HL = example_fhl.o
@@ -52,9 +52,7 @@ TESTFX_HL = example_fhl.x
 all: ${LIBS}
 
 test: ${TESTX} ${TESTFX} ${TESTFX_HL}
-	./${TESTX}
-#	./${TESTFX}
-#	./${TESTFX_HL}
+	@./examples/run_tests
 
 ${STATIC_LIB}: ${OBJ}
 	ar rcs $@ $^

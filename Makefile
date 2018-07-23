@@ -45,13 +45,7 @@ TESTFX_HL = example_fhl.x
 all: ${LIBS}
 
 test: ${TESTX} ${TESTFX} ${TESTFX_HL}
-	@printf "\n\nRunning ${TESTX}.\n\n"
-	./${TESTX}
-	@printf "\n\nCompleted.\n\nRunning ${TESTFX}\n\n"
-	./${TESTFX}
-	@printf "\n\nCompleted.\n\nRunning ${TESTFX_HL}\n\n"
-	./${TESTFX_HL}
-	@printf "\n\nCompleted.\n\nAll tests complete.\n\n"
+	@./examples/run_tests --host
 
 ${STATIC_LIB}: ${OBJ}
 	ar rcs $@ $^

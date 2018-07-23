@@ -1,5 +1,11 @@
 program test
-    use iso_c_binding
+    use,intrinsic :: iso_fortran_env
+    use,intrinsic :: iso_c_binding
+#ifdef _OPENMP
+    use omp_lib
+#else
+#error "You must build this code with OpenMP."
+#endif
     use molecular_lines_f
     implicit none
 
@@ -12,7 +18,7 @@ program test
 #define FP c_float
 #endif
 
-    type(GrtContext_t) :: context !Library context.
+    type(GrtContext_t),dimension(:),allocatable :: context !Library context.
     integer(kind=c_int) :: num_levels !Number of atmospheric levels.
     real(kind=c_double) :: w0 !Lower bound [1/cm] of spectral grid.
     real(kind=c_double) :: wn !Upper bound [1/cm] of spectral grid.
@@ -23,30 +29,67 @@ program test
                                                  !files.
     character(kind=c_char,len=64) :: o3_ctm_dir !Path to directory containing
                                                 !ozone continuum input files.
+    integer(kind=c_int),dimension(:),allocatable :: h2o !Water vapor molecule id.
+                                                        !This is set by the
+                                                        !library.
+    integer(kind=c_int),dimension(:),allocatable :: o3 !Ozone molecule id.
+                                                       !This is set by the
+                                                       !library.
+    integer(kind=c_int) :: num_contexts !Number of library contexts.
+    logical :: host_only !Flag telling if the run will occur on only the
+                         !host CPU.
+    integer(kind=c_int),parameter :: host_id = -1 !Special id that signifies
+                                                  !a host-only run.
+    integer :: argc !Number of command line arguments.
+    character(len=128) :: argv !Command line argument.
     integer(kind=c_int) :: rc !Return code from library calls.
+    integer(kind=c_int) :: gid !GPU id for a context.
+    character(kind=c_char,len=128) :: hitran_path !Path to HITRAN database
+                                                  !input file.
+    real(kind=c_double) :: min_line_center_wavenumber !Lower bound for line
+                                                      !center [1/cm].
+    real(kind=c_double) :: max_line_center_wavenumber !Upper bound for line
+                                                      !center [1/cm].
     integer(kind=c_int64_t) :: num_wpoints !Spectral grid size.
     integer(kind=c_int) :: num_layers !Number of atmospheric layers.  This
                                       !must be equal to the number of
                                       !atmospheric levels - 1.
-    character(kind=c_char,len=64) :: hitran_path !Path to HITRAN database
-                                                 !input file.
-    integer(kind=c_int) :: h2o !Water vapor molecule id.  This is set by the
-                               !library.
-    integer(kind=c_int) :: o3 !Ozone molecule id.  This is set by the
-                              !library.
-    real(kind=FP),dimension(:),allocatable :: pressure !Atmospheric level
-                                                       !pressures [atm].
-    real(kind=FP),dimension(:),allocatable :: temperature !Atmospheric level
-                                                          !temperatures [K].
-    real(kind=FP),dimension(:),allocatable :: ppmv !Atmospheric level
-                                                   !molecular abundances
-                                                   ![ppmv].
-    real(kind=FP),dimension(:,:),allocatable :: optical_depth !Atmospheric
-                                                              !layer optical
-                                                              !depths.
     integer(kind=c_int) :: num_columns !Number of atmospheric columns.
+    real(kind=FP),dimension(:,:),allocatable :: pressure !Atmospheric level
+                                                         !pressures [atm].
+    real(kind=FP),dimension(:,:),allocatable :: temperature !Atmospheric level
+                                                            !temperatures [K].
+    real(kind=FP),dimension(:,:),allocatable :: ppmv !Atmospheric level
+                                                     !molecular abundances
+                                                     ![ppmv].
+    real(kind=FP),dimension(:,:,:),allocatable :: optical_depth !Atmospheric
+                                                                !layer optical
+                                                                !depths.
     integer(kind=c_int) :: i
     integer(kind=c_int) :: j
+
+    !Command line argument controls how many GPUs will be used.
+    num_contexts = 1
+    host_only = .false.
+    argc = command_argument_count()
+    if (argc .eq. 1) then
+        call get_command_argument(1,argv)
+        if (trim(argv) .eq. "--host") then
+            host_only = .true.
+        else
+            read(argv,*) num_contexts
+        endif
+    elseif (argc .gt. 1) then
+        call get_command_argument(0,argv)
+        write(error_unit,*) "Usage: "//trim(argv)//" [--host|num_gpus]"
+        stop 1
+    endif
+    allocate(context(num_contexts))
+    allocate(h2o(num_contexts))
+    allocate(o3(num_contexts))
+
+    !Increase the verbosity of the library output.
+    call grt_set_verbosity_f(3)
 
     num_levels = 25
     w0 = 1._c_double
@@ -55,79 +98,114 @@ program test
     h2o_ctm_dir = "water_vapor_continuum"
     o3_ctm_dir = "ozone_continuum"
 
-    !Initalize a library context context.
-    rc = grt_context_init_f(context, &
-                            num_levels, &
-                            w0, &
-                            wn, &
-                            wres, &
-                            h2o_ctm_dir=trim(h2o_ctm_dir), &
-                            o3_ctm_dir=trim(o3_ctm_dir))
-    call check_rc(rc)
+    do i = 1,num_contexts
 
-    !Add water vapor to the context.
-    hitran_path = ""
-    hitran_path = "HITRAN_files/water_vapor.hitran12.par"
-    rc = grt_add_molecule_f(context, &
-                            trim(hitran_path), &
-                            h2o, &
-                            min_line_center_wavenumber=1._c_double, &
-                            max_line_center_wavenumber=300._c_double)
-    call check_rc(rc)
+        if (argc .eq. 0) then
+            !Initalize library context pointers.
+            rc = grt_context_init_f(context(i), &
+                                    num_levels, &
+                                    w0, &
+                                    wn, &
+                                    wres, &
+                                    h2o_ctm_dir=h2o_ctm_dir, &
+                                    o3_ctm_dir=o3_ctm_dir)
+        else
+            !Determine the GPU id for the context.
+            if (host_only) then
+                gid = host_id
+            else
+                gid = i - 1
+            endif
 
-    !Add ozone to the context.
-    hitran_path = ""
-    hitran_path = "HITRAN_files/ozone.hitran12.par"
-    rc = grt_add_molecule_f(context, &
-                            trim(hitran_path), &
-                            o3)
-    call check_rc(rc)
+            !Initalize library context pointers.
+            rc = grt_context_init_f(context(i), &
+                                    num_levels, &
+                                    w0, &
+                                    wn, &
+                                    wres, &
+                                    gpu_id=gid, &
+                                    h2o_ctm_dir=h2o_ctm_dir, &
+                                    o3_ctm_dir=o3_ctm_dir)
+        endif
+        call check_rc(rc)
 
-    !Get the size of the spectral grid.
-    rc = grt_get_spectral_grid_size_f(context, &
+        !Set path to the water vapor HITRAN database input file.
+        hitran_path = "HITRAN_files/water_vapor.hitran12.par"
+
+        !Only water vapor lines with line centers in the range 1 - 1000 [1/cm]
+        !will be included in the calculation.
+        min_line_center_wavenumber = 1._c_double
+        max_line_center_wavenumber = 1000._c_double
+
+        !Add water vapor to the library context.
+        rc = grt_add_molecule_f(context(i), &
+                                hitran_path, &
+                                h2o(i), &
+                                min_line_center_wavenumber, &
+                                max_line_center_wavenumber)
+        call check_rc(rc)
+
+        !Set path to the ozone HITRAN database input file.
+        hitran_path = "HITRAN_files/ozone.hitran12.par"
+
+        !Add ozone to the library context.
+        rc = grt_add_molecule_f(context(i), &
+                                hitran_path, &
+                                o3(i))
+        call check_rc(rc)
+    enddo
+
+    rc = grt_get_spectral_grid_size_f(context(1), &
                                       num_wpoints)
     call check_rc(rc)
     num_layers = num_levels - 1
 
     !Allocate necessary arrays.
-    allocate(pressure(num_levels))
-    allocate(temperature(num_levels))
-    allocate(ppmv(num_levels))
-    allocate(optical_depth(num_wpoints,num_layers))
+    num_columns = 2*num_contexts
+    allocate(pressure(num_levels,num_columns))
+    allocate(temperature(num_levels,num_columns))
+    allocate(ppmv(num_levels,num_columns))
+    allocate(optical_depth(num_wpoints,num_layers,num_columns))
 
-    !Loop over columns.
-    num_columns = 3
+    !Loop over some columns.
+!$omp parallel do num_threads(num_contexts) &
+!$omp&            default(none) &
+!$omp&            shared(context,num_levels,num_columns,num_wpoints, &
+!$omp&                   pressure,temperature,ppmv,h2o,o3, &
+!$omp&                   optical_depth) &
+!$omp&            private(i,j,gid,rc)
     do i = 1,num_columns
+        gid = omp_get_thread_num() + 1
 
-        !Make up some data.
+        !Make up some data for the column.
         do j = 1,num_levels
-            pressure(j) = 0.1 + 150.*real(j,kind=FP)
-            temperature(j) = 230. + 2.3*real(j,kind=FP)
-            ppmv(j) = 300. + 0.2*real(j,kind=FP)
+            pressure(j,i) = 0.1 + 150.*j
+            temperature(j,i) = 230. + 2.3*j
+            ppmv(j,i) = 300. + 0.2*j
         enddo
 
-        !Set water vapor abundance for the context.
-        rc = grt_set_molecule_ppmv_f(context, &
-                                     h2o, &
-                                     ppmv)
+        !Set the water vapor abundance for the library context.
+        rc = grt_set_molecule_ppmv_f(context(gid), &
+                                     h2o(gid), &
+                                     ppmv(:,i))
         call check_rc(rc)
 
-        !Make up some more data.
+        !Make up some more data for the column.
         do j = 1,num_levels
-            ppmv(j) = 600. + 0.3*real(j,kind=FP)
+            ppmv(j,i) = 325. - 3.3*j
         enddo
 
-        !Set ozone abundance for the context.
-        rc = grt_set_molecule_ppmv_f(context, &
-                                     o3, &
-                                     ppmv)
+        !Set the water vapor abundance for the library context.
+        rc = grt_set_molecule_ppmv_f(context(gid), &
+                                     o3(gid), &
+                                     ppmv(:,i))
         call check_rc(rc)
 
         !Calculate the optical depths.
-        rc = grt_calculate_optical_depth_f(context, &
-                                           pressure, &
-                                           temperature, &
-                                           optical_depth)
+        rc = grt_calculate_optical_depth_f(context(gid), &
+                                           pressure(:,i), &
+                                           temperature(:,i), &
+                                           optical_depth(:,:,i))
         call check_rc(rc)
     enddo
 
@@ -137,9 +215,14 @@ program test
     deallocate(ppmv)
     deallocate(optical_depth)
 
-    !Free memory allocated by the context.
-    rc = grt_context_free_f(context)
-    call check_rc(rc)
+    !Free memory allocated by the library context.
+    do i = 1,num_contexts
+        rc = grt_context_free_f(context(i))
+        call check_rc(rc)
+    enddo
+    deallocate(context)
+    deallocate(h2o)
+    deallocate(o3)
 
 
     contains
@@ -147,7 +230,6 @@ program test
 
     !Utility routine that traps errors returned by the library.
     subroutine check_rc(rc)
-        use iso_fortran_env
         integer(kind=c_int),intent(in) :: rc
         character(len=256) :: mesg
         if (rc .ne. 0) then

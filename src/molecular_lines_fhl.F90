@@ -46,7 +46,8 @@ module molecular_lines_fhl
     public :: grt_calculate_optical_depth_fhl
     public :: grt_get_num_levels_fhl
     public :: grt_get_spectral_grid_size_fhl
-
+    public :: grt_set_verbosity_f
+    public :: grt_get_verbosity_f
 
 #ifdef DOUBLE_PRECISION
 #define FP c_double

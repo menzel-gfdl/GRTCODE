@@ -26,7 +26,7 @@ enum return_codes
 
 
 #define backtrace() { \
-    if (get_verbosity() <= ERROR) { \
+    if (get_verbosity() >= ERROR) { \
         fprintf(stderr, \
                 "\t%s: %d\n", \
                 __FILE__, \
@@ -35,7 +35,7 @@ enum return_codes
 
 
 #define log_err(mesg,...) { \
-    if (get_verbosity() <= ERROR) { \
+    if (get_verbosity() >= ERROR) { \
         fprintf(stderr, \
                 "[%s] error: " mesg "\nBacktrace:\n", \
                 __func__, \
@@ -45,7 +45,7 @@ enum return_codes
 
 
 #define log_warn(mesg,...) { \
-    if (get_verbosity() <= WARN) { \
+    if (get_verbosity() >= WARN) { \
         fprintf(stderr, \
                 "[%s:%d] warning: " mesg "\n", \
                 __FILE__, \
@@ -55,7 +55,7 @@ enum return_codes
 
 
 #define log_info(mesg,...) {\
-    if (get_verbosity() <= INFO) { \
+    if (get_verbosity() >= INFO) { \
         fprintf(stderr, \
                 "[%s:%d] info: " mesg "\n", \
                 __FILE__, \
