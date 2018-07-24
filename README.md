@@ -14,9 +14,9 @@ This library requires a c and fortran compiler, such as the freely
 available gcc and gfortran.  The c compiler must support the c99
 standard, and the fortran compiler must support [this Fortran 2012
 Technical Specification](https://www.iso.org/standard/45136.html).
-In order to run on a NVIDIA GPU, CUDA must also be installed and the
-library must be built using the included NVCC compiler.  This library
-also requires make and install.
+In order to run on a NVIDIA GPU, the library also requires a c++ compiler (such
+as g++), CUDA, and the NVCC compiler.  This library also requires make and
+install.
 
 # Source Code
 The source code currently resides in
@@ -47,21 +47,28 @@ $ make test
 
 to make sure that everything built and runs properly.  The make
 variable PREFIX can be used to specify where the library will be
-installed;  if it is not specified the library is installed in the
+installed;  
+
+```
+$ make install PREFIX=/home/molecular_lines
+```
+
+if it is not specified the library is installed in the
 current directory.  The default compilers and compiler flags can be
 overridden by specifying CC, FC, CFLAGS, and FFLAGS when running
-make in the usual fashion.  For example,
+make in the usual fashion:
 
 ```
 $ make CC=icc CFLAGS=-O3 FC=ifort FFLAGS=-O3
 ```
 
 This library takes advantage of thread-level parallelism through the
-use of OpenMP.  If your compiler supports OpenMP, make sure you
+use of OpenMP (the default settings will activate OpenMP using the GNU
+compilers).  If your compiler supports OpenMP, make sure you
 activate it by setting the corresponding compiler option.
 
 ### With GPUs
-If you have CUDA and the NVCC compiler installed, the library
+If you have a c++ compiler, CUDA, and the NVCC compiler installed, the library
 can built to run on NVIDIA GPUs by running
 
 ```
@@ -77,6 +84,23 @@ $ make -f Makefile.nvcc test
 
 Once again the make variable PREFIX can be used to specify where the
 library will be installed (default is the current directory).
+
+### Tip
+One way to see how many CUDA-enabled GPUs your system has is to try running:
+
+```
+$ nvidia-smi --list-gpus
+```
+Each CUDA-enabled GPU that is found will be listed with with its device id,
+followed by its model name.  Example output on a system with two Tesla K40c
+GPUs will look like:
+
+```
+GPU 0: Tesla K40c (UUID: GPU-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+GPU 1: Tesla K40c (UUID: GPU-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+```
+
+
 
 # APIs
 A C API, Low-level Fortran API, and High-level Fortran API
@@ -112,7 +136,7 @@ $ make -f Makefile.nvcc test
 
 ### Example HITRAN Database Files
 Example ASCII HITRAN database file for water vapor, carbon dixoide,
-ozone, nitrous ozide, methane, carbon monoxide, and oxygen are
+ozone, nitrous oxide, methane, carbon monoxide, and oxygen are
 included in the HITRAN_files directory.  As described on the API
 pages, input ASCII HITRAN database files for each molecule that will be
 included in the optical depth calculation are required.  These files

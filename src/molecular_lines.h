@@ -8,34 +8,37 @@
 
 /**
     @defgroup capi C API
-    @brief foobar
     @section Overview
         Given an atmospheric column made up of at least one layer,
         this code calculates the total optical depth of each layer
-        at each point on an input spectral grid.  Typical usage of this
-        library includes the following steps:\n\n
-            -# Declare library context pointer(s).  Each context pointer will
+        at each point on an input spectral grid.  To use this API,
+
+            #include "molecular_lines.h"
+
+        and follow these steps:
+            -# Declare library context pointer(s).  These variables must be
+               pointers of type GrtContext_t, as in:
+
+                   GrtContext_t *x;
+
+               Each context pointer will
                hold the address of a struct that contains data that is
-               required by the library.\n\n
+               required by the library.
                @note Each context can be associated with a single GPU.  If
                    you wish to use multiple GPUs, you must create a context
                    pointer for each GPU you wish to use and pass
-                   in the appropriate device id when initalizing the context
+                   in the appropriate device id when initializing the context
                    pointer (i.e., by calling the @ref grt_context_init
                    function).
 
-               \n
             -# Initialize the context pointer(s) by calling the
                @ref grt_context_init function.  Here you must provide the
                number of levels per atmospheric column and parameters
                (lower bound, upper bound, and resolution) for the
                spectral grid on which the optical depths will be calculated.
-               \n\n
                @attention You must call this function before calling any
                    other function included in this library.  Failure to do
                    so will result in undefined behavior.
-
-               \n
                @note Each atmospheric level corresponds to an interface
                    between adjacent atmospheric layers or the lower/upper
                    edge of the atmosphere.  Thus, the number of atmospheric
@@ -44,32 +47,23 @@
                    the number of atmospheric levels must be greater than or
                    equal to two.
 
-               \n In addition, the following parameters may be set (passing
-               in NULL implies using the default values):\n\n
+               In addition, the following parameters may be set (passing
+               in NULL implies using the default values):
                - A cutoff value for the molecular lines.  This
                  value denotes how far (in terms of wavenumber) from the line
                  center each molecular line is calculated out to.  By default
                  this value is set to 25 [1/cm], so if for example a line
                  center lies at the wavenumber 150 [1/cm], then it contributes
                  to the optical depth at all spectral grid points in the range
-                 125 <= w <= 175 [1/cm].\n\n
+                 125 <= w <= 175 [1/cm].
                - The id of the GPU device you wish to associate with this
-                 context.  A list of NVIDIA GPUs on your system can be
-                 found by running:\n\n
-                 ```
-                 $ nvidia-smi --list-gpus
-                 ```
-                 \n\n
-                 If you do not specify a GPU id when initializing the context,
-                 the library will query the system for available GPUs.  If any
-                 are found, then the first device (device 0) will be used.
-                 If you wish to run only on your host CPU, pass in a value
-                 of -1.\n\n
-                 \note If you wish to run on a GPU, you must have a NVIDIA GPU,
-                     install CUDA, and compile with the NVCC compiler (see
-                     Requirements below).
-
-                 \n
+                 context (see the readme for a simple way to determine the ids of
+                 any GPUs you may have on your system).  If you do not specify a
+                 GPU id when initializing the context (i.e., by passing in NULL
+                 for this argument), the library will query the system for available
+                 GPUs.  If any are found, then the first device (device 0) will be used.
+                 If you wish to force the code to run on your host CPU, pass in a value
+                 of -1.
                - If you wish to run with either the water vapor
                  or ozone continua, you must provide a path to a directory
                  containing the necessary input files.  The required input
@@ -77,36 +71,31 @@
                  "water_vapor_continuum" and "ozone_continuum" respectively,
                  and are located in the base directory of this repository.
                  If you wish to run without either continuum, instead pass
-                 in the value NULL.\n\n
+                 in the value NULL.
             -# Add each molecule that you want included in the optical
                depth calculation by calling the @ref grt_add_molecule function.
-               Each added molecule requires an ascii [HITRAN]
-               (http://hitran.org) database file
-               containing the necessary molecular line parameters.  The
+               Each added molecule requires an ascii [HITRAN](http://hitran.org)
+               database file containing the necessary molecular line parameters.  The
                format of these files must match that described in Table 1 of
-               [Rothman et al. 2013, Journal of Quantitative Spectroscopy
-               & Radiative Transfer, 130]
-               (http://dx.doi.org/10.1016/j.jqsrt.2013.07.002).
-               Example HITRAN database files
-               for a select set of molecules are included with this library in
-               a directory labeled HITRAN_files in the base of this
-               repository.\n\n
+               [Rothman et al. 2013, Journal of Quantitative Spectroscopy & Radiative
+               Transfer, 130](http://dx.doi.org/10.1016/j.jqsrt.2013.07.002).
+               Example HITRAN database files for a select set of molecules are included
+               with this library in a directory labeled HITRAN_files in the base of this
+               repository.
                @attention Ozone and water vapor continua will only be
                    included in the optical depth calculation if the ozone
                    and water vapor molecules are added.
 
-               \n
             -# Set the abundance [ppmv] of each added molecule by calling
-               the @ref grt_set_molecule_ppmv function.\n\n
+               the @ref grt_set_molecule_ppmv function.
                @attention The input abundance array must be contiguous and
                    its size (number of elements) must be equal to the number
                    of atmospheric levels passed into the @ref grt_context_init
                    function, or else the behavior is undefined.
 
-               \n
-            -# Calculate the optical depth for each layer in the column
-               at each spectral grid point by calling the
-               @ref grt_calculate_optical_depth function.\n\n
+            -# Calculate the optical depth for each layer in the column at each
+               spectral grid point by calling the @ref grt_calculate_optical_depth
+               function.
                @attention All input arrays must be contiguous.  In addition,
                    the number of elements in the input pressure [atm] and
                    temperature [K] arrays must be equal to the number of
@@ -114,32 +103,30 @@
                    optical depth array must be equal to the number of
                    atmospheric layers (number of atmospheric levels minus one)
                    times the number of spectral grid points (returned by
-                   the @ref grt_context_init function).  If any of
+                   the @ref grt_get_spectral_grid_size function).  If any of
                    these arrays are not contiguous or have an incorrect size,
                    the behavior is undefined.
 
-               \n
             -# Release the memory allocated by the context(s) by calling the
-               @ref finalize_grt function.\n\n
-
+               @ref grt_context_free function.
     @section Example
-        Here is a simple example demonstrating how to use this library.
-        @include example.c
-        In order to build this code, copy this code into a file and
-        (assuming you have gcc installed), run:\n\n
-        ```
-        gcc <file> -o example.x -I<path to library include directory>
-            -L<path to library lib directory> -lmolecular_lines
-        ```
-        \n\n
-        To run this example on your GPU, make sure that you have compiled
-        the library using the NVCC compiler (i.e., by using the provided
-        Makefile.nvcc).
+    Here is a simple example demonstrating how to use this library.
+    @include example.c
+    In order to build this code, copy this code into a file and
+    (assuming you have gcc installed), run:
+
+        $ gcc <file> -o example.x -I<path to library include directory> \
+              -L<path to library lib directory> -lmolecular_lines
+
+    To run this example on your GPU, make sure that you have compiled
+    the library using the NVCC compiler (i.e., by using the provided
+    Makefile.nvcc).
 */
 
 
 /** @ingroup capi
-    @brief Library context.*/
+    @brief Library context.
+*/
 typedef struct GrtContext GrtContext_t;
 
 
@@ -168,7 +155,7 @@ int grt_context_init(GrtContext_t **context, /**< Library context.*/
                      int const * const num_threads, /**< If running on the host CPU,
                                                          determines the maximum number
                                                          of OpenMP threads that will
-                                                         be used.  Defaults to
+                                                         be used.  If NULL, default to
                                                          omp_get_max_threads (or one
                                                          if not build with OpenMP).*/
                      char const * const h2o_ctm_dir, /**< Directory containing the
@@ -214,12 +201,14 @@ int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
                      int * const molecule_id, /**< Id that is associated with the molecule. */
                      double const * const min_line_center_wavenumber, /**< Lower bound [1/cm] of spectral range.
                                                                            Only lines with line center wavenumbers
-                                                                           greater than or eqaul to this will be
-                                                                           computed.  Defaults to 1 [1/cm].*/
+                                                                           greater than or equal to this will be
+                                                                           computed.  If the value NULL is passed
+                                                                           in, this defaults to 1 [1/cm].*/
                      double const * const max_line_center_wavenumber /**< Upper bound [1/cm] of spectral range.
                                                                           Only lines with line center wavenumbers
                                                                           less than or equal to this will be
-                                                                          computed.  Defaults to 50,000 [1/cm].*/
+                                                                          computed.  If the value NULL is passed
+                                                                          in, this defaults to 3250 [1/cm].*/
                     );
 
 
@@ -236,7 +225,7 @@ int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
                                                       @ref add_molecule.*/
                           fp_t const * const ppmv /**< Array of molecular abundances [ppmv].
                                                        The size of this array must be
-                                                       eqaul to the number of atmospheric
+                                                       equal to the number of atmospheric
                                                        levels.*/
                          );
 
@@ -253,11 +242,11 @@ extern "C"
 int grt_calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
                                 fp_t const * const pressure, /**< Array of atmospheric pressures [atm].
                                                                   The size of this array must be
-                                                                  eqaul to the number of atmospheric
+                                                                  equal to the number of atmospheric
                                                                   levels.*/
                                 fp_t const * const temperature, /**< Array of atmospheric temperatures [K].
                                                                      The size of this array must be
-                                                                     eqaul to the number of atmospheric
+                                                                     equal to the number of atmospheric
                                                                      levels.*/
                                 fp_t *optical_depth /**< Array of atmospheric optical depths.
                                                          The size of this array must be equal

@@ -9,17 +9,82 @@ module molecular_lines_fhl
     private
 
 
-    !> \defgroup highlevelfortranapi High Level Fortran API
-    !! \brief This module provides Fortran functions that calculate optical
-    !!     depths from molecular lines in each layer of an atmospheric column.
-    !!      To use this module, include the line:\n\n
-    !!      ```use molecular_lines_fhl```\n\n
-    !!      in your fortran application.
-    !! \section Overview
-    !!     The high level fortran API provides simplified interfaces, at the
-    !!     cost of thread-safety and more fine-grained control.  The goal
-    !!     of this API is to make the library more accessible to users
-    !!     familiar with Fortran paradigms currently used in GCMs.
+    !> \defgroup highlevelfortranapi High-level Fortran API
+    !!@section Overview
+    !!    Given an atmospheric column made up of at least one layer,
+    !!    this code calculates the total optical depth of each layer
+    !!    at each point on an input spectral grid.  Unlike the
+    !!    @ref lowlevelfortranapi, this API provides simplified interfaces,
+    !!    at the cost of thread-safety and more fine-grained control with the
+    !!    goal of making this library more accessible to users
+    !!    familiar with Fortran paradigms currently used in GCMs.
+    !!    To use this API,
+    !!
+    !!        use molecular_lines_fhl
+    !!
+    !!    and follow these steps:
+    !!        -# Initialize the library by calling the
+    !!           @ref grt_context_init_fhl function.  Here you must provide
+    !!           an array of paths HITRAN database files, where each path
+    !!           in the array corresponds to a molecule that will be used
+    !!           in the optical depth calculation.
+    !!           @attention You must call this function before calling any
+    !!               other function included in this library.  Failure to do
+    !!               so will result in undefined behavior.
+    !!
+    !!           In addition, the following optional parameters may be set (not
+    !!           passing these arguments in implies using the default values):
+    !!           - A path to a file containg a Fortran namelist.  As described
+    !!             below, the number of levels per atmospheric column and
+    !!             parameters (lower bound, upper bound, and resolution) for
+    !!             the spectral grid on which the optical depths will be
+    !!             calculated are namelist controlled.  If this argument is
+    !!             not passed in, the default values described in the section
+    !!             below will be used.
+    !!           - A cutoff value for the molecular lines.  This
+    !!             value denotes how far (in terms of wavenumber) from the line
+    !!             center each molecular line is calculated out to.  By default
+    !!             this value is set to 25 [1/cm], so if for example a line
+    !!             center lies at the wavenumber 150 [1/cm], then it contributes
+    !!             to the optical depth at all spectral grid points in the range
+    !!             125 <= w <= 175 [1/cm].
+    !!           - The id of the GPU device you'd like the library to use
+    !!             (see the readme for a simple way to determine the ids of
+    !!             any GPUs you may have on your system).  If you do not specify a
+    !!             GPU id when initializing the library,
+    !!             the library will query the system for available
+    !!             GPUs.  If any are found, then the first device (device 0) will be used.
+    !!             If you wish to force the code to run on your host CPU, pass in a value
+    !!             of -1.
+    !!           - If you wish to run with either the water vapor
+    !!             or ozone continua, you must provide a path to a directory
+    !!             containing the necessary input files.  The required input
+    !!             files are included with this library in directories named
+    !!             "water_vapor_continuum" and "ozone_continuum" respectively,
+    !!             and are located in the base directory of this repository.
+    !!        -# Calculate the optical depth for each layer in the column at each
+    !!           spectral grid point by calling the @ref grt_calculate_optical_depth_fhl
+    !!           function.
+    !!           @attention All input arrays must be contiguous.  In addition,
+    !!               the number of elements in the input pressure [atm] and
+    !!               temperature [K] arrays must be equal to the number of
+    !!               atmospheric levels.  The input abundance array [ppmv]
+    !!               must be two-dimensional, and layed out in memory as
+    !!               (level,molecule), where the molecules must be in the
+    !!               same order as they were in the array of HITRAN file paths
+    !!               that was passed into the @ref grt_context_init_fhl
+    !!               routine.  The input optical depth array must also be
+    !!               two-dimensional, and layed out in memory as (wavenumber,
+    !!               layers), where the number of atmospheric layers must
+    !!               equal the number of atmospheric levels minus one and the
+    !!               size of the wavenumber dimension must equal the number
+    !!               of spectral grid points (returned by the
+    !!               @ref grt_get_spectral_grid_size_fhl function).  If any of
+    !!               these arrays are not contiguous or have an incorrect size,
+    !!               the behavior is undefined.
+    !!
+    !!        -# Release the memory allocated by the libray by calling the
+    !!           @ref grt_context_free_f function.
     !! \section Namelist
     !!     Runtime arguments can be supplied via a Fortran namelist titled
     !!     <c>molecular_lines_nml</c>.  A path to the file containing
@@ -36,8 +101,35 @@ module molecular_lines_fhl
     !!               spectral grid.  Defaults to 3250.
     !!     \param wres <b> Real(kind=c_double) </b> resolution [1/cm] of
     !!                 spectral grid.  Defaults to 0.1.
-    !! \section Example
-    !! \include examplef_hl.F90
+    !!     @note Each atmospheric level corresponds to an interface
+    !!         between adjacent atmospheric layers or the lower/upper
+    !!         edge of the atmosphere.  Thus, the number of atmospheric
+    !!         levels = the number of atmospheric layers plus one.
+    !!         Since at least one atmospheric layer is required,
+    !!         the number of atmospheric levels must be greater than or
+    !!
+    !!@section Limitations
+    !!    This API aims to simply the function interfaces by managing
+    !!    the library context internally.  Because of this, only a single
+    !!    library context is used, and thus:
+    !!    - The library is no longer thread-safe.  Calling these functions
+    !!      in OpenMP threaded regions will lead to undefined behavior.
+    !!    - The library is restricted to only using a single GPU.
+    !!
+    !!    If greater control over parallelism is required, please use the
+    !!    @ref lowlevelfortranapi.
+    !!@section Example
+    !!Here is a simple example demonstrating how to use this library.
+    !!@include example_fhl.F90
+    !!In order to build this code, copy this code into a file and
+    !!(assuming you have gcc installed), run:
+    !!
+    !!    $ gfortran <file> -o example.x -I<path to library include directory> \
+    !!          -L<path to library lib directory> -lmolecular_lines
+    !!
+    !!To run this example on your GPU, make sure that you have compiled
+    !!the library using the NVCC compiler (i.e., by using the provided
+    !!Makefile.nvcc).
 
 
     !Public routines
@@ -163,11 +255,10 @@ module molecular_lines_fhl
                                                                          !! database files.
             character(len=*),intent(in),optional :: namelist_filepath !< Path to namelist file.
             real(kind=c_double),intent(in),optional :: wcutoff !< Cutoff [1/cm] from spectral
-                                                               !! line center.  If NULL, this
-                                                               !! defaults to 25 [1/cm].
+                                                               !! line center.  Defaults to 25 [1/cm].
             integer(kind=c_int),intent(in),optional :: gpu_id !< Id of the GPU that will be associated
-                                                              !! with this context.  If NULL, then
-                                                              !! use GPU 0 if at least one GPU
+                                                              !! with this context.  If not passed in,
+                                                              !! then use GPU 0 if at least one GPU
                                                               !! exists on the system, or else
                                                               !! set to -1 (corresponding to
                                                               !! a host only run.
@@ -179,16 +270,16 @@ module molecular_lines_fhl
                                                                    !! if not build with OpenMP).
             character(len=*),intent(in),optional :: h2o_ctm_dir !< Directory containing the
                                                                 !! provided water vapor continuum
-                                                                !! input files.  If NULL, then
-                                                                !! the water vapor continuum
+                                                                !! input files.  If not passed in,
+                                                                !! then the water vapor continuum
                                                                 !! is not included in the optical
                                                                 !! depth calculation.
             character(len=*),intent(in),optional :: o3_ctm_dir !< Directory containing the
                                                                !! provided ozone continuum
-                                                               !! input files.  If NULL, then
-                                                               !! the ozone continuum is not
+                                                               !! input files.  If not passed in,
+                                                               !! then the ozone continuum is not
                                                                !! included in the optical depth
-                                                               !!  calculation.
+                                                               !! calculation.
 
             !Local variables
             integer(kind=c_int) :: return_code
@@ -275,7 +366,6 @@ module molecular_lines_fhl
         !> @ingroup highlevelfortranapi
         !! @brief Calculate the total optical depth of each atmospheric
         !!        layer at each spectral grid point.
-        !! @return 0 if completed successfully, or else an error code.
         subroutine grt_calculate_optical_depth_fhl(pressure, &
                                                    temperature, &
                                                    ppmv, &
