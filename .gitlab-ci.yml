@@ -1,0 +1,10 @@
+ml_test:
+  stage: test
+  tags:
+    - rlmworkstation
+  script:
+    - make test
+    - make clean
+    - module load cuda
+    - make -f Makefile.nvcc test
+    - make -f Makefile.nvcc clean
