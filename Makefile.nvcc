@@ -38,6 +38,7 @@ OBJ = ${LIB_NAME}_fhl.o \
       cuda_helpers.o
 STATIC_LIB = lib${LIB_NAME}.a
 SHARED_LIB = lib${LIB_NAME}.so
+LIB_HEADERS = src/${LIB_NAME}.h src/floating_point_type.h
 LIB_MODS = ${LIB_NAME}_f.mod ${LIB_NAME}_fhl.mod
 LIBS = ${STATIC_LIB} ${SHARED_LIB}
 PREFIX = .
@@ -94,7 +95,7 @@ ${TESTFX_HL}: ${TESTFOBJ_HL} ${LIBS}
 
 install:
 	install -d ${PREFIX}/include
-	install -t ${PREFIX}/include ${LIB_MODS} src/${LIB_NAME}.h
+	install -t ${PREFIX}/include ${LIB_MODS} ${LIB_HEADERS}
 	install -d ${PREFIX}/lib
 	install -t ${PREFIX}/lib ${LIBS}
 

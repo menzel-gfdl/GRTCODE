@@ -112,11 +112,13 @@
     @section Example
     Here is a simple example demonstrating how to use this library.
     @include example.c
-    In order to build this code, copy this code into a file and
-    (assuming you have gcc installed), run:
+    In order to build this code, copy this code into a file, modify
+    the paths to input files (as needed), and (assuming you have gcc
+    installed) run:
 
-        $ gcc <file> -o example.x -I<path to library include directory> \
-              -L<path to library lib directory> -lmolecular_lines
+        $ gcc <file> -fopenmp -o example.x -I<path to library include directory> \
+              -L<path to library lib directory> -lmolecular_lines \
+              -Wl,-rpath=<path to library lib directory>
 
     To run this example on your GPU, make sure that you have compiled
     the library using the NVCC compiler (i.e., by using the provided
