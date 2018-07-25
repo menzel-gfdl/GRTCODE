@@ -8,9 +8,10 @@ build:lscsky50:
     - make clean
     - make
   artifacts:
-    - *.so
-    - *.a
-    - *.mod
+    paths:
+      - ./*.so
+      - ./*.a
+      - ./*.mod
 
 test:lscsky50:
   stage: test
