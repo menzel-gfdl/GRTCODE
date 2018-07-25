@@ -1,7 +1,7 @@
-build:lscsky50:
+build:lscsky50-d:
   stage: build
   tags:
-    - lscsky50
+    - lscsky50-d
   only:
     - modular_lines
   script:
@@ -13,13 +13,13 @@ build:lscsky50:
       - ./*.a
       - ./*.mod
 
-test:lscsky50:
+test:lscsky50-d:
   stage: test
   tags:
-    - lscsky50
+    - lscsky50-d
   only:
     - modular_lines
   script:
     - make test
   dependencies:
-    - build:lscsky50
+    - build:lscsky50-d
