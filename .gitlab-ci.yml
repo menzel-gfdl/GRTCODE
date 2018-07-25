@@ -12,6 +12,7 @@ build:lscsky50-d:
       - ./*.so
       - ./*.a
       - ./*.mod
+      - ./*.o
 
 test:lscsky50-d:
   stage: test
