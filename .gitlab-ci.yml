@@ -1,10 +1,24 @@
-ml_test:
+build:lscsky50:
   stage: build
   tags:
-    - rlmworkstation
+    - lscsky50
+  only:
+    - modular_lines
+  script:
+    - make clean
+    - make
+  artifacts:
+    - *.so
+    - *.a
+    - *.mod
+
+test:lscsky50:
+  stage: test
+  tags:
+    - lscsky50
+  only:
+    - modular_lines
   script:
     - make test
-    - make clean
-    - module load cuda
-    - make -f Makefile.nvcc test
-    - make -f Makefile.nvcc clean
+  dependencies:
+    - build:lscsky50
