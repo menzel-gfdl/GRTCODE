@@ -10,14 +10,27 @@
 #include "molecular_lines.h"
 
 
-/*Utility macro to catch errors from library functions.*/
+/*Utility macros to catch errors from library functions.*/
 #define check_rc(rc) { \
     if (rc != 0) { \
         char buf[256]; \
-        int e_ = grt_errstr(rc,buf,256); \
+        grt_errstr(rc,buf,256); \
         fprintf(stderr,"%s\n",buf); \
         fprintf(stderr,"%s: %d Error\n",__FILE__,__LINE__); \
-    }}
+        return rc; \
+    } \
+}
+
+
+#define omp_check_rc(rc,e) { \
+    if (rc != 0) { \
+        char buf[256]; \
+        grt_errstr(rc,buf,256); \
+        fprintf(stderr,"%s\n",buf); \
+        fprintf(stderr,"%s: %d Error\n",__FILE__,__LINE__); \
+        e |= rc; \
+    } \
+}
 
 
 /*Utility macro for switching precision.  If you want to run in double
@@ -147,13 +160,17 @@ int main(int argc,char **argv)
     FP_t *ppmv = (FP_t *)malloc(sizeof(*ppmv)*num_levels*num_columns);
     FP_t *optical_depth = (FP_t *)malloc(sizeof(*optical_depth)*
                                          num_wpoints*num_layers*num_columns);
+    int rc[num_contexts];
+    memset(rc,
+           0,
+           sizeof(rc)*num_contexts);
 
     /*Loop over some columns.*/
 #pragma omp parallel for num_threads(num_contexts) \
                          default(none) \
                          shared(context,num_levels,num_columns,num_wpoints, \
                                 pressure,temperature,ppmv,h2o,o3,stderr, \
-                                optical_depth) \
+                                optical_depth,rc) \
                          private(i) /*is watching you, seeing your every move.*/
     for (i=0;i<num_columns;++i)
     {
@@ -172,9 +189,10 @@ int main(int argc,char **argv)
         }
 
         /*Set the water vapor abundance for the library context.*/
-        check_rc(grt_set_molecule_ppmv(c,
-                                       h2o[g],
-                                       &(ppmv[offset])));
+        omp_check_rc(grt_set_molecule_ppmv(c,
+                                           h2o[g],
+                                           &(ppmv[offset])),
+                     rc[g]);
 
         /*Make up some more data for the column.*/
         for (j=0;j<num_levels;++j)
@@ -183,15 +201,21 @@ int main(int argc,char **argv)
         }
 
         /*Set the water vapor abundance for the library context.*/
-        check_rc(grt_set_molecule_ppmv(c,
-                                       o3[g],
-                                       &(ppmv[offset])));
+        omp_check_rc(grt_set_molecule_ppmv(c,
+                                           o3[g],
+                                           &(ppmv[offset])),
+                     rc[g]);
 
         /*Calculate the optical depths.*/
-        check_rc(grt_calculate_optical_depth(c,
-                                             &(pressure[offset]),
-                                             &(temperature[offset]),
-                                             &(optical_depth[offset*num_wpoints])));
+        omp_check_rc(grt_calculate_optical_depth(c,
+                                                 &(pressure[offset]),
+                                                 &(temperature[offset]),
+                                                 &(optical_depth[offset*num_wpoints])),
+                     rc[g]);
+    }
+    for (i=0;i<num_contexts;++i)
+    {
+        check_rc(rc[i]);
     }
 
     /*Clean up.*/

@@ -34,7 +34,8 @@ SHARED_LIB = lib${LIB_NAME}.so
 LIB_HEADERS = src/${LIB_NAME}.h src/floating_point_type.h
 LIB_MODS = ${LIB_NAME}_f.mod ${LIB_NAME}_fhl.mod
 LIBS = ${STATIC_LIB} ${SHARED_LIB}
-PREFIX = .
+LIB_PC = ${LIB_NAME}.pc
+PREFIX = $(shell pwd)
 
 TESTOBJ = example.o
 TESTX = example.x
@@ -61,11 +62,13 @@ ${SHARED_LIB}: ${OBJ}
 %.o: src/%.F90
 	${FC} ${FFLAGS} -fPIC -o $@ -c $<
 
-%.o: examples/%.c
-	${CC} ${CFLAGS} ${CPPFLAGS} -Isrc -o $@ -c $<
+%.o: examples/%.c install
+	${CC} ${CFLAGS} ${CPPFLAGS} -o $@ -c $< \
+    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC})
 
-%.o: examples/%.F90
-	${FC} ${FFLAGS} -o $@ -c $<
+%.o: examples/%.F90 install
+	${FC} ${FFLAGS} -o $@ -c $< \
+    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC})
 
 ${LIB_NAME}_fhl.o: src/${LIB_NAME}_fhl.F90 ${LIB_NAME}_f.o
 	${FC} ${FFLAGS} -fPIC -o $@ -c $<
@@ -74,21 +77,40 @@ ${TESTOBJ}: ${LIBS}
 ${TESTFOBJ}: ${LIBS}
 ${TESTFOBJ_HL}: ${LIBS}
 
-${TESTX}: ${TESTOBJ} ${LIBS}
-	${CC} ${CFLAGS} -o $@ $< -L. -l${LIB_NAME} -Wl,-rpath='$$ORIGIN'
+${TESTX}: ${TESTOBJ} install
+	${CC} ${CFLAGS} -o $@ $< \
+    $(shell pkg-config --libs ${PREFIX}/pkg-config/${LIB_PC}) \
+    -Wl,-rpath=$(shell pkg-config --variable=libdir ${PREFIX}/pkg-config/${LIB_PC})
 
-${TESTFX}: ${TESTFOBJ} ${LIBS}
-	${FC} ${FFLAGS} -o $@ $< -L. -l${LIB_NAME} -Wl,-rpath='$$ORIGIN'
+${TESTFX}: ${TESTFOBJ} install
+	${FC} ${FFLAGS} -o $@ $< \
+    $(shell pkg-config --libs ${PREFIX}/pkg-config/${LIB_PC}) \
+    -Wl,-rpath=$(shell pkg-config --variable=libdir ${PREFIX}/pkg-config/${LIB_PC})
 
-${TESTFX_HL}: ${TESTFOBJ_HL} ${LIBS}
-	${FC} ${FFLAGS} -o $@ $< -L. -l${LIB_NAME} -Wl,-rpath='$$ORIGIN'
+${TESTFX_HL}: ${TESTFOBJ_HL} install
+	${FC} ${FFLAGS} -o $@ $< \
+    $(shell pkg-config --libs ${PREFIX}/pkg-config/${LIB_PC}) \
+    -Wl,-rpath=$(shell pkg-config --variable=libdir ${PREFIX}/pkg-config/${LIB_PC})
 
-install:
+${LIB_PC}: ${LIBS}
+	@echo "prefix=${PREFIX}" > $@
+	@echo 'includedir=$${prefix}/include' >> $@
+	@echo 'libdir=$${prefix}/lib' >> $@
+	@echo "" >> $@
+	@echo "Name: ${SHARED_LIB}" >> $@
+	@echo "Description: The ${LIB_NAME} library." >> $@
+	@echo "Version: 0.0" >> $@
+	@echo 'Cflags: -I$${includedir}' >> $@
+	@echo 'Libs: -L$${libdir} -l${LIB_NAME}' >> $@
+
+install: ${LIB_PC}
 	install -d ${PREFIX}/include
 	install -t ${PREFIX}/include ${LIB_MODS} ${LIB_HEADERS}
 	install -d ${PREFIX}/lib
 	install -t ${PREFIX}/lib ${LIBS}
+	install -d ${PREFIX}/pkg-config
+	install -t ${PREFIX}/pkg-config ${LIB_PC}
 
 clean:
-	rm -f ${LIBS} ${LIB_MODS} ${OBJ} *.mod
+	rm -f ${LIBS} ${LIB_PC} ${LIB_MODS} ${OBJ} *.mod
 	rm -f ${TESTX} ${TESTOBJ} ${TESTFX} ${TESTFOBJ} ${TESTFX_HL} ${TESTFOBJ_HL}
