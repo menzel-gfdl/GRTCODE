@@ -100,14 +100,13 @@ GPU 0: Tesla K40c (UUID: GPU-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 GPU 1: Tesla K40c (UUID: GPU-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 ```
 
-
-
 # APIs
 A C API, Low-level Fortran API, and High-level Fortran API
 are provided.  The Low-level Fortran Api simply provides direct
 bindings to the C API, while the High-level Fortran API
 provides a more simplified interface (at the expense of less control).
-All APIs are documented with Doxygen.  To view Doxygen-generated HTML describing each API, please open the file docs/APIs/index.html in a browser and click
+All APIs are documented with Doxygen.  To view Doxygen-generated HTML
+describing each API, please open the file APIs.html in a browser and click
 on the Modules tab.
 
 # Extras
