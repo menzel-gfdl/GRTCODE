@@ -21,11 +21,12 @@ install.
 # Source Code
 The source code currently resides in
 [this Gitlab repository](https://gitlab.gfdl.noaa.gov/Raymond.Menzel/grtcodev2),
-on branch modular_lines.  To obtain the code, run
+on branch molecular_lines_beta.  To obtain the code, run
 
 ```
-$ git clone https://gitlab.gfdl.noaa.gov/Raymond.Menzel/grtcodev2.git .
-$ git checkout modular_lines
+$ git clone https://gitlab.gfdl.noaa.gov/Raymond.Menzel/grtcodev2.git molecular_lines
+$ cd molecular_lines
+$ git checkout molecular_lines_beta
 ```
 
 # Building
