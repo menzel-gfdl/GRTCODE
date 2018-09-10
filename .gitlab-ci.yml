@@ -3,7 +3,7 @@ build:lscsky50-d:
   tags:
     - skylake
   only:
-    - modular_lines
+    - molecular_lines_beta
   script:
     - make clean
     - make
@@ -19,7 +19,7 @@ test:lscsky50-d:
   tags:
     - skylake
   only:
-    - modular_lines
+    - molecular_lines_beta
   script:
     - make test
   dependencies:
