@@ -143,10 +143,10 @@ module molecular_lines_fhl
     public :: grt_set_verbosity_f
     public :: grt_get_verbosity_f
 
-#ifdef DOUBLE_PRECISION
-#define FP c_double
-#else
+#ifdef SINGLE_PRECISION
 #define FP c_float
+#else
+#define FP c_double
 #endif
 
 
