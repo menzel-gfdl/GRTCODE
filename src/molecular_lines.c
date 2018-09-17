@@ -229,47 +229,47 @@ int grt_context_init(GrtContext_t **context,
     }
 
     /*Pepare water vapor continuum.*/
+    c.use_h2o_ctm = 0;
     if (h2o_ctm_dir != NULL)
     {
-        if (strlen(h2o_ctm_dir) >= DIR_PATH_LEN - 1)
+        if (strcmp(h2o_ctm_dir,"none") != 0)
         {
-            fatal(VALUE_ERR,
-                  "input water vapor continuum path length is too long (>= %d"
-                      " characters).",
-                  DIR_PATH_LEN-1);
+            if (strlen(h2o_ctm_dir) >= DIR_PATH_LEN - 1)
+            {
+                fatal(VALUE_ERR,
+                      "input water vapor continuum path length is too long"
+                          " (>= %d characters).",
+                      DIR_PATH_LEN-1);
+            }
+            c.use_h2o_ctm = 1;
+            snprintf(c.h2o_ctm_dir,
+                     DIR_PATH_LEN,
+                     "%s",
+                     h2o_ctm_dir);
+            c.h2o_cc = NULL;
         }
-        c.use_h2o_ctm = 1;
-        snprintf(c.h2o_ctm_dir,
-                 DIR_PATH_LEN,
-                 "%s",
-                 h2o_ctm_dir);
-        c.h2o_cc = NULL;
-    }
-    else
-    {
-        c.use_h2o_ctm = 0;
     }
 
     /*Prepare ozone continuum.*/
+    c.use_o3_ctm = 0;
     if (o3_ctm_dir != NULL)
     {
-        if (strlen(o3_ctm_dir) >= DIR_PATH_LEN - 1)
+        if (strcmp(o3_ctm_dir,"none") != 0)
         {
-            fatal(VALUE_ERR,
-                  "input ozone continuum path length is too long (>= %d"
-                      " characters).",
-                  DIR_PATH_LEN-1);
+            if (strlen(o3_ctm_dir) >= DIR_PATH_LEN - 1)
+            {
+                fatal(VALUE_ERR,
+                      "input ozone continuum path length is too long (>= %d"
+                          " characters).",
+                      DIR_PATH_LEN-1);
+            }
+            c.use_o3_ctm = 1;
+            snprintf(c.o3_ctm_dir,
+                     DIR_PATH_LEN,
+                     "%s",
+                     o3_ctm_dir);
+            c.o3_cc = NULL;
         }
-        c.use_o3_ctm = 1;
-        snprintf(c.o3_ctm_dir,
-                 DIR_PATH_LEN,
-                 "%s",
-                 o3_ctm_dir);
-        c.o3_cc = NULL;
-    }
-    else
-    {
-        c.use_o3_ctm = 0;
     }
 
     /*Reserve memory.*/
@@ -562,12 +562,20 @@ int grt_set_molecule_ppmv(GrtContext_t *context,
     in_range(molecule_id,0,context->num_molecules-1);
     int offset = molecule_id*context->num_levels;
     size_t num_bytes = sizeof(*ppmv)*context->num_levels;
+    fp_t *a = NULL;
+    check(malloc_ptr((void **)(&a),
+                     num_bytes));
+    int i;
+    for (i=0;i<context->num_levels;++i)
+    {
+        a[i] = ppmv[i]*1.e-6;
+    }
     if (context->gpu_id != HOST_ONLY)
     {
 #ifdef __NVCC__
         HANDLE_ERROR(cudaSetDevice(context->gpu_id));
         HANDLE_ERROR(cudaMemcpy(&(context->x[offset]),
-                                ppmv,
+                                a,
                                 num_bytes,
                                 cudaMemcpyHostToDevice));
 #endif
@@ -575,9 +583,10 @@ int grt_set_molecule_ppmv(GrtContext_t *context,
     else
     {
         memcpy(&(context->x[offset]),
-               ppmv,
+               a,
                num_bytes);
     }
+    free(a);
     return SUCCESS;
 }
 

@@ -12,10 +12,10 @@ program test
 !Utility macro for switching precision.  If you want to run in double
 !precision, you must include the -DDOUBLE_PRECISION when building the
 !library.
-#ifdef DOUBLE_PRECISION
-#define FP c_double
-#else
+#ifdef SINGLE_PRECISION
 #define FP c_float
+#else
+#define FP c_double
 #endif
 
     type(GrtContext_t),dimension(:),allocatable :: context !Library context.

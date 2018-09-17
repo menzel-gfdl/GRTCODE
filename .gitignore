@@ -4,3 +4,6 @@
 *.so
 *.mod
 *.swp
+*.pc
+include/*
+pkg-config/*

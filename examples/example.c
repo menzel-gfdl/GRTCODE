@@ -36,10 +36,10 @@
 /*Utility macro for switching precision.  If you want to run in double
   precision, you must include the -DDOUBLE_PRECISION when building the
   library.*/
-#ifdef DOUBLE_PRECISION
-#define FP_t double
-#else
+#ifdef SINGLE_PRECISION
 #define FP_t float
+#else
+#define FP_t double
 #endif
 
 

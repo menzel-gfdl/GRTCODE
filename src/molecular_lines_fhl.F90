@@ -143,10 +143,10 @@ module molecular_lines_fhl
     public :: grt_set_verbosity_f
     public :: grt_get_verbosity_f
 
-#ifdef DOUBLE_PRECISION
-#define FP c_double
-#else
+#ifdef SINGLE_PRECISION
 #define FP c_float
+#else
+#define FP c_double
 #endif
 
 
@@ -337,8 +337,8 @@ module molecular_lines_fhl
                                              wcutoff, &
                                              gpu_id, &
                                              num_threads, &
-                                             trim(h2o_ctm_dir), &
-                                             trim(o3_ctm_dir))
+                                             h2o_ctm_dir, &
+                                             o3_ctm_dir)
             call check_rc(return_code)
 
             !Add the molecules associated with the input HITRAN files to
