@@ -605,6 +605,15 @@ int grt_calculate_optical_depth(GrtContext_t *context,
     not_null(pressure);
     not_null(temperature);
     not_null(optical_depth);
+    fp_t const mbtoatm = 0.000986923;
+    fp_t *p = NULL;
+    check(malloc_ptr((void **)(&p),
+                     sizeof(*p)*context->num_levels));
+    int i;
+    for (i=0;i<context->num_levels;++i)
+    {
+        p[i] = pressure[i]*mbtoatm;
+    }
     if (context->gpu_id != HOST_ONLY)
     {
         log_mesg("Calculating optical depths for %d molecules in %d"
@@ -616,8 +625,8 @@ int grt_calculate_optical_depth(GrtContext_t *context,
         HANDLE_ERROR(cudaSetDevice(context->gpu_id));
         size_t num_elements = context->num_levels;
         HANDLE_ERROR(cudaMemcpy(context->P,
-                                pressure,
-                                sizeof(*pressure)*num_elements,
+                                p,
+                                sizeof(*p)*num_elements,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(context->T,
                                 temperature,
@@ -661,7 +670,7 @@ int grt_calculate_optical_depth(GrtContext_t *context,
                  context->num_molecules,
                  context->num_levels-1);
         check(launch_h(context->num_levels,
-                       pressure,
+                       p,
                        temperature,
                        context->x,
                        context->Pavg,
@@ -686,6 +695,7 @@ int grt_calculate_optical_depth(GrtContext_t *context,
                        context->o3_cc,
                        optical_depth));
     }
+    free(p);
     return SUCCESS;
 }
 

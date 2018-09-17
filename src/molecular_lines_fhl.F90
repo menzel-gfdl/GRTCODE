@@ -66,7 +66,7 @@ module molecular_lines_fhl
     !!           spectral grid point by calling the @ref grt_calculate_optical_depth_fhl
     !!           function.
     !!           @attention All input arrays must be contiguous.  In addition,
-    !!               the number of elements in the input pressure [atm] and
+    !!               the number of elements in the input pressure [mb] and
     !!               temperature [K] arrays must be equal to the number of
     !!               atmospheric levels.  The input abundance array [ppmv]
     !!               must be two-dimensional, and layed out in memory as
@@ -374,7 +374,7 @@ module molecular_lines_fhl
                                                    optical_depth)
 
             !Inputs/outputs
-            real(kind=FP),dimension(:),intent(in) :: pressure !< Array of atmospheric pressures [atm].
+            real(kind=FP),dimension(:),intent(in) :: pressure !< Array of atmospheric pressures [mb].
                                                               !! The size of this array must be
                                                               !! equal to the number of atmospheric
                                                               !! levels.

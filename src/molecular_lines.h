@@ -97,7 +97,7 @@
                spectral grid point by calling the @ref grt_calculate_optical_depth
                function.
                @attention All input arrays must be contiguous.  In addition,
-                   the number of elements in the input pressure [atm] and
+                   the number of elements in the input pressure [mb] and
                    temperature [K] arrays must be equal to the number of
                    atmospheric levels.  The number of elements in the input
                    optical depth array must be equal to the number of
@@ -242,7 +242,7 @@ int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
 extern "C"
 #endif
 int grt_calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
-                                fp_t const * const pressure, /**< Array of atmospheric pressures [atm].
+                                fp_t const * const pressure, /**< Array of atmospheric pressures [mb].
                                                                   The size of this array must be
                                                                   equal to the number of atmospheric
                                                                   levels.*/

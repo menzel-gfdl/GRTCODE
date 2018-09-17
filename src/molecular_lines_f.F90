@@ -93,7 +93,7 @@ module molecular_lines_f
     !!           spectral grid point by calling the @ref grt_calculate_optical_depth_f
     !!           function.
     !!           @attention All input arrays must be contiguous.  In addition,
-    !!               the number of elements in the input pressure [atm] and
+    !!               the number of elements in the input pressure [mb] and
     !!               temperature [K] arrays must be equal to the number of
     !!               atmospheric levels.  The number of elements in the input
     !!               optical depth array must be equal to the number of
@@ -469,7 +469,7 @@ module molecular_lines_f
                                                optical_depth) &
             result(return_code)
             type(GrtContext_t),value,intent(in) :: context !< Library context.
-            real(kind=FP),dimension(*),intent(in) :: pressure !< Array of atmospheric pressures [atm].
+            real(kind=FP),dimension(*),intent(in) :: pressure !< Array of atmospheric pressures [mb].
                                                               !! The size of this array must be
                                                               !! eqaul to the number of atmospheric
                                                               !! levels.
