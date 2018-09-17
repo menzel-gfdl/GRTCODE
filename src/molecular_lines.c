@@ -28,7 +28,7 @@
 
 /*Bounds for input parameters.*/
 int const MIN_NUM_LEVELS = 2;
-int const MAX_NUM_LEVELS = 61;
+int const MAX_NUM_LEVELS = 101;
 int const MIN_NUM_MOLECULES = 1;
 int const MAX_NUM_MOLECULES = 10;
 double const MIN_WAVENUMBER = 1.;
