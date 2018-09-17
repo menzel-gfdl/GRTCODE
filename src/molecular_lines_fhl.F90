@@ -337,8 +337,8 @@ module molecular_lines_fhl
                                              wcutoff, &
                                              gpu_id, &
                                              num_threads, &
-                                             trim(h2o_ctm_dir), &
-                                             trim(o3_ctm_dir))
+                                             h2o_ctm_dir, &
+                                             o3_ctm_dir)
             call check_rc(return_code)
 
             !Add the molecules associated with the input HITRAN files to

@@ -173,8 +173,8 @@ module molecular_lines_f
             real(kind=c_double),intent(in),optional :: wcutoff
             integer(kind=c_int),intent(in),optional :: gpu_id
             integer(kind=c_int),intent(in),optional :: num_threads
-            character(kind=c_char,len=1),dimension(*),intent(in),optional :: h2o_ctm_dir
-            character(kind=c_char,len=1),dimension(*),intent(in),optional :: o3_ctm_dir
+            character(kind=c_char,len=1),dimension(*),intent(in) :: h2o_ctm_dir
+            character(kind=c_char,len=1),dimension(*),intent(in) :: o3_ctm_dir
             integer(kind=c_int) :: return_code
         end function grt_context_init
     end interface
@@ -367,7 +367,18 @@ module molecular_lines_f
                                                                !! included in the optical depth
                                                                !! calculation.
             integer(kind=c_int) :: return_code
-
+            character(len=1024) :: hbuf
+            character(len=1024) :: obuf
+            if (present(h2o_ctm_dir)) then
+                hbuf = trim(h2o_ctm_dir)//c_null_char
+            else
+                hbuf = "none"//c_null_char
+            endif
+            if (present(o3_ctm_dir)) then
+                obuf = trim(o3_ctm_dir)//c_null_char
+            else
+                obuf = "none"//c_null_char
+            endif
             return_code = grt_context_init(context%p, &
                                            num_levels, &
                                            w0, &
@@ -376,8 +387,8 @@ module molecular_lines_f
                                            wcutoff, &
                                            gpu_id, &
                                            num_threads, &
-                                           trim(h2o_ctm_dir)//c_null_char, &
-                                           trim(o3_ctm_dir)//c_null_char)
+                                           trim(hbuf), &
+                                           trim(obuf))
         end function grt_context_init_f
 
 
