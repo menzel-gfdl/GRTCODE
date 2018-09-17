@@ -7,7 +7,7 @@
 #define TYPE double
 #endif
 
-typedef double fp_t;
+typedef TYPE fp_t;
 
 #define cat(a,b) a##b
 #define funcname(func,type) cat(func,type)
