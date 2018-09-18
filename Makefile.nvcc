@@ -1,12 +1,12 @@
 CXX = g++
 NVCC = nvcc
 CFLAGS = -g -Wall -Wextra -fopenmp -Wno-variadic-macros \
-         -Wno-long-long
+         -Wno-long-long -O2
 NVCCFLAGS = -ccbin ${CXX} --compiler-options "${CFLAGS}" -g -O3
 NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 CPPFLAGS =
 FC = gfortran
-FFLAGS = -g -Wall -Wextra -pedantic -std=f2008ts -fopenmp
+FFLAGS = -g -Wall -Wextra -pedantic -std=f2008ts -fopenmp -O2
 
 LIB_NAME = molecular_lines
 OBJ = ${LIB_NAME}_fhl.o \

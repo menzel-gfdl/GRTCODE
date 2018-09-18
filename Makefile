@@ -1,8 +1,8 @@
 CC = gcc
-CFLAGS = -g -Wall -Wextra -pedantic -std=c99 -fopenmp
+CFLAGS = -g -Wall -Wextra -pedantic -std=c99 -fopenmp -O2
 CPPFLAGS =
 FC = gfortran
-FFLAGS = -g -Wall -Wextra -pedantic -std=f2008ts -fopenmp
+FFLAGS = -g -Wall -Wextra -pedantic -std=f2008ts -fopenmp -O2
 
 LIB_NAME = molecular_lines
 OBJ = ${LIB_NAME}_fhl.o \
