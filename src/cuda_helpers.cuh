@@ -21,9 +21,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 
 cudaDeviceProp check_device_props();
 
+#if defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ < 600
+__device__ double atomicAdd(double* address, double val);
+#endif
 #endif
 
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
-#else
-__device__ double atomicAdd(double* address, double val);
 #endif

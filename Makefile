@@ -36,12 +36,8 @@ LIB_MODS = ${LIB_NAME}_f.mod ${LIB_NAME}_fhl.mod
 LIBS = ${STATIC_LIB} ${SHARED_LIB}
 LIB_PC = ${LIB_NAME}.pc
 PREFIX = $(shell pwd)
-
-TESTOBJ = example.o
 TESTX = example.x
-TESTFOBJ = example_f.o
 TESTFX = example_f.x
-TESTFOBJ_HL = example_fhl.o
 TESTFX_HL = example_fhl.x
 
 all: ${LIBS}
@@ -59,36 +55,31 @@ ${SHARED_LIB}: ${OBJ}
 %.o: src/%.c
 	${CC} ${CFLAGS} ${CPPFLAGS} -fPIC -o $@ -c $<
 
-%.o: src/%.F90
-	${FC} ${FFLAGS} -fPIC -o $@ -c $<
-
-%.o: examples/%.c install
-	${CC} ${CFLAGS} ${CPPFLAGS} -o $@ -c $< \
-    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC})
-
-%.o: examples/%.F90 install
-	${FC} ${FFLAGS} -o $@ -c $< \
-    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC})
+${LIB_NAME}_f.o: src/${LIB_NAME}_f.F90
+	${FC} ${FFLAGS} ${CPPFLAGS} -fPIC -o $@ -c $<
 
 ${LIB_NAME}_fhl.o: src/${LIB_NAME}_fhl.F90 ${LIB_NAME}_f.o
-	${FC} ${FFLAGS} -fPIC -o $@ -c $<
+	${FC} ${FFLAGS} ${CPPFLAGS} -fPIC -o $@ -c $<
 
-${TESTOBJ}: ${LIBS}
-${TESTFOBJ}: ${LIBS}
-${TESTFOBJ_HL}: ${LIBS}
+%.o: examples/%.F90 install
+	${FC} ${FFLAGS} ${CPPFLAGS} -o $@ -c $< \
+    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC})
 
-${TESTX}: ${TESTOBJ} install
-	${CC} ${CFLAGS} -o $@ $< \
+${TESTX}: examples/example.c install
+	${CC} ${CFLAGS} ${CPPFLAGS} -o $@ $< \
+    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC}) \
     $(shell pkg-config --libs ${PREFIX}/pkg-config/${LIB_PC}) \
     -Wl,-rpath=$(shell pkg-config --variable=libdir ${PREFIX}/pkg-config/${LIB_PC})
 
-${TESTFX}: ${TESTFOBJ} install
-	${FC} ${FFLAGS} -o $@ $< \
+${TESTFX}: examples/example_f.F90 install
+	${FC} ${FFLAGS} ${CPPFLAGS} -o $@ $< \
+    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC}) \
     $(shell pkg-config --libs ${PREFIX}/pkg-config/${LIB_PC}) \
     -Wl,-rpath=$(shell pkg-config --variable=libdir ${PREFIX}/pkg-config/${LIB_PC})
 
-${TESTFX_HL}: ${TESTFOBJ_HL} install
-	${FC} ${FFLAGS} -o $@ $< \
+${TESTFX_HL}: examples/example_fhl.F90 install
+	${FC} ${FFLAGS} ${CPPFLAGS} -o $@ $< \
+    $(shell pkg-config --cflags ${PREFIX}/pkg-config/${LIB_PC}) \
     $(shell pkg-config --libs ${PREFIX}/pkg-config/${LIB_PC}) \
     -Wl,-rpath=$(shell pkg-config --variable=libdir ${PREFIX}/pkg-config/${LIB_PC})
 
@@ -113,4 +104,4 @@ install: ${LIB_PC}
 
 clean:
 	rm -f ${LIBS} ${LIB_PC} ${LIB_MODS} ${OBJ} *.mod
-	rm -f ${TESTX} ${TESTOBJ} ${TESTFX} ${TESTFOBJ} ${TESTFX_HL} ${TESTFOBJ_HL}
+	rm -f ${TESTX} ${TESTFX} ${TESTFX_HL}

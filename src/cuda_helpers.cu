@@ -37,8 +37,8 @@ cudaDeviceProp check_device_props()
 }
 
 
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
-#else
+#if defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ < 600
 __device__ double atomicAdd(double *address,
                             double val)
 {
@@ -55,4 +55,5 @@ __device__ double atomicAdd(double *address,
 
     return __longlong_as_double(old);
 }
+#endif
 #endif
