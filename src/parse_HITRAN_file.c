@@ -165,35 +165,37 @@ int free_line_params_host(LineParams_t ** const line_params,
                           LineFlags_t const flags)
 {
     not_null(line_params);
-    not_null(*line_params);
-    LineParams_t *self = *line_params;
-    unsigned int const cuflags = flags.cumemset_host_flags;
-    if (cuflags != ((unsigned int)-1))
+    if (*line_params != NULL)
     {
+        LineParams_t *self = *line_params;
+        unsigned int const cuflags = flags.cumemset_host_flags;
+        if (cuflags != ((unsigned int)-1))
+        {
 #ifdef __NVCC__
-        HANDLE_ERROR(cudaFreeHost(self->iso));
-        HANDLE_ERROR(cudaFreeHost(self->vnn));
-        HANDLE_ERROR(cudaFreeHost(self->snn_ref));
-        HANDLE_ERROR(cudaFreeHost(self->yair));
-        HANDLE_ERROR(cudaFreeHost(self->yself));
-        HANDLE_ERROR(cudaFreeHost(self->en));
-        HANDLE_ERROR(cudaFreeHost(self->n));
-        HANDLE_ERROR(cudaFreeHost(self->d));
+            HANDLE_ERROR(cudaFreeHost(self->iso));
+            HANDLE_ERROR(cudaFreeHost(self->vnn));
+            HANDLE_ERROR(cudaFreeHost(self->snn_ref));
+            HANDLE_ERROR(cudaFreeHost(self->yair));
+            HANDLE_ERROR(cudaFreeHost(self->yself));
+            HANDLE_ERROR(cudaFreeHost(self->en));
+            HANDLE_ERROR(cudaFreeHost(self->n));
+            HANDLE_ERROR(cudaFreeHost(self->d));
 #endif
+        }
+        else
+        {
+            free(self->iso);
+            free(self->vnn);
+            free(self->snn_ref);
+            free(self->yair);
+            free(self->yself);
+            free(self->en);
+            free(self->n);
+            free(self->d);
+        }
+        free(self);
+        *line_params = NULL;
     }
-    else
-    {
-        free(self->iso);
-        free(self->vnn);
-        free(self->snn_ref);
-        free(self->yair);
-        free(self->yself);
-        free(self->en);
-        free(self->n);
-        free(self->d);
-    }
-    free(self);
-    *line_params = NULL;
     return SUCCESS;
 }
 
@@ -317,14 +319,16 @@ int parse_hitran_file(LineParams_t ** const line_params,
 
     /*Parse out the line parameters.*/
     n = 0;
+    size_t line_count = 0;
     while((ll=getline(&buf,&l,fp)) != -1)
     {
+        line_count++;
         if ((ll-HITRAN2012_recordLen) > HITRAN2012_pad)
         {
             fatal(VALUE_ERR,
                   "Found bad record at line %u (%zu exceeds max %zu chars)"
                       " in file %s.",
-                  n,
+                  line_count,
                   (size_t)ll,
                   max_line,
                   filename);
@@ -334,7 +338,7 @@ int parse_hitran_file(LineParams_t ** const line_params,
             fatal(VALUE_ERR,
                   "Found bad record at line %u (%zu less than %zu chars)"
                       " in file %s.",
-                  n,
+                  line_count,
                   (size_t)ll,
                   max_line,
                   filename);
@@ -342,8 +346,13 @@ int parse_hitran_file(LineParams_t ** const line_params,
         unsigned int val_idx = 0;
         size_t offset = 0;
         int col;
+        int go_to_next_line = 0;
         for (col=0;col<NCOLS;++col)
         {
+            if (go_to_next_line)
+            {
+                break;
+            }
             size_t len = HITRAN2012_fmt[col][0];
             unsigned int t = HITRAN2012_fmt[col][1];
             char tmp[16];
@@ -364,6 +373,7 @@ int parse_hitran_file(LineParams_t ** const line_params,
                                                     &m));
                         if (m != lines->mol)
                         {
+                            go_to_next_line = 1;
                             continue;
                         }
                         break;
@@ -402,15 +412,18 @@ int parse_hitran_file(LineParams_t ** const line_params,
                 ++val_idx;
             }
         }
-        if ((w0 < 0) && (wn < 0))
+        if (!go_to_next_line)
         {
-            /*Include the line for the calculation.*/
-            ++n;
-        }
-        else if ((lines->vnn[n] >= w0) && (lines->vnn[n] <= wn))
-        {
-            /*Include the line for the calculation.*/
-            ++n;
+            if ((w0 < 0) && (wn < 0))
+            {
+                /*Include the line for the calculation.*/
+                ++n;
+            }
+            else if ((lines->vnn[n] >= w0) && (lines->vnn[n] <= wn))
+            {
+                /*Include the line for the calculation.*/
+                ++n;
+            }
         }
     }
     free(buf);

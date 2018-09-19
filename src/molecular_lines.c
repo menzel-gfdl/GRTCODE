@@ -288,7 +288,11 @@ int grt_context_init(GrtContext_t **context,
     c.num_molecules = 0;
     check(malloc_ptr((void **)(&(c.line_params)),
                      sizeof(*(c.line_params))*MAX_NUM_MOLECULES));
-    not_null(c.line_params);
+    int i;
+    for (i=0;i<MAX_NUM_MOLECULES;++i)
+    {
+        c.line_params[i] = NULL;
+    }
     if (c.gpu_id != HOST_ONLY)
     {
 #ifdef __NVCC__
@@ -376,7 +380,7 @@ int grt_context_free(GrtContext_t **context)
     not_null(c);
     LineFlags_t flags = {((unsigned int) -1),1,0};
     int i;
-    for (i=0;i<(c->num_molecules);++i)
+    for (i=0;i<MAX_NUM_MOLECULES;++i)
     {
         check(free_line_params_host(&(c->line_params[i]),
                                     flags));
