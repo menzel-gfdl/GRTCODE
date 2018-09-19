@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "floating_point_type.h"
+#include "molecules.h"
 
 
 /**
@@ -145,6 +146,20 @@ int grt_context_init(GrtContext_t **context, /**< Library context.*/
                      double const w0, /**< Lowest wavenumber [1/cm] on spectral grid.*/
                      double const wn, /**< Highest wavenumber [1/cm] on spectral grid.*/
                      double const wres, /**< Spectral grid resolution [1/cm].*/
+                     char const * const hitran_path, /**< Path to the HITRAN
+                                                          database file.*/
+                     char const * const h2o_ctm_dir, /**< Directory containing the
+                                                          provided water vapor continuum
+                                                          input files.  If NULL, then
+                                                          the water vapor continuum
+                                                          is not included in the optical
+                                                          depth calculation.*/
+                     char const * const o3_ctm_dir, /**< Directory containing the
+                                                         provided ozone continuum
+                                                         input files.  If NULL, then
+                                                         the ozone continuum is not
+                                                         included in the optical depth
+                                                         calculation.*/
                      double const * const wcutoff, /**< Cutoff [1/cm] from spectral
                                                         line center.  If NULL, this
                                                         defaults to 25 [1/cm].*/
@@ -154,24 +169,12 @@ int grt_context_init(GrtContext_t **context, /**< Library context.*/
                                                     exists on the system, or else
                                                     set to -1 (corresponding to
                                                     a host only run.*/
-                     int const * const num_threads, /**< If running on the host CPU,
-                                                         determines the maximum number
-                                                         of OpenMP threads that will
-                                                         be used.  If NULL, default to
-                                                         omp_get_max_threads (or one
-                                                         if not build with OpenMP).*/
-                     char const * const h2o_ctm_dir, /**< Directory containing the
-                                                          provided water vapor continuum
-                                                          input files.  If NULL, then
-                                                          the water vapor continuum
-                                                          is not included in the optical
-                                                          depth calculation.*/
-                     char const * const o3_ctm_dir /**< Directory containing the
-                                                        provided ozone continuum
-                                                        input files.  If NULL, then
-                                                        the ozone continuum is not
-                                                        included in the optical depth
-                                                        calculation.*/
+                     int const * const num_threads /**< If running on the host CPU,
+                                                        determines the maximum number
+                                                        of OpenMP threads that will
+                                                        be used.  If NULL, default to
+                                                        omp_get_max_threads (or one
+                                                        if not build with OpenMP).*/
                     );
 
 
@@ -198,9 +201,7 @@ int grt_context_free(GrtContext_t **context /**< Library context.*/
 extern "C"
 #endif
 int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
-                     char const * const hitran_filepath, /**< Path to HITRAN ascii file containing
-                                                              molecular line parameters.*/
-                     int * const molecule_id, /**< Id that is associated with the molecule. */
+                     int const molecule_id, /**< Id that is associated with the molecule. */
                      double const * const min_line_center_wavenumber, /**< Lower bound [1/cm] of spectral range.
                                                                            Only lines with line center wavenumbers
                                                                            greater than or equal to this will be

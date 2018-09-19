@@ -133,6 +133,15 @@ module molecular_lines_f
     public :: grt_get_verbosity_f
 
 
+    integer(kind=c_int),parameter,public :: H2O = 1
+    integer(kind=c_int),parameter,public :: CO2 = 2
+    integer(kind=c_int),parameter,public :: O3 = 4
+    integer(kind=c_int),parameter,public :: N2O = 8
+    integer(kind=c_int),parameter,public :: CO = 16
+    integer(kind=c_int),parameter,public :: CH4 = 32
+    integer(kind=c_int),parameter,public :: O2 = 64
+
+
 #ifdef SINGLE_PRECISION
 #define FP c_float
 #else
@@ -156,11 +165,12 @@ module molecular_lines_f
                                   w0, &
                                   wn, &
                                   wres, &
+                                  hitran_path, &
+                                  h2o_ctm_dir, &
+                                  o3_ctm_dir, &
                                   wcutoff, &
                                   gpu_id, &
-                                  num_threads, &
-                                  h2o_ctm_dir, &
-                                  o3_ctm_dir) &
+                                  num_threads) &
             result(return_code) &
             bind(c)
             use iso_c_binding
@@ -170,11 +180,12 @@ module molecular_lines_f
             real(kind=c_double),value,intent(in) :: w0
             real(kind=c_double),value,intent(in) :: wn
             real(kind=c_double),value,intent(in) :: wres
+            character(kind=c_char,len=1),dimension(*),intent(in) :: hitran_path
+            character(kind=c_char,len=1),dimension(*),intent(in) :: h2o_ctm_dir
+            character(kind=c_char,len=1),dimension(*),intent(in) :: o3_ctm_dir
             real(kind=c_double),intent(in),optional :: wcutoff
             integer(kind=c_int),intent(in),optional :: gpu_id
             integer(kind=c_int),intent(in),optional :: num_threads
-            character(kind=c_char,len=1),dimension(*),intent(in) :: h2o_ctm_dir
-            character(kind=c_char,len=1),dimension(*),intent(in) :: o3_ctm_dir
             integer(kind=c_int) :: return_code
         end function grt_context_init
     end interface
@@ -194,7 +205,6 @@ module molecular_lines_f
 
     interface
         function grt_add_molecule(context, &
-                                  hitran_filepath, &
                                   molecule_id, &
                                   min_line_center_wavenumber, &
                                   max_line_center_wavenumber) &
@@ -203,8 +213,7 @@ module molecular_lines_f
             use iso_c_binding
             implicit none
             type(c_ptr),value,intent(in) :: context
-            character(kind=c_char,len=1),dimension(*),intent(in) :: hitran_filepath
-            integer(kind=c_int),intent(inout) :: molecule_id
+            integer(kind=c_int),intent(in) :: molecule_id
             real(kind=c_double),intent(in),optional :: min_line_center_wavenumber
             real(kind=c_double),intent(in),optional :: max_line_center_wavenumber
             integer(kind=c_int) :: return_code
@@ -328,17 +337,31 @@ module molecular_lines_f
                                     w0, &
                                     wn, &
                                     wres, &
+                                    hitran_path, &
+                                    h2o_ctm_dir, &
+                                    o3_ctm_dir, &
                                     wcutoff, &
                                     gpu_id, &
-                                    num_threads, &
-                                    h2o_ctm_dir, &
-                                    o3_ctm_dir) &
+                                    num_threads) &
             result(return_code)
             type(GrtContext_t),intent(inout) :: context !< Library context.
             integer(kind=c_int),intent(in) :: num_levels !< Number of atmospheric levels.
             real(kind=c_double),intent(in) :: w0 !< Lowest wavenumber [1/cm] on spectral grid.
             real(kind=c_double),intent(in) :: wn !< Highest wavenumber [1/cm] on spectral grid.
             real(kind=c_double),intent(in) :: wres !< Spectral grid resolution [1/cm].
+            character(len=*),intent(in) :: hitran_path !< Path to the HITRAN database file.
+            character(len=*),intent(in),optional :: h2o_ctm_dir !< Directory containing the
+                                                                !! provided water vapor continuum
+                                                                !! input files.  If not passed in,
+                                                                !! then the water vapor continuum
+                                                                !! is not included in the optical
+                                                                !! depth calculation.
+            character(len=*),intent(in),optional :: o3_ctm_dir !< Directory containing the
+                                                               !! provided ozone continuum
+                                                               !! input files.  If not passed in,
+                                                               !! then the ozone continuum is not
+                                                               !! included in the optical depth
+                                                               !! calculation.
             real(kind=c_double),intent(in),optional :: wcutoff !< Cutoff [1/cm] from spectral
                                                                !! line center.  This
                                                                !! defaults to 25 [1/cm].*/
@@ -354,18 +377,6 @@ module molecular_lines_f
                                                                    !! be used.  Defaults to
                                                                    !! omp_get_max_threads (or one
                                                                    !! if not build with OpenMP).
-            character(len=*),intent(in),optional :: h2o_ctm_dir !< Directory containing the
-                                                                !! provided water vapor continuum
-                                                                !! input files.  If not passed in,
-                                                                !! then the water vapor continuum
-                                                                !! is not included in the optical
-                                                                !! depth calculation.
-            character(len=*),intent(in),optional :: o3_ctm_dir !< Directory containing the
-                                                               !! provided ozone continuum
-                                                               !! input files.  If not passed in,
-                                                               !! then the ozone continuum is not
-                                                               !! included in the optical depth
-                                                               !! calculation.
             integer(kind=c_int) :: return_code
             character(len=1024) :: hbuf
             character(len=1024) :: obuf
@@ -384,11 +395,12 @@ module molecular_lines_f
                                            w0, &
                                            wn, &
                                            wres, &
+                                           trim(hitran_path)//c_null_char, &
+                                           trim(hbuf), &
+                                           trim(obuf), &
                                            wcutoff, &
                                            gpu_id, &
-                                           num_threads, &
-                                           trim(hbuf), &
-                                           trim(obuf))
+                                           num_threads)
         end function grt_context_init_f
 
 
@@ -410,15 +422,12 @@ module molecular_lines_f
         !!        depth of each atmospheric layer at each spectral grid point.
         !! @return 0 if completed successfully, or else an error code.
         function grt_add_molecule_f(context, &
-                                    hitran_filepath, &
                                     molecule_id, &
                                     min_line_center_wavenumber, &
                                     max_line_center_wavenumber) &
             result(return_code)
             type(GrtContext_t),intent(in) :: context !< Library context.
-            character(len=*),intent(in) :: hitran_filepath !< Path to HITRAN ascii file containing
-                                                           !! molecular line parameters.
-            integer(kind=c_int),intent(inout) :: molecule_id !< Id that is associated with the molecule.
+            integer(kind=c_int),intent(in) :: molecule_id !< Id that is associated with the molecule.
             real(kind=c_double),intent(in),optional :: min_line_center_wavenumber !< Lower bound [1/cm] of spectral range.
                                                                                   !! Only lines with line center wavenumbers
                                                                                   !! greater than or eqaul to this will be
@@ -430,7 +439,6 @@ module molecular_lines_f
             integer(kind=c_int) :: return_code
 
             return_code = grt_add_molecule(context%p, &
-                                           trim(hitran_filepath)//c_null_char, &
                                            molecule_id, &
                                            min_line_center_wavenumber, &
                                            max_line_center_wavenumber)

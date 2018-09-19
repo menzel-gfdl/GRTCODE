@@ -30,7 +30,7 @@
 int const MIN_NUM_LEVELS = 2;
 int const MAX_NUM_LEVELS = 101;
 int const MIN_NUM_MOLECULES = 1;
-int const MAX_NUM_MOLECULES = 10;
+int const MAX_NUM_MOLECULES = NUM_MOLS;
 double const MIN_WAVENUMBER = 1.;
 double const MAX_WAVENUMBER = 3250.;
 double const MIN_RESOLUTION = 0.01;
@@ -47,7 +47,7 @@ int const HOST_ONLY = -1;
 
 
 /*Macros.*/
-#define DIR_PATH_LEN 256
+#define DIR_PATH_LEN 1024
 
 
 /*Library context.*/
@@ -67,6 +67,9 @@ struct GrtContext
     int gpu_id; /**< Id of the GPU that is associated with this context.*/
     int num_threads; /**< Number of CPU threads that will be used to calculate
                           the lines (if not using a GPU).*/
+    char hitran_path[DIR_PATH_LEN]; /**< Path to the HITRAN database file.*/
+    int molecule_bit_field; /**< Bit field used to determine which molecules
+                                 are currently in use.*/
     int use_h2o_ctm; /**< Flag for using the water vapor continuum.*/
     char h2o_ctm_dir[DIR_PATH_LEN];
     WaterVaporContinuumCoefs_t *h2o_cc; /**< Structure containing water vapor
@@ -102,11 +105,12 @@ int grt_context_init(GrtContext_t **context,
                      double const w0,
                      double const wn,
                      double const wres,
+                     char const * const hitran_path,
+                     char const * const h2o_ctm_dir,
+                     char const * const o3_ctm_dir,
                      double const * const wcutoff,
                      int const * const gpu_id,
-                     int const * const num_threads,
-                     char const * const h2o_ctm_dir,
-                     char const * const o3_ctm_dir)
+                     int const * const num_threads)
 {
     /*Guard against bad constants.*/
     assert(MIN_NUM_LEVELS >= 2);
@@ -155,6 +159,14 @@ int grt_context_init(GrtContext_t **context,
              c.wn,
              c.wres,
              c.num_wpoints);
+
+    /*Store the path to the hitran database file.*/
+    not_null(hitran_path);
+    snprintf(c.hitran_path,
+             DIR_PATH_LEN,
+             "%s",
+             hitran_path);
+    c.molecule_bit_field = 0;
 
     /*Set the molecular line cutoff.*/
     if (wcutoff != NULL)
@@ -437,14 +449,22 @@ int grt_context_free(GrtContext_t **context)
 extern "C"
 #endif
 int grt_add_molecule(GrtContext_t *context,
-                     char const * const hitran_filepath,
-                     int * const molecule_id,
+                     int const molecule_id,
                      double const * const min_line_center_wavenumber,
                      double const * const max_line_center_wavenumber)
 {
     not_null(context);
-    not_null(hitran_filepath);
-    int index = (context->num_molecules)++;
+    int index;
+    if (is_molecule_active(context->molecule_bit_field,molecule_id))
+    {
+        fatal(VALUE_ERR,
+              "molecule %d has already been added.",
+              molecule_id);
+    }
+    check(molecule_hash(molecule_id,
+                        &index));
+    context->molecule_bit_field |= molecule_id;
+    (context->num_molecules)++;
     in_range(context->num_molecules,1,MAX_NUM_MOLECULES);
     LineFlags_t flags = {((unsigned int) -1),1,0};
     double w0;
@@ -469,13 +489,13 @@ int grt_add_molecule(GrtContext_t *context,
     }
     min_check(wn,w0);
     check(parse_hitran_file(&(context->line_params[index]),
-                            hitran_filepath,
+                            context->hitran_path,
                             flags,
+                            molecule_id,
                             w0,
                             wn));
     char mol_name[8];
-    int m = context->line_params[index]->mol;
-    check(get_mol_name(m,
+    check(get_mol_name(molecule_id,
                        mol_name,
                        8));
     log_mesg("Using %s (%u lines in range %e - %e [1/cm]).",
@@ -483,7 +503,7 @@ int grt_add_molecule(GrtContext_t *context,
              context->line_params[index]->num_lines,
              w0,
              wn);
-    if (m == H2O && context->use_h2o_ctm)
+    if (molecule_id == H2O && context->use_h2o_ctm)
     {
         log_mesg("Using the %s continuum.",
                  mol_name);
@@ -513,7 +533,7 @@ int grt_add_molecule(GrtContext_t *context,
         }
     }
 
-    if (m == O3 && context->use_o3_ctm)
+    if (molecule_id == O3 && context->use_o3_ctm)
     {
         log_mesg("Using the %s continuum.",
                  mol_name);
@@ -542,9 +562,6 @@ int grt_add_molecule(GrtContext_t *context,
                    sizeof(*(context->o3_cc)));
         }
     }
-
-    not_null(molecule_id);
-    *molecule_id = index;
     return SUCCESS;
 }
 
@@ -559,8 +576,20 @@ int grt_set_molecule_ppmv(GrtContext_t *context,
 {
     not_null(context);
     not_null(ppmv);
-    in_range(molecule_id,0,context->num_molecules-1);
-    int offset = molecule_id*context->num_levels;
+    if (!is_molecule_active(context->molecule_bit_field,molecule_id))
+    {
+        char mol_name[8];
+        check(get_mol_name(molecule_id,
+                           mol_name,
+                           8));
+        log_warn("molecule %s is not being used.",
+                 mol_name);
+        return SUCCESS;
+    }
+    int index;
+    check(molecule_hash(molecule_id,
+                        &index));
+    int offset = index*context->num_levels;
     size_t num_bytes = sizeof(*ppmv)*context->num_levels;
     fp_t *a = NULL;
     check(malloc_ptr((void **)(&a),
@@ -645,7 +674,7 @@ int grt_calculate_optical_depth(GrtContext_t *context,
                      context->Pshift,
                      context->s,
                      context->lines,
-                     context->num_molecules,
+                     context->molecule_bit_field,
                      context->line_params,
                      context->w0,
                      context->wres,
@@ -683,7 +712,7 @@ int grt_calculate_optical_depth(GrtContext_t *context,
                        context->Pshift,
                        context->s,
                        context->lines,
-                       context->num_molecules,
+                       context->molecule_bit_field,
                        context->line_params,
                        context->w0,
                        context->wres,

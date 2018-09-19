@@ -78,8 +78,6 @@ int main(int argc,char **argv)
     char *o3_ctm_dir = "ozone_continuum"; /*Path of the directory
                                             that contains the
                                             ozone continuum input file.*/
-    int h2o[num_contexts]; /*Water vapor molecule id.  Set by the library.*/
-    int o3[num_contexts]; /*Ozone molecule id.  Set by the library.*/
     int i;
 
     /*Increase the verbosity of the library output.*/
@@ -109,16 +107,13 @@ int main(int argc,char **argv)
                                   w0,
                                   wn,
                                   wres,
+                                  "HITRAN_files/hitran2012.par",
+                                  h2o_ctm_dir,
+                                  o3_ctm_dir,
                                   NULL,
                                   g,
-                                  NULL,
-                                  h2o_ctm_dir,
-                                  o3_ctm_dir));
+                                  NULL));
         context[i] = c;
-
-        /*Set path to the water vapor HITRAN database input file.*/
-        char hitran_path[128];
-        snprintf(hitran_path,128,"HITRAN_files/water_vapor.hitran12.par");
 
         /*Only water vapor lines with line centers in the range 1 - 1000 [1/cm]
           will be included in the calculation.*/
@@ -127,18 +122,13 @@ int main(int argc,char **argv)
 
         /*Add water vapor to the library context.*/
         check_rc(grt_add_molecule(c,
-                                  hitran_path,
-                                  &(h2o[i]),
+                                  H2O,
                                   &min_line_center_wavenumber,
                                   &max_line_center_wavenumber));
 
-        /*Set path to the ozone HITRAN database input file.*/
-        snprintf(hitran_path,128,"HITRAN_files/ozone.hitran12.par");
-
         /*Add ozone to the library context.*/
         check_rc(grt_add_molecule(c,
-                                  hitran_path,
-                                  &(o3[i]),
+                                  O3,
                                   NULL,
                                   NULL));
     }
@@ -169,7 +159,7 @@ int main(int argc,char **argv)
 #pragma omp parallel for num_threads(num_contexts) \
                          default(none) \
                          shared(context,num_levels,num_columns,num_wpoints, \
-                                pressure,temperature,ppmv,h2o,o3,stderr, \
+                                pressure,temperature,ppmv,stderr, \
                                 optical_depth,rc) \
                          private(i) /*is watching you, seeing your every move.*/
     for (i=0;i<num_columns;++i)
@@ -190,7 +180,7 @@ int main(int argc,char **argv)
 
         /*Set the water vapor abundance for the library context.*/
         omp_check_rc(grt_set_molecule_ppmv(c,
-                                           h2o[g],
+                                           H2O,
                                            &(ppmv[offset])),
                      rc[g]);
 
@@ -202,7 +192,7 @@ int main(int argc,char **argv)
 
         /*Set the water vapor abundance for the library context.*/
         omp_check_rc(grt_set_molecule_ppmv(c,
-                                           o3[g],
+                                           O3,
                                            &(ppmv[offset])),
                      rc[g]);
 

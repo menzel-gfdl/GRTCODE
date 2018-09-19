@@ -280,6 +280,7 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
 int parse_hitran_file(LineParams_t ** const line_params,
                       char const * const filename,
                       LineFlags_t const flags,
+                      int const mol_id,
                       double const w0,
                       double const wn)
 {
@@ -312,6 +313,7 @@ int parse_hitran_file(LineParams_t ** const line_params,
     check(alloc_line_params_host(&lines,
                                  n,
                                  flags));
+    lines->mol = mol_id;
 
     /*Parse out the line parameters.*/
     n = 0;
@@ -354,25 +356,15 @@ int parse_hitran_file(LineParams_t ** const line_params,
                 check(HITRAN2012_cast(&val,
                                       col,
                                       tmp));
-                int mol_id;
+                int m;
                 switch (val_idx)
                 {
                     case mol_pidx:
                         check(HITRAN_id_to_model_id(val.i,
-                                                    &mol_id));
-                        if (n == 0)
+                                                    &m));
+                        if (m != lines->mol)
                         {
-                            lines->mol = mol_id;
-                        }
-                        else if (lines->mol != mol_id)
-                        {
-                            fatal(VALUE_ERR,
-                                  "molecule changed from %d to %d at line %u"
-                                      " in file %s.",
-                                  lines->mol,
-                                  mol_id,
-                                  n,
-                                  filename);
+                            continue;
                         }
                         break;
                     case iso_pidx:
@@ -434,7 +426,7 @@ int parse_hitran_file(LineParams_t ** const line_params,
               filename);
     }
 
-    if ((w0 >=0) || (wn>=0))
+    if ((w0 >= 0) || (wn >= 0))
     {
         check(realloc_line_params_host(&lines,
                                        flags,

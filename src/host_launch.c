@@ -31,7 +31,7 @@ int launch_h(int const num_levels,
              fp_t * const Pshift,
              fp_t * const s,
              LineParams_t *lines,
-             int const num_molecules,
+             int const molecule_bit_field,
              LineParams_t ** const line_params,
              double const w0,
              double const wres,
@@ -84,10 +84,27 @@ int launch_h(int const num_levels,
 
     /*Loop over the molecules and calculate the optical depths.*/
     int mol;
-    for (mol=0;mol<num_molecules;++mol)
+    int m = 1;
+    for (mol=0;mol<NUM_MOLS;++mol)
     {
+        char mol_name[8];
+        if (is_molecule_active(molecule_bit_field,m))
+        {
+            check(get_mol_name(m,
+                               mol_name,
+                               8));
+        }
+        else
+        {
+            m *= 2;
+            continue;
+        }
+
         /*Point to the molecules line parameter structure.*/
-        lines = line_params[mol];
+        int index;
+        check(molecule_hash(m,
+                            &index));
+        lines = line_params[index];
 
         /*Copy the snn_ref array.*/
         unsigned int num_lines = lines->num_lines;
@@ -97,23 +114,22 @@ int launch_h(int const num_levels,
 
         /*Calculate the initial Snn_ref correction.*/
         log_info("Launching kernel pre_eval_snn_h across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
-        int mol_id = lines->mol;
+                 mol_name);
         pre_eval_snn_h(num_lines,
-                       mol_id,
+                       m,
                        lines->iso,
                        lines->vnn,
                        lines->en,
                        snn_ref);
 
         /*Calculate the integrated average layer partial pressure.*/
-        fp_t const *xp = &(x[mol*num_levels]);
+        fp_t const *xp = &(x[index*num_levels]);
         log_info("Calculating Curtis-Godson partial pressure and abundance"
-                     " across %d layers for molecule %d.",
+                     " across %d layers for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         Curtis_Godson_PsNs_h(num_layers,
                              P,
                              xp,
@@ -123,9 +139,9 @@ int launch_h(int const num_levels,
 
         /*Calcluate the lorentz half-width at half-max (HWHM).*/
         log_info("Launching kernel eval_gamma_h across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         eval_gamma_h(num_layers,
                      num_lines,
                      Pavg,
@@ -139,9 +155,9 @@ int launch_h(int const num_levels,
         /*Calcluate the shift in the line center frequency due to the
           pressure.*/
         log_info("Launching kernel eval_pshift_h across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         eval_pshift_h(num_layers,
                       num_lines,
                       Pavg,
@@ -151,12 +167,12 @@ int launch_h(int const num_levels,
 
         /*Calculate the remainder of the Snn_ref correction.*/
         log_info("Launching kernel eval_snn_correction_h across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         eval_snn_correction_h(num_layers,
                               num_lines,
-                              mol_id,
+                              m,
                               Tavg,
                               lines->iso,
                               lines->vnn,
@@ -167,10 +183,10 @@ int launch_h(int const num_levels,
         /*Calculate the molecule's optical depths and add them to existing
           values.*/
         log_info("Launching kernel eval_profile_h across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
-        eval_profile_h(mol_id,
+                 mol_name);
+        eval_profile_h(m,
                        num_lines,
                        num_wpoints,
                        w0,
@@ -184,7 +200,7 @@ int launch_h(int const num_levels,
                        Ns,
                        tau);
 
-        if (use_h2o_ctm && mol_id == H2O)
+        if (use_h2o_ctm && m == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
             not_null(h2o_cc);
@@ -203,7 +219,7 @@ int launch_h(int const num_levels,
                                                  Pavg,
                                                  h2o_cc->coefs[CKDF]);
         }
-        else if (use_o3_ctm && mol_id == O3)
+        else if (use_o3_ctm && m == O3)
         {
             /*Calculate the ozone continuum optical depths.*/
             not_null(o3_cc);
@@ -216,6 +232,7 @@ int launch_h(int const num_levels,
                                            Ns,
                                            tau);
         }
+        m *= 2;
     }
     return SUCCESS;
 }

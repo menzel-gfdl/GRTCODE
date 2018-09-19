@@ -34,6 +34,7 @@ int free_line_params_host(LineParams_t ** const line_params,
 int parse_hitran_file(LineParams_t ** const line_params,
                       char const * const filename,
                       LineFlags_t const flags,
+                      int const mol_id,
                       double const w0,
                       double const wn);
 

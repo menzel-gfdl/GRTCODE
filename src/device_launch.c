@@ -35,7 +35,7 @@ int launch(int const num_levels,
            fp_t * const Pshift,
            fp_t * const s,
            LineParams_t *lines,
-           int const num_molecules,
+           int const molecule_bit_field,
            LineParams_t ** const line_params,
            double const w0,
            double const wres,
@@ -76,49 +76,65 @@ int launch(int const num_levels,
     int dim_block;
     int dim_grid;
     int mol;
-    for (mol=0;mol<num_molecules;++mol)
+    int m = 1;
+    for (mol=0;mol<NUM_MOLS;++mol)
     {
+        char mol_name[8];
+        if (is_molecule_active(molecule_bit_field,m))
+        {
+            check(get_mol_name(m,
+                               mol_name,
+                               8));
+        }
+        else
+        {
+            m *= 2;
+            continue;
+        }
+
         /*Copy line parameters to device.*/
-        unsigned int num_lines = line_params[mol]->num_lines;
-        int mol_id = line_params[mol]->mol;
+        int index;
+        check(molecule_hash(m,
+                            &index));
+        unsigned int num_lines = line_params[index]->num_lines;
         HANDLE_ERROR(cudaMemcpy(lines->iso,
-                                line_params[mol]->iso,
+                                line_params[index]->iso,
                                 sizeof(*(lines->iso))*num_lines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(lines->vnn,
-                                line_params[mol]->vnn,
+                                line_params[index]->vnn,
                                 sizeof(*(lines->vnn))*num_lines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(lines->snn_ref,
-                                line_params[mol]->snn_ref,
+                                line_params[index]->snn_ref,
                                 sizeof(*(lines->snn_ref))*num_lines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(lines->yair,
-                                line_params[mol]->yair,
+                                line_params[index]->yair,
                                 sizeof(*(lines->yair))*num_lines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(lines->yself,
-                                line_params[mol]->yself,
+                                line_params[index]->yself,
                                 sizeof(*(lines->yself))*num_lines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(lines->en,
-                                line_params[mol]->en,
+                                line_params[index]->en,
                                 sizeof(*(lines->en))*num_lines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(lines->n,
-                                line_params[mol]->n,
+                                line_params[index]->n,
                                 sizeof(*(lines->n))*num_lines,
                                 cudaMemcpyHostToDevice));
         HANDLE_ERROR(cudaMemcpy(lines->d,
-                                line_params[mol]->d,
+                                line_params[index]->d,
                                 sizeof(*(lines->d))*num_lines,
                                 cudaMemcpyHostToDevice));
 
         /*Calculate the initial Snn_ref correction.*/
         log_info("Launching kernel pre_eval_snn across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
                                                         pre_eval_snn,
@@ -126,18 +142,18 @@ int launch(int const num_levels,
                                                         ((int)num_lines)));
         dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
         pre_eval_snn<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_lines,
-                                                                                 mol_id,
+                                                                                 m,
                                                                                  lines->iso,
                                                                                  lines->vnn,
                                                                                  lines->en,
                                                                                  lines->snn_ref);
 
         /*Calculate the integrated average layer partial pressure.*/
-        fp_t const *xp = &(x[mol*num_levels]);
+        fp_t const *xp = &(x[index*num_levels]);
         log_info("Calculating Curtis-Godson partial pressure and abundance"
-                     " across %d layers for molecule %d.",
+                     " across %d layers for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         Curtis_Godson_PsNs<<<1,num_layers,0,0>>>(num_layers,
                                                  P,
                                                  xp,
@@ -147,9 +163,9 @@ int launch(int const num_levels,
 
         /*Calcluate the lorentz half-width at half-max (HWHM).*/
         log_info("Launching kernel eval_gamma across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
                                                         eval_gamma,
@@ -169,9 +185,9 @@ int launch(int const num_levels,
         /*Calcluate the shift in the line center frequency due to the
           pressure.*/
         log_info("Launching kernel eval_pshift across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
                                                         eval_pshift,
@@ -187,9 +203,9 @@ int launch(int const num_levels,
 
         /*Calculate the remainder of the Snn_ref correction.*/
         log_info("Launching kernel eval_snn_correction across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
                                                         eval_snn_correction,
@@ -198,7 +214,7 @@ int launch(int const num_levels,
         dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
         eval_snn_correction<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_layers,
                                                                                         num_lines,
-                                                                                        mol_id,
+                                                                                        m,
                                                                                         Tavg,
                                                                                         lines->iso,
                                                                                         lines->vnn,
@@ -209,16 +225,16 @@ int launch(int const num_levels,
         /*Calculate the molecule's optical depths and add them to existing
           values.*/
         log_info("Launching kernel eval_profile across %d layers"
-                     " for molecule %d.",
+                     " for molecule %s.",
                  num_layers,
-                 mol);
+                 mol_name);
         HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
                                                         &dim_block,
                                                         eval_profile,
                                                         0,
                                                         ((int)num_lines)));
         dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
-        eval_profile<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(mol_id,
+        eval_profile<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(m,
                                                                                  num_lines,
                                                                                  num_wpoints,
                                                                                  w0,
@@ -232,7 +248,7 @@ int launch(int const num_levels,
                                                                                  Ns,
                                                                                  tau);
 
-        if (use_h2o_ctm && mol_id == H2O)
+        if (use_h2o_ctm && m == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
             log_info("Calculating optical depth due to the water vapor"
@@ -256,7 +272,7 @@ int launch(int const num_levels,
                                                                                                            Pavg,
                                                                                                            h2o_cc->coefs[CKDF]);
         }
-        else if (use_o3_ctm && mol_id == O3)
+        else if (use_o3_ctm && m == O3)
         {
             /*Calculate the ozone continuum optical depths.*/
             log_info("Calculating optical depth due to the ozone"
@@ -274,6 +290,7 @@ int launch(int const num_levels,
                                                                                                      Ns,
                                                                                                      tau);
         }
+        m *= 2;
     }
     return SUCCESS;
 }

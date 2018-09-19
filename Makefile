@@ -31,7 +31,7 @@ OBJ = ${LIB_NAME}_fhl.o \
       verbosity.o
 STATIC_LIB = lib${LIB_NAME}.a
 SHARED_LIB = lib${LIB_NAME}.so
-LIB_HEADERS = src/${LIB_NAME}.h src/floating_point_type.h
+LIB_HEADERS = src/${LIB_NAME}.h src/floating_point_type.h src/molecules.h
 LIB_MODS = ${LIB_NAME}_f.mod ${LIB_NAME}_fhl.mod
 LIBS = ${STATIC_LIB} ${SHARED_LIB}
 LIB_PC = ${LIB_NAME}.pc

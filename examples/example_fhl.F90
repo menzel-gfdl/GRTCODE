@@ -14,10 +14,6 @@ program test
 
     character(kind=c_char,len=64) :: namelist_file !Path to the namelist
                                                    !file.
-    character(kind=c_char,len=64),dimension(2) :: hitran_files !Array of paths
-                                                               !to HITRAN
-                                                               !database
-                                                               !input files.
     character(kind=c_char,len=64) :: h2o_ctm_dir !Path to directory
                                                  !containing the water
                                                  !vapor continuum input
@@ -49,8 +45,6 @@ program test
     integer(kind=c_int) :: k
 
     namelist_file = "namelist/example.nml"
-    hitran_files = (/"HITRAN_files/water_vapor.hitran12.par", &
-                     "HITRAN_files/ozone.hitran12.par      "/)
     h2o_ctm_dir = "water_vapor_continuum"
     o3_ctm_dir = "ozone_continuum"
 
@@ -58,8 +52,7 @@ program test
     call grt_set_verbosity_f(2)
 
     !Initalize the library.
-    call grt_context_init_fhl(hitran_files, &
-                              namelist_filepath=trim(namelist_file), &
+    call grt_context_init_fhl(namelist_filepath=trim(namelist_file), &
                               h2o_ctm_dir=trim(h2o_ctm_dir), &
                               o3_ctm_dir=trim(o3_ctm_dir))
 
@@ -70,7 +63,7 @@ program test
     num_wpoints = grt_get_spectral_grid_size_fhl()
 
     !Allocate data arrays.
-    num_molecules = size(hitran_files)
+    num_molecules = grt_get_num_molecules_fhl()
     num_layers = num_levels - 1
     allocate(pressure(num_levels))
     allocate(temperature(num_levels))
@@ -87,14 +80,7 @@ program test
             temperature(j) = 230. + 2.3*real(j,kind=FP)
         enddo
 
-        !Set molecular abundances.  Molecule index corresponds to its
-        !place in the input hitran_files array.  For example, in this case
-        !the hitran_files array was declare as:
-        !hitran_files(1) = water vapor file.
-        !hitran_files(2) = ozone input file.
-        !so
-        !ppmv(:,1) = water vapor abundances.
-        !ppmv(:,2) = ozone abundances.
+        !Set molecular abundances.
         do k = 1,num_molecules
             do j = 1,num_levels
                 ppmv(j,k) = 300. + 0.2*real(j,kind=FP) + real(k,kind=FP)
@@ -104,8 +90,14 @@ program test
         !Calculate the optical depths.
         call grt_calculate_optical_depth_fhl(pressure, &
                                              temperature, &
-                                             ppmv, &
-                                             optical_depth)
+                                             optical_depth, &
+                                             xh2o=ppmv(:,1), &
+                                             xco2=ppmv(:,2), &
+                                             xo3=ppmv(:,3), &
+                                             xn2o=ppmv(:,4), &
+                                             xco=ppmv(:,5), &
+                                             xch4=ppmv(:,6), &
+                                             xo2=ppmv(:,7))
     enddo
 
     !Clean up.

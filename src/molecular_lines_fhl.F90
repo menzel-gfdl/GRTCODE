@@ -140,6 +140,7 @@ module molecular_lines_fhl
     public :: grt_calculate_optical_depth_fhl
     public :: grt_get_num_levels_fhl
     public :: grt_get_spectral_grid_size_fhl
+    public :: grt_get_num_molecules_fhl
     public :: grt_set_verbosity_f
     public :: grt_get_verbosity_f
 
@@ -153,16 +154,32 @@ module molecular_lines_fhl
     !Private module variables
     type(GrtContext_t) :: context
 
-
     !Namelist variables.
     integer(kind=c_int) :: num_levels = 60 !Number of atmospheric levels.
     real(kind=c_double) :: w0 = 1._c_double !Lower bound of spectral grid.
     real(kind=c_double) :: wn = 3250._c_double !Upper bound of spectral grid.
     real(kind=c_double) :: wres = 0.1_c_double !Resolution of spectral grid.
+    character(len=1024) :: hitran_path = "HITRAN_files/hitran2012.par" !Path to the hitran
+                                                                       !database file.
+    logical :: do_h2o = .true. !Use water vapor.
+    logical :: do_co2 = .true. !Use carbon dioxide
+    logical :: do_o3 = .true. !Use ozone.
+    logical :: do_n2o = .true. !Use nitrous oxide.
+    logical :: do_co = .true. !Use carbon monoxide.
+    logical :: do_ch4 = .true. !Use methane.
+    logical :: do_o2 = .true. !Use oxygen.
     namelist /molecular_lines_nml/ num_levels, &
                                    w0, &
                                    wn, &
-                                   wres
+                                   wres, &
+                                   hitran_path, &
+                                   do_h2o, &
+                                   do_co2, &
+                                   do_o3, &
+                                   do_n2o, &
+                                   do_co, &
+                                   do_ch4, &
+                                   do_o2
 
 
     contains
@@ -242,10 +259,25 @@ module molecular_lines_fhl
 
 
         !> @ingroup highlevelfortranapi
+        !! @brief Return the number of molecules that are being used.
+        function grt_get_num_molecules_fhl() result(n)
+
+            !Inputs/outputs
+            integer(kind=c_int) :: n
+
+            !Local variables
+            integer(kind=c_int) :: return_code
+
+            return_code = grt_get_num_molecules_f(context, &
+                                                  n)
+            call check_rc(return_code)
+        end function grt_get_num_molecules_fhl
+
+
+        !> @ingroup highlevelfortranapi
         !! @brief Initialize the library with the molecules that correspond
         !!        to the input HITRAN file paths.
-        subroutine grt_context_init_fhl(hitran_filepaths, &
-                                        namelist_filepath, &
+        subroutine grt_context_init_fhl(namelist_filepath, &
                                         wcutoff, &
                                         gpu_id, &
                                         num_threads, &
@@ -253,8 +285,6 @@ module molecular_lines_fhl
                                         o3_ctm_dir)
 
             !Inputs/outputs
-            character(len=*),dimension(:),intent(in) :: hitran_filepaths !< Array of paths to HITRAN
-                                                                         !! database files.
             character(len=*),intent(in),optional :: namelist_filepath !< Path to namelist file.
             real(kind=c_double),intent(in),optional :: wcutoff !< Cutoff [1/cm] from spectral
                                                                !! line center.  Defaults to 25 [1/cm].
@@ -288,7 +318,6 @@ module molecular_lines_fhl
             logical :: nml_exists
             logical :: in_use
             integer(kind=c_int) :: io_status
-            integer(kind=c_int) :: mol_id
             integer(kind=c_int) :: i
 
             call omp_thread_trap()
@@ -334,21 +363,51 @@ module molecular_lines_fhl
                                              w0, &
                                              wn, &
                                              wres, &
+                                             hitran_path, &
+                                             h2o_ctm_dir, &
+                                             o3_ctm_dir, &
                                              wcutoff, &
                                              gpu_id, &
-                                             num_threads, &
-                                             h2o_ctm_dir, &
-                                             o3_ctm_dir)
+                                             num_threads)
             call check_rc(return_code)
 
             !Add the molecules associated with the input HITRAN files to
             !the library context.
-            do i = 1,size(hitran_filepaths)
+            if (do_h2o) then
                 return_code = grt_add_molecule_f(context, &
-                                                 hitran_filepaths(i), &
-                                                 mol_id)
+                                                 H2O)
                 call check_rc(return_code)
-            enddo
+            endif
+            if (do_co2) then
+                return_code = grt_add_molecule_f(context, &
+                                                 CO2)
+                call check_rc(return_code)
+            endif
+            if (do_o3) then
+                return_code = grt_add_molecule_f(context, &
+                                                 O3)
+                call check_rc(return_code)
+            endif
+            if (do_n2o) then
+                return_code = grt_add_molecule_f(context, &
+                                                 N2O)
+                call check_rc(return_code)
+            endif
+            if (do_co) then
+                return_code = grt_add_molecule_f(context, &
+                                                 CO)
+                call check_rc(return_code)
+            endif
+            if (do_ch4) then
+                return_code = grt_add_molecule_f(context, &
+                                                 CH4)
+                call check_rc(return_code)
+            endif
+            if (do_o2) then
+                return_code = grt_add_molecule_f(context, &
+                                                 O2)
+                call check_rc(return_code)
+            endif
         end subroutine grt_context_init_fhl
 
 
@@ -370,8 +429,14 @@ module molecular_lines_fhl
         !!        layer at each spectral grid point.
         subroutine grt_calculate_optical_depth_fhl(pressure, &
                                                    temperature, &
-                                                   ppmv, &
-                                                   optical_depth)
+                                                   optical_depth, &
+                                                   xh2o, &
+                                                   xco2, &
+                                                   xo3, &
+                                                   xn2o, &
+                                                   xco, &
+                                                   xch4, &
+                                                   xo2)
 
             !Inputs/outputs
             real(kind=FP),dimension(:),intent(in) :: pressure !< Array of atmospheric pressures [mb].
@@ -382,8 +447,6 @@ module molecular_lines_fhl
                                                                  !! The size of this array must be
                                                                  !! equal to the number of atmospheric
                                                                  !! levels.
-            real(kind=FP),dimension(:,:),intent(in) :: ppmv !< Array of molecular abundances [ppmv].
-                                                            !! This array must be of size (num_layers,molecules).
             real(kind=FP),dimension(:,:),intent(inout) :: optical_depth !< Array of atmospheric optical depths.
                                                                         !! The size of this array must be equal
                                                                         !! to the number of atmospheric layers
@@ -393,28 +456,116 @@ module molecular_lines_fhl
                                                                         !! fastest changing dimension is the
                                                                         !! one corresponding to the spectral
                                                                         !! grid.)
+            real(kind=FP),dimension(:),intent(in),optional :: xh2o !< Array of water vapor abundances [ppmv].
+                                                                   !! The size of this array must be
+                                                                   !! equal to the number of atmospheric
+                                                                   !! levels.
+            real(kind=FP),dimension(:),intent(in),optional :: xco2 !< Array of carbon dioxide abundances [ppmv].
+                                                                   !! The size of this array must be
+                                                                   !! equal to the number of atmospheric
+                                                                   !! levels.
+            real(kind=FP),dimension(:),intent(in),optional :: xo3 !< Array of ozone abundances [ppmv].
+                                                                  !! The size of this array must be
+                                                                  !! equal to the number of atmospheric
+                                                                  !! levels.
+            real(kind=FP),dimension(:),intent(in),optional :: xn2o !< Array of nitrous oxide abundances [ppmv].
+                                                                   !! The size of this array must be
+                                                                   !! equal to the number of atmospheric
+                                                                   !! levels.
+            real(kind=FP),dimension(:),intent(in),optional :: xco !< Array of carbon monoxide abundances [ppmv].
+                                                                  !! The size of this array must be
+                                                                  !! equal to the number of atmospheric
+                                                                  !! levels.
+            real(kind=FP),dimension(:),intent(in),optional :: xch4 !< Array of methane abundances [ppmv].
+                                                                   !! The size of this array must be
+                                                                   !! equal to the number of atmospheric
+                                                                   !! levels.
+            real(kind=FP),dimension(:),intent(in),optional :: xo2 !< Array of oxygen abundances [ppmv].
+                                                                  !! The size of this array must be
+                                                                  !! equal to the number of atmospheric
+                                                                  !! levels.
+
             !Local variables
             integer(kind=c_int) :: return_code
-            integer(kind=c_int) :: i
-            integer(kind=c_int) :: num_mols
 
             call omp_thread_trap()
-            return_code = grt_get_num_molecules_f(context, &
-                                                  num_mols)
-            call check_rc(return_code)
-
-            if (size(ppmv,1) .ne. num_levels .or. size(ppmv,2) .ne. &
-                num_mols) then
-                call error("input ppmv array must be of size" &
-                           //"(num_levels,num_molecules).")
-                stop 1
-            endif
-            do i = 1,num_mols
+            if (present(xh2o)) then
+                if (size(xh2o) .ne. num_levels) then
+                    call error("input xh2o array must be of size" &
+                               //"num_levels.")
+                    stop 1
+                endif
                 return_code = grt_set_molecule_ppmv_f(context, &
-                                                      i-1, &
-                                                      ppmv(:,i))
+                                                      H2O, &
+                                                      xh2o)
                 call check_rc(return_code)
-            enddo
+            endif
+            if (present(xco2)) then
+                if (size(xco2) .ne. num_levels) then
+                    call error("input xco2 array must be of size" &
+                               //"num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_molecule_ppmv_f(context, &
+                                                      CO2, &
+                                                      xco2)
+                call check_rc(return_code)
+            endif
+            if (present(xo3)) then
+                if (size(xo3) .ne. num_levels) then
+                    call error("input xo3 array must be of size" &
+                               //"num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_molecule_ppmv_f(context, &
+                                                      O3, &
+                                                      xo3)
+                call check_rc(return_code)
+            endif
+            if (present(xn2o)) then
+                if (size(xn2o) .ne. num_levels) then
+                    call error("input xn2o array must be of size" &
+                               //"num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_molecule_ppmv_f(context, &
+                                                      N2O, &
+                                                      xn2o)
+                call check_rc(return_code)
+            endif
+            if (present(xco)) then
+                if (size(xco) .ne. num_levels) then
+                    call error("input xco array must be of size" &
+                               //"num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_molecule_ppmv_f(context, &
+                                                      CO, &
+                                                      xco)
+                call check_rc(return_code)
+            endif
+            if (present(xch4)) then
+                if (size(xch4) .ne. num_levels) then
+                    call error("input xch4 array must be of size" &
+                               //"num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_molecule_ppmv_f(context, &
+                                                      CH4, &
+                                                      xch4)
+                call check_rc(return_code)
+            endif
+            if (present(xo2)) then
+                if (size(xo2) .ne. num_levels) then
+                    call error("input xo2 array must be of size" &
+                               //"num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_molecule_ppmv_f(context, &
+                                                      O2, &
+                                                      xo2)
+                call check_rc(return_code)
+            endif
             if (size(pressure) .ne. num_levels .or. size(temperature) .ne. &
                 num_levels) then
                 call error("input pressure and temperature must" &

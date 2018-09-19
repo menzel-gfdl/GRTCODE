@@ -67,15 +67,69 @@ int HITRAN_id_to_model_id(int const hitran_id,
                           int * const model_id)
 {
     not_null(model_id);
-    *model_id = hitran_id - 1;
-    if (*model_id < 0 || *model_id >= NUM_MOL)
+    switch (hitran_id)
     {
-        fatal(VALUE_ERR,
-              "the model id (%d) calculated from the HITRAN id (%d) must be"
-                  " >= 0 and <= %d.",
-              *model_id,
-              hitran_id,
-              NUM_MOL);
+        case Hitran_H2O:
+            *model_id = H2O;
+            break;
+        case Hitran_CO2:
+            *model_id = CO2;
+            break;
+        case Hitran_O3:
+            *model_id = O3;
+            break;
+        case Hitran_N2O:
+            *model_id = N2O;
+            break;
+        case Hitran_CO:
+            *model_id = CO;
+            break;
+        case Hitran_CH4:
+            *model_id = CH4;
+            break;
+        case Hitran_O2:
+            *model_id = O2;
+            break;
+        default:
+            fatal(VALUE_ERR,
+                  "unrecognized HITRAN molecule id %d.",
+                  hitran_id);
     }
     return SUCCESS;
+}
+
+
+int molecule_hash(int const mol_id,
+                  int * const hash)
+{
+    not_null(hash);
+    *hash = 0;
+    unsigned int a = mol_id;
+    if (mol_id < 1)
+    {
+        fatal(VALUE_ERR,
+              "input molecule id (%d) must be at least 1.",
+              mol_id);
+    }
+    while (a != 1)
+    {
+        a = a >> 1;
+        (*hash)++;
+    }
+    if (*hash >= NUM_MOLS)
+    {
+        fatal(VALUE_ERR,
+              "hash (%d) of molecule id (%d) cannot be >= %d.",
+              *hash,
+              mol_id,
+              NUM_MOLS);
+    }
+    return SUCCESS;
+}
+
+
+int is_molecule_active(int const molecule_bit_field,
+                       int const mol_id)
+{
+    return molecule_bit_field & mol_id;
 }
