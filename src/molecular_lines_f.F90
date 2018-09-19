@@ -213,7 +213,7 @@ module molecular_lines_f
             use iso_c_binding
             implicit none
             type(c_ptr),value,intent(in) :: context
-            integer(kind=c_int),intent(in) :: molecule_id
+            integer(kind=c_int),value,intent(in) :: molecule_id
             real(kind=c_double),intent(in),optional :: min_line_center_wavenumber
             real(kind=c_double),intent(in),optional :: max_line_center_wavenumber
             integer(kind=c_int) :: return_code
