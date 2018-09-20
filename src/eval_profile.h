@@ -1,6 +1,7 @@
 #ifndef EVAL_PROFILE_H_
 #define EVAL_PROFILE_H_
 
+#include <stdint.h>
 #include "floating_point_type.h"
 
 

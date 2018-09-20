@@ -68,8 +68,8 @@ struct GrtContext
     int num_threads; /**< Number of CPU threads that will be used to calculate
                           the lines (if not using a GPU).*/
     char hitran_path[DIR_PATH_LEN]; /**< Path to the HITRAN database file.*/
-    int molecule_bit_field; /**< Bit field used to determine which molecules
-                                 are currently in use.*/
+    uint64_t molecule_bit_field; /**< Bit field used to determine which molecules
+                                      are currently in use.*/
     int use_h2o_ctm; /**< Flag for using the water vapor continuum.*/
     char h2o_ctm_dir[DIR_PATH_LEN];
     WaterVaporContinuumCoefs_t *h2o_cc; /**< Structure containing water vapor
@@ -467,7 +467,8 @@ int grt_add_molecule(GrtContext_t *context,
     }
     check(molecule_hash(molecule_id,
                         &index));
-    context->molecule_bit_field |= molecule_id;
+    check(activate_molecule(&(context->molecule_bit_field),
+                            molecule_id));
     (context->num_molecules)++;
     in_range(context->num_molecules,1,MAX_NUM_MOLECULES);
     LineFlags_t flags = {((unsigned int) -1),1,0};

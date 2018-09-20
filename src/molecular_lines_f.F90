@@ -135,11 +135,11 @@ module molecular_lines_f
 
     integer(kind=c_int),parameter,public :: H2O = 1
     integer(kind=c_int),parameter,public :: CO2 = 2
-    integer(kind=c_int),parameter,public :: O3 = 4
-    integer(kind=c_int),parameter,public :: N2O = 8
-    integer(kind=c_int),parameter,public :: CO = 16
-    integer(kind=c_int),parameter,public :: CH4 = 32
-    integer(kind=c_int),parameter,public :: O2 = 64
+    integer(kind=c_int),parameter,public :: O3 = 3
+    integer(kind=c_int),parameter,public :: N2O = 4
+    integer(kind=c_int),parameter,public :: CO = 5
+    integer(kind=c_int),parameter,public :: CH4 = 6
+    integer(kind=c_int),parameter,public :: O2 = 7
 
 
 #ifdef SINGLE_PRECISION

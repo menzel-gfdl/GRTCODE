@@ -3,6 +3,7 @@
 
 #include "floating_point_type.h"
 
+
 #ifdef __NVCC__
 __host__ __device__
 #endif

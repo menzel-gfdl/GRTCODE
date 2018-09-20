@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "debug.h"
@@ -63,73 +64,34 @@ int get_mol_name(int const id,
 }
 
 
-int HITRAN_id_to_model_id(int const hitran_id,
-                          int * const model_id)
-{
-    not_null(model_id);
-    switch (hitran_id)
-    {
-        case Hitran_H2O:
-            *model_id = H2O;
-            break;
-        case Hitran_CO2:
-            *model_id = CO2;
-            break;
-        case Hitran_O3:
-            *model_id = O3;
-            break;
-        case Hitran_N2O:
-            *model_id = N2O;
-            break;
-        case Hitran_CO:
-            *model_id = CO;
-            break;
-        case Hitran_CH4:
-            *model_id = CH4;
-            break;
-        case Hitran_O2:
-            *model_id = O2;
-            break;
-        default:
-            fatal(VALUE_ERR,
-                  "unrecognized HITRAN molecule id %d.",
-                  hitran_id);
-    }
-    return SUCCESS;
-}
-
-
 int molecule_hash(int const mol_id,
                   int * const hash)
 {
     not_null(hash);
-    *hash = 0;
-    unsigned int a = mol_id;
-    if (mol_id < 1)
+    if (mol_id < H2O || mol_id > COCl2)
     {
         fatal(VALUE_ERR,
-              "input molecule id (%d) must be at least 1.",
+              "unrecognized molecule id %d.",
               mol_id);
     }
-    while (a != 1)
-    {
-        a = a >> 1;
-        (*hash)++;
-    }
-    if (*hash >= NUM_MOLS)
-    {
-        fatal(VALUE_ERR,
-              "hash (%d) of molecule id (%d) cannot be >= %d.",
-              *hash,
-              mol_id,
-              NUM_MOLS);
-    }
+    *hash = mol_id - 1;
     return SUCCESS;
 }
 
 
-int is_molecule_active(int const molecule_bit_field,
+int activate_molecule(uint64_t * const molecule_bit_field,
+                      int const mol_id)
+{
+    not_null(molecule_bit_field);
+    uint64_t const one = 1;
+    *molecule_bit_field = (*molecule_bit_field) | (one << (mol_id-1));
+    return SUCCESS;
+}
+
+
+int is_molecule_active(uint64_t const molecule_bit_field,
                        int const mol_id)
 {
-    return molecule_bit_field & mol_id;
+    uint64_t const one = 1;
+    return molecule_bit_field & (one << (mol_id-1));
 }

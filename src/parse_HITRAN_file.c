@@ -1,4 +1,5 @@
 #include <float.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -326,7 +327,7 @@ int parse_hitran_file(LineParams_t ** const line_params,
         if ((ll-HITRAN2012_recordLen) > HITRAN2012_pad)
         {
             fatal(VALUE_ERR,
-                  "Found bad record at line %u (%zu exceeds max %zu chars)"
+                  "Found bad record at line %zu (%zu exceeds max %zu chars)"
                       " in file %s.",
                   line_count,
                   (size_t)ll,
@@ -336,7 +337,7 @@ int parse_hitran_file(LineParams_t ** const line_params,
         else if (ll < HITRAN2012_recordLen)
         {
             fatal(VALUE_ERR,
-                  "Found bad record at line %u (%zu less than %zu chars)"
+                  "Found bad record at line %zu (%zu less than %zu chars)"
                       " in file %s.",
                   line_count,
                   (size_t)ll,
@@ -365,13 +366,10 @@ int parse_hitran_file(LineParams_t ** const line_params,
                 check(HITRAN2012_cast(&val,
                                       col,
                                       tmp));
-                int m;
                 switch (val_idx)
                 {
                     case mol_pidx:
-                        check(HITRAN_id_to_model_id(val.i,
-                                                    &m));
-                        if (m != lines->mol)
+                        if (val.i != lines->mol)
                         {
                             go_to_next_line = 1;
                             continue;

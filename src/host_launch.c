@@ -31,7 +31,7 @@ int launch_h(int const num_levels,
              fp_t * const Pshift,
              fp_t * const s,
              LineParams_t *lines,
-             int const molecule_bit_field,
+             uint64_t const molecule_bit_field,
              LineParams_t ** const line_params,
              double const w0,
              double const wres,
@@ -96,7 +96,7 @@ int launch_h(int const num_levels,
         }
         else
         {
-            m *= 2;
+            m++;
             continue;
         }
 
@@ -232,7 +232,7 @@ int launch_h(int const num_levels,
                                            Ns,
                                            tau);
         }
-        m *= 2;
+        m++;
     }
     return SUCCESS;
 }
