@@ -140,6 +140,7 @@ module molecular_lines_fhl
     public :: grt_calculate_optical_depth_fhl
     public :: grt_get_num_levels_fhl
     public :: grt_get_spectral_grid_size_fhl
+    public :: grt_get_spectral_grid_properties_fhl
     public :: grt_get_num_molecules_fhl
     public :: grt_set_verbosity_f
     public :: grt_get_verbosity_f
@@ -159,7 +160,7 @@ module molecular_lines_fhl
     real(kind=c_double) :: w0 = 1._c_double !Lower bound of spectral grid.
     real(kind=c_double) :: wn = 3250._c_double !Upper bound of spectral grid.
     real(kind=c_double) :: wres = 0.1_c_double !Resolution of spectral grid.
-    character(len=1024) :: hitran_path = "HITRAN_files/hitran2012.par" !Path to the hitran
+    character(len=1024) :: hitran_path = "HITRAN_files/hitran2016.par" !Path to the hitran
                                                                        !database file.
     logical :: do_h2o = .true. !Use water vapor.
     logical :: do_co2 = .true. !Use carbon dioxide
@@ -168,6 +169,18 @@ module molecular_lines_fhl
     logical :: do_co = .true. !Use carbon monoxide.
     logical :: do_ch4 = .true. !Use methane.
     logical :: do_o2 = .true. !Use oxygen.
+    character(len=1024) :: h2o_ctm_dir = "none" !< Directory containing the
+                                                !! provided water vapor continuum
+                                                !! input files.  If not passed in,
+                                                !! then the water vapor continuum
+                                                !! is not included in the optical
+                                                !! depth calculation.
+    character(len=1024) :: o3_ctm_dir = "none" !< Directory containing the
+                                               !! provided ozone continuum
+                                               !! input files.  If not passed in,
+                                               !! then the ozone continuum is not
+                                               !! included in the optical depth
+                                               !! calculation.
     namelist /molecular_lines_nml/ num_levels, &
                                    w0, &
                                    wn, &
@@ -179,7 +192,9 @@ module molecular_lines_fhl
                                    do_n2o, &
                                    do_co, &
                                    do_ch4, &
-                                   do_o2
+                                   do_o2, &
+                                   h2o_ctm_dir, &
+                                   o3_ctm_dir
 
 
     contains
@@ -259,6 +274,32 @@ module molecular_lines_fhl
 
 
         !> @ingroup highlevelfortranapi
+        !! @brief Return poperties of the spectral grid.
+        subroutine grt_get_spectral_grid_properties_fhl(low, &
+                                                        high, &
+                                                        res)
+
+            !Inputs/outputs
+            real(kind=c_double),intent(out),optional :: low !< Lower bound of
+                                                            !! spectral grid.
+            real(kind=c_double),intent(out),optional :: high !< Upper bound of
+                                                             !! spectral grid.
+            real(kind=c_double),intent(out),optional :: res !< Resolution of
+                                                            !! spectral grid.
+
+            if (present(low)) then
+                low = w0
+            endif
+            if (present(high)) then
+                high = wn
+            endif
+            if (present(res)) then
+                res = wres
+            endif
+        end subroutine grt_get_spectral_grid_properties_fhl
+
+
+        !> @ingroup highlevelfortranapi
         !! @brief Return the number of molecules that are being used.
         function grt_get_num_molecules_fhl() result(n)
 
@@ -280,9 +321,7 @@ module molecular_lines_fhl
         subroutine grt_context_init_fhl(namelist_filepath, &
                                         wcutoff, &
                                         gpu_id, &
-                                        num_threads, &
-                                        h2o_ctm_dir, &
-                                        o3_ctm_dir)
+                                        num_threads)
 
             !Inputs/outputs
             character(len=*),intent(in),optional :: namelist_filepath !< Path to namelist file.
@@ -300,18 +339,6 @@ module molecular_lines_fhl
                                                                    !! be used.  Defaults to
                                                                    !! omp_get_max_threads (or one
                                                                    !! if not build with OpenMP).
-            character(len=*),intent(in),optional :: h2o_ctm_dir !< Directory containing the
-                                                                !! provided water vapor continuum
-                                                                !! input files.  If not passed in,
-                                                                !! then the water vapor continuum
-                                                                !! is not included in the optical
-                                                                !! depth calculation.
-            character(len=*),intent(in),optional :: o3_ctm_dir !< Directory containing the
-                                                               !! provided ozone continuum
-                                                               !! input files.  If not passed in,
-                                                               !! then the ozone continuum is not
-                                                               !! included in the optical depth
-                                                               !! calculation.
 
             !Local variables
             integer(kind=c_int) :: return_code

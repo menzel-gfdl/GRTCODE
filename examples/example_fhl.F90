@@ -14,12 +14,6 @@ program test
 
     character(kind=c_char,len=64) :: namelist_file !Path to the namelist
                                                    !file.
-    character(kind=c_char,len=64) :: h2o_ctm_dir !Path to directory
-                                                 !containing the water
-                                                 !vapor continuum input
-                                                 !files.
-    character(kind=c_char,len=64) :: o3_ctm_dir !Path to directory containing
-                                                !ozone continuum input files.
     integer(kind=c_int) :: num_levels !Number of atmospheric levels.
     integer(kind=c_int64_t) :: num_wpoints !Spectral grid size.
     integer(kind=c_int) :: num_molecules !Number of molecules the library
@@ -45,16 +39,12 @@ program test
     integer(kind=c_int) :: k
 
     namelist_file = "namelist/example.nml"
-    h2o_ctm_dir = "water_vapor_continuum"
-    o3_ctm_dir = "ozone_continuum"
 
     !Set verbosity.
     call grt_set_verbosity_f(2)
 
     !Initalize the library.
-    call grt_context_init_fhl(namelist_filepath=trim(namelist_file), &
-                              h2o_ctm_dir=trim(h2o_ctm_dir), &
-                              o3_ctm_dir=trim(o3_ctm_dir))
+    call grt_context_init_fhl(namelist_filepath=trim(namelist_file))
 
     !Get the number of atmospheric levels.
     num_levels = grt_get_num_levels_fhl()

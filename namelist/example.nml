@@ -3,4 +3,14 @@ num_levels = 48
 w0 = 1.
 wn = 2000.
 wres = 1.
+hitran_path = "HITRAN_files/hitran2016.par"
+h2o_ctm_dir = "water_vapor_continuum"
+o3_ctm_dir = "ozone_continuum"
+do_h2o = .true.
+do_co2 = .true.
+do_o3 = .true.
+do_n2o = .false.
+do_co = .true.
+do_ch4 = .false.
+do_o2 = .true.
 /
