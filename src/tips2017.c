@@ -127831,7 +127831,11 @@ __host__ __device__
 #endif
 void QT(int const mol_id,fp_t const T,int const iso,fp_t * const Qt)
 {
-    int const i = iso - 1;
+    int i = iso - 1;
+    if (i == -1)
+    {
+        i = 9;
+    }
     switch (mol_id)
     {
         case H2O:
