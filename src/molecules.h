@@ -42,7 +42,7 @@ typedef enum HitranMoleculeId
     HO2 = 33,
     O = 34,
     ClONO2 = 35,
-    NOplus = 36,
+    NOp = 36,
     HOBr = 37,
     C2H4 = 38,
     CH3OH = 39,
@@ -56,7 +56,11 @@ typedef enum HitranMoleculeId
     SO3 = 47,
     C2N2 = 48,
     COCl2 = 49,
-    NUM_MOLS = 49
+    SO = 50,
+    C3H4 = 51,
+    CH3 = 52,
+    CS2 = 53,
+    NUM_MOLS = 53
 } HitranMoleculeId_t;
 
 

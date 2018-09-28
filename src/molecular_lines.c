@@ -20,7 +20,7 @@
 #ifdef __NVCC__
 #include "query_gpu.cuh"
 #endif
-#include "TIPS_2011.h"
+#include "tips2017.h"
 #include "utils.h"
 #include "verbosity.h"
 #include "water_vapor_continuum.h"
@@ -328,10 +328,10 @@ int grt_context_init(GrtContext_t **context,
         num_elements = c.num_layers*c.num_wpoints;
         HANDLE_ERROR(cudaMalloc(&(c.tau),
                                 sizeof(*(c.tau))*num_elements));
+        check(inittips_d());
 #endif
         check(alloc_line_params_device(&(c.lines),
                                        MAX_NUM_LINES));
-        check(initTIPS_d());
     }
     else
     {
