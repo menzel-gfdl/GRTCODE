@@ -23,7 +23,7 @@ OBJ = ${LIB_NAME}_fhl.o \
       ida_voigt.o \
       doppler.o \
       lorentz.o \
-      TIPS_2011.o \
+      tips2017.o \
       parse_HITRAN_file.o \
       parse_csv.o \
       molecules.o \
