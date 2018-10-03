@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,7 +152,7 @@ int grt_context_init(GrtContext_t **context,
               wn,
               w0);
     }
-    c.num_wpoints = (wn-w0)/wres + 1.;
+    c.num_wpoints = ceil((wn-w0)/wres) + 1.;
     log_mesg("Spectral grid properties:\n\tlower bound: %e [1/cm]\n\t"
                  "upper bound: %e [1/cm]\n\tresolution: %e [1/cm]\n\t"
                  "total size: %zu grid points",
