@@ -17,6 +17,8 @@
 #endif
 
 
+#include <stdio.h>
+
 /*Compute the dimensionless optical depth values at each desired frequency.
 
   Arguments:
@@ -163,9 +165,11 @@ __global__ void eval_profile(int const mol_id,
 
 void eval_profile_h(int const mol_id,
                     unsigned int const num_lines,
-                    uint64_t const num_wpoints,
+                    uint64_t const num_wpoints_fine,
+                    uint64_t const num_wpoints_coarse,
                     double const w0,
-                    double const wres,
+                    double const wres_fine,
+                    double const wres_coarse,
                     int const num_layers,
                     double const wcutoff,
                     fp_t const * const T,
@@ -173,9 +177,11 @@ void eval_profile_h(int const mol_id,
                     fp_t const * const Pshift,
                     fp_t const * const s,
                     fp_t const * const N,
-                    fp_t * const tau)
+                    fp_t * const tau_fine,
+                    fp_t * const tau_coarse,
+                    fp_t const fine_factor)
 {
-    int const fsteps = ceil(wcutoff/wres);
+    fp_t const molar_mass = get_molar_mass(mol_id);
     int lyr;
     unsigned int ltid;
 
@@ -187,83 +193,137 @@ void eval_profile_h(int const mol_id,
     {
         for (ltid=0;ltid<num_lines;++ltid)
         {
-            fp_t n = N[lyr];
-            fp_t temp = T[lyr];
             unsigned int loffset = lyr*num_lines + ltid;
             LineShapeInputs_t in;
             in.line_center = Pshift[loffset];
-
-            /*Find index of nearest frequency bin to line.*/
-            unsigned int fcenterid = (2*((in.line_center-w0)/wres)+1)/2;
-            if (fcenterid < num_wpoints)
-            {
-                fp_t snn = s[loffset];
-                fp_t molar_mass = get_molar_mass(mol_id);
-
-                /*Set the necessary values for the line shape input
-                  structure.*/
-                in.lorentz_hwhm = gamma[loffset];
-                in.doppler_hwhm = doppler_hwhm(temp,
-                                               molar_mass,
-                                               in.line_center);
+            fp_t n = N[lyr];
+            fp_t temp = T[lyr];
+            fp_t snn = s[loffset];
+            in.lorentz_hwhm = gamma[loffset];
+            in.doppler_hwhm = doppler_hwhm(temp,
+                                           molar_mass,
+                                           in.line_center);
 #ifdef IDA_VOIGT
-                in.eta = eta(2.*in.lorentz_hwhm,
-                             2.*in.doppler_hwhm);
-#else
-                in.eta = -1;
+            in.eta = eta(2.*in.lorentz_hwhm,
+                         2.*in.doppler_hwhm);
 #endif
 
-                /*Calculate the optical depth values from the left edge of
-                  the line to the line center.*/
-                int ftid;
-                for (ftid=fcenterid-((int)fsteps);ftid<=(int)fcenterid;++ftid)
-                {
-                    if (ftid >= 0)
-                    {
-                        in.w = ((fp_t)ftid)*wres + w0;
+            double fcutoff = fine_factor*in.lorentz_hwhm;
+/*
+            fcutoff = 100.f*in.lorentz_hwhm;
+*/
+            fcutoff = 1.5f;
+            if (fcutoff > wcutoff)
+            {
+                fcutoff = wcutoff;
+            }
+            double wleft = in.line_center - fcutoff;
+            if (wleft < w0)
+            {
+                wleft = w0;
+            }
+            double wright = in.line_center + fcutoff;
+            if (wright > w0 + wres_fine*num_wpoints_fine)
+            {
+                wright = wres_fine*num_wpoints_fine;
+            }
 
-                        /*Calculate the value of the line shape function.*/
+            /*Fine grid calculation.*/
+            uint64_t leftid = (2*((wleft-w0)/wres_fine)+1)/2;
+            if (leftid >= num_wpoints_fine)
+            {
+                leftid = num_wpoints_fine - 1;
+            }
+            uint64_t rightid = (2*((wright-w0)/wres_fine)+1)/2;
+            if (rightid >= num_wpoints_fine)
+            {
+                rightid = num_wpoints_fine - 1;
+            }
+            uint64_t i;
+            for (i=leftid;i<=rightid;++i)
+            {
+                in.w = w0 + i*wres_fine;
 #if defined(DOPPLER)
-                        fp_t line_shape = doppler_line_shape(in);
+                fp_t line_shape = doppler_line_shape(in);
 #elif defined(LORENTZ)
-                        fp_t line_shape = lorentz_line_shape(in);
+                fp_t line_shape = lorentz_line_shape(in);
 #elif defined(IDA_VOIGT)
-                        fp_t line_shape = ida_voigt_line_shape(in);
+                fp_t line_shape = ida_voigt_line_shape(in);
 #else
-                        fp_t line_shape = rfm_voigt_line_shape(in);
+                fp_t line_shape = rfm_voigt_line_shape(in);
 #endif
 
 #pragma omp atomic update
-                        tau[lyr*num_wpoints+ftid] += snn*n*line_shape;
-                    }
-                }
+                tau_fine[lyr*num_wpoints_fine+i] += snn*n*line_shape;
+            }
 
-                /*Calculate the optical depth values from the right edge of
-                  the line to the line center.*/
-                for (ftid=fcenterid+((int)fsteps);ftid>(int)fcenterid;--ftid)
-                {
-                    if (ftid < (int)num_wpoints)
-                    {
-                        in.w = ((fp_t)ftid)*wres + w0;
-
-                        /*Calculate the value of the line shape function.*/
+            /*Coarse grid calculation.*/
+            /*Left side.*/
+            double cleft = in.line_center - wcutoff;
+            if (cleft < w0)
+            {
+                cleft = w0;
+            }
+            leftid = (2*((cleft-w0)/wres_coarse)+1)/2;
+            if (leftid >= num_wpoints_coarse)
+            {
+                leftid = num_wpoints_coarse - 1;
+            }
+            rightid = (2*((wleft-w0)/wres_coarse)+1)/2;
+            if (rightid >= num_wpoints_coarse)
+            {
+                rightid = num_wpoints_coarse - 1;
+            }
+            for (i=leftid;i<=rightid;++i)
+            {
+                in.w = w0 + i*wres_coarse;
 #if defined(DOPPLER)
-                        fp_t line_shape = doppler_line_shape(in);
+                fp_t line_shape = doppler_line_shape(in);
 #elif defined(LORENTZ)
-                        fp_t line_shape = lorentz_line_shape(in);
+                fp_t line_shape = lorentz_line_shape(in);
 #elif defined(IDA_VOIGT)
-                        fp_t line_shape = ida_voigt_line_shape(in);
+                fp_t line_shape = ida_voigt_line_shape(in);
 #else
-                        fp_t line_shape = rfm_voigt_line_shape(in);
+                fp_t line_shape = rfm_voigt_line_shape(in);
 #endif
 
 #pragma omp atomic update
-                        tau[lyr*num_wpoints+ftid] += snn*n*line_shape;
-                    }
-                }
+                tau_coarse[lyr*num_wpoints_coarse+i] += snn*n*line_shape;
+            }
+
+            /*Right side.*/
+            double cright = in.line_center + wcutoff;
+            if (cright > w0 + wres_coarse*num_wpoints_coarse)
+            {
+                cright = w0 + wres_coarse*num_wpoints_coarse;
+            }
+            leftid = (2*((wright-w0)/wres_coarse)+1)/2;
+            if (leftid >= num_wpoints_coarse)
+            {
+                leftid = num_wpoints_coarse - 1;
+            }
+            rightid = (2*((cright-w0)/wres_coarse)+1)/2;
+            if (rightid >= num_wpoints_coarse)
+            {
+                rightid = num_wpoints_coarse - 1;
+            }
+            for (i=leftid;i<=rightid;++i)
+            {
+                in.w = w0 + i*wres_coarse;
+#if defined(DOPPLER)
+                fp_t line_shape = doppler_line_shape(in);
+#elif defined(LORENTZ)
+                fp_t line_shape = lorentz_line_shape(in);
+#elif defined(IDA_VOIGT)
+                fp_t line_shape = ida_voigt_line_shape(in);
+#else
+                fp_t line_shape = rfm_voigt_line_shape(in);
+#endif
+
+#pragma omp atomic update
+                tau_coarse[lyr*num_wpoints_coarse+i] += snn*n*line_shape;
             }
         }
     }
-
     return;
 }

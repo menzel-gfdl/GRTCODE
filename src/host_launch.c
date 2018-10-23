@@ -1,6 +1,9 @@
+#include <stdio.h>
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "coarse_to_fine.h"
 #include "debug.h"
 #include "eval_gamma.h"
 #include "eval_profile.h"
@@ -34,14 +37,18 @@ int launch_h(int const num_levels,
              uint64_t const molecule_bit_field,
              LineParams_t ** const line_params,
              double const w0,
-             double const wres,
-             uint64_t const num_wpoints,
+             double const wres_fine,
+             double const wres_coarse,
+             uint64_t const num_wpoints_fine,
+             uint64_t const num_wpoints_coarse,
              double const wcutoff,
              int const use_h2o_ctm,
              WaterVaporContinuumCoefs_t * const h2o_cc,
              int const use_o3_ctm,
              OzoneContinuumCoefs_t const * const o3_cc,
-             fp_t * const tau)
+             fp_t * const tau_fine,
+             fp_t * const tau_coarse,
+             fp_t const fine_factor)
 {
     not_null(P);
     not_null(T);
@@ -56,13 +63,17 @@ int launch_h(int const num_levels,
     not_null(Pshift);
     not_null(s);
     not_null(line_params);
-    not_null(tau);
+    not_null(tau_fine);
+    not_null(tau_coarse);
 
     /*Zero out buffers used to accumulate results.*/
     int num_layers = num_levels - 1;
-    memset(tau,
+    memset(tau_fine,
            0,
-           sizeof(*tau)*num_layers*num_wpoints);
+           sizeof(*tau_fine)*num_layers*num_wpoints_fine);
+    memset(tau_coarse,
+           0,
+           sizeof(*tau_coarse)*num_layers*num_wpoints_coarse);
 
     /*Calculate the total number density of air moleucles integrated across
       each layer.*/
@@ -188,9 +199,11 @@ int launch_h(int const num_levels,
                  mol_name);
         eval_profile_h(m,
                        num_lines,
-                       num_wpoints,
+                       num_wpoints_fine,
+                       num_wpoints_coarse,
                        w0,
-                       wres,
+                       wres_fine,
+                       wres_coarse,
                        num_layers,
                        wcutoff,
                        Tavg,
@@ -198,7 +211,22 @@ int launch_h(int const num_levels,
                        Pshift,
                        s,
                        Ns,
-                       tau);
+                       tau_fine,
+                       tau_coarse,
+                       fine_factor);
+
+        int k;
+        int h;
+        FILE *foo;
+        foo = fopen("coarse.spectra","w");
+        for (h=0;h<num_layers;++h)
+        {
+            for (k=0;k<num_wpoints_coarse;++k)
+            {
+                fprintf(foo,"%d %d %e %e\n",h,k,w0+k*wres_coarse,tau_coarse[h*num_wpoints_coarse+k]);
+            }
+        }
+        fclose(foo);
 
         if (use_h2o_ctm && m == H2O)
         {
@@ -207,9 +235,9 @@ int launch_h(int const num_levels,
             log_info("Calculating optical depth due to the water vapor"
                          " continuum across %d layers.",
                      num_layers);
-            calc_water_vapor_ctm_optical_depth_h(num_wpoints,
+            calc_water_vapor_ctm_optical_depth_h(num_wpoints_fine,
                                                  num_layers,
-                                                 tau,
+                                                 tau_fine,
                                                  h2o_cc->coefs[MTCKD25_S296],
                                                  Tavg,
                                                  Psavg,
@@ -226,13 +254,27 @@ int launch_h(int const num_levels,
             log_info("Calculating optical depth due to the ozone"
                          " continuum across %d layers.",
                      num_layers);
-            calc_ozone_ctm_optical_depth_h(num_wpoints,
+            calc_ozone_ctm_optical_depth_h(num_wpoints_fine,
                                            num_layers,
                                            o3_cc->cross_section,
                                            Ns,
-                                           tau);
+                                           tau_fine);
         }
         m++;
     }
+
+    /*Interpolate from coarse to fine grid.*/
+    log_info("Interpolating from coarse to fine spectral grids across"
+                 " %d layers.",
+             num_layers);
+    coarse_to_fine(num_layers,
+                   w0,
+                   wres_fine,
+                   wres_coarse,
+                   num_wpoints_fine,
+                   num_wpoints_coarse,
+                   tau_fine,
+                   tau_coarse);
+
     return SUCCESS;
 }

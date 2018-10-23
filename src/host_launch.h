@@ -25,14 +25,18 @@ int launch_h(int const num_levels,
              uint64_t const molecule_bit_field,
              LineParams_t ** const line_params,
              double const w0,
-             double const wres,
-             uint64_t const num_wpoints,
+             double const wres_fine,
+             double const wres_coarse,
+             uint64_t const num_wpoints_fine,
+             uint64_t const num_wpoints_coarse,
              double const wcutoff,
              int const use_h2o_ctm,
              WaterVaporContinuumCoefs_t * const h2o_cc,
              int const use_o3_ctm,
              OzoneContinuumCoefs_t const * const o3_cc,
-             fp_t * const tau);
+             fp_t * const tau_fine,
+             fp_t * const tau_coarse,
+             fp_t const fine_factor);
 
 
 #endif

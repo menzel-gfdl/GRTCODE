@@ -62,8 +62,10 @@ struct GrtContext
                                      files.)*/
     double w0; /**< First point of the spectral grid [1/cm].*/
     double wn; /**< Last point of the spectral grid [1/cm].*/
-    double wres; /**< Spectral resolution [1/cm].*/
-    uint64_t num_wpoints; /**< Number of spectral grid points.*/
+    double wres_fine; /**< Spectral resolution of fine grid [1/cm].*/
+    uint64_t num_wpoints_fine; /**< Number of spectral fine grid points.*/
+    double wres_coarse; /**< Spectral resolution of coarse grid [1/cm].*/
+    uint64_t num_wpoints_coarse; /**< Number of spectral coarse grid points.*/
     double wcutoff; /**< Cutoff from spectral line center [1/cm].*/
     int gpu_id; /**< Id of the GPU that is associated with this context.*/
     int num_threads; /**< Number of CPU threads that will be used to calculate
@@ -92,8 +94,10 @@ struct GrtContext
     fp_t *gamma; /**< */
     fp_t *Pshift; /**< */
     fp_t *s; /**< */
-    fp_t *tau; /**< Optical depths (layer,wavenumber).*/
+    fp_t *tau_fine; /**< Optical depths on fine grid (layer,wavenumber).*/
+    fp_t *tau_coarse; /**< Optical depths on coarse grid (layer,wavenumber).*/
     LineParams_t *lines; /**< Molecular line parameters.*/
+    fp_t fine_factor; /**<Fine grid cutoff = fine_factor*lorentz_hwhm.*/
 };
 
 
@@ -137,13 +141,13 @@ int grt_context_init(GrtContext_t **context,
              c.num_levels,
              c.num_layers);
 
-    /*Set the spectral grid properties.*/
+    /*Set the fine spectral grid properties.*/
     in_range(w0,MIN_WAVENUMBER,MAX_WAVENUMBER);
     c.w0 = w0;
     in_range(wn,MIN_WAVENUMBER,MAX_WAVENUMBER);
     c.wn = wn;
     in_range(wres,MIN_RESOLUTION,MAX_RESOLUTION);
-    c.wres = wres;
+    c.wres_fine = wres;
     if (wn <= w0)
     {
         fatal(VALUE_ERR,
@@ -152,14 +156,29 @@ int grt_context_init(GrtContext_t **context,
               wn,
               w0);
     }
-    c.num_wpoints = ceil((wn-w0)/wres) + 1.;
+    c.num_wpoints_fine = ceil((wn-w0)/wres) + 1.;
     log_mesg("Spectral grid properties:\n\tlower bound: %e [1/cm]\n\t"
                  "upper bound: %e [1/cm]\n\tresolution: %e [1/cm]\n\t"
                  "total size: %zu grid points",
              c.w0,
              c.wn,
-             c.wres,
-             c.num_wpoints);
+             c.wres_fine,
+             c.num_wpoints_fine);
+
+    /*Set the coarse grid spectral properties.*/
+    if (c.wres_fine > 0.5)
+    {
+        c.wres_coarse = c.wres_fine;
+    }
+    else
+    {
+        c.wres_coarse = 0.5;
+    }
+    c.num_wpoints_coarse = ceil((wn-w0)/c.wres_coarse) + 1.;
+    log_info("Spectral coarse grid properties:\n\tresolution: %e [1/cm]\n\t"
+                 "total size: %zu grid points",
+             c.wres_coarse,
+             c.num_wpoints_coarse);
 
     /*Store the path to the hitran database file.*/
     not_null(hitran_path);
@@ -326,9 +345,12 @@ int grt_context_init(GrtContext_t **context,
                                 sizeof(*(c.Pshift))*num_elements));
         HANDLE_ERROR(cudaMalloc(&(c.s),
                                 sizeof(*(c.s))*num_elements));
-        num_elements = c.num_layers*c.num_wpoints;
-        HANDLE_ERROR(cudaMalloc(&(c.tau),
-                                sizeof(*(c.tau))*num_elements));
+        num_elements = c.num_layers*c.num_wpoints_fine;
+        HANDLE_ERROR(cudaMalloc(&(c.tau_fine),
+                                sizeof(*(c.tau_fine))*num_elements));
+        num_elements = c.num_layers*c.num_wpoints_coarse;
+        HANDLE_ERROR(cudaMalloc(&(c.tau_coarse),
+                                sizeof(*(c.tau_coarse))*num_elements));
         check(inittips_d());
 #endif
         check(alloc_line_params_device(&(c.lines),
@@ -356,7 +378,11 @@ int grt_context_init(GrtContext_t **context,
                          sizeof(*(c.Pshift))*c.num_layers*MAX_NUM_LINES));
         check(malloc_ptr((void **)(&c.s),
                          sizeof(*(c.s))*c.num_layers*MAX_NUM_LINES));
+        check(malloc_ptr((void **)(&c.tau_coarse),
+                         sizeof(*(c.tau_coarse))*c.num_layers*
+                         c.num_wpoints_coarse));
     }
+    c.fine_factor = 2.5;
 
     /*Copy data into the input context.*/
     not_null(context);
@@ -402,7 +428,8 @@ int grt_context_free(GrtContext_t **context)
         HANDLE_ERROR(cudaFree(c->gamma));
         HANDLE_ERROR(cudaFree(c->Pshift));
         HANDLE_ERROR(cudaFree(c->s));
-        HANDLE_ERROR(cudaFree(c->tau));
+        HANDLE_ERROR(cudaFree(c->tau_fine));
+        HANDLE_ERROR(cudaFree(c->tau_coarse));
         check(free_line_params_device(&(c->lines)));
 #endif
     }
@@ -418,6 +445,7 @@ int grt_context_free(GrtContext_t **context)
         free(c->gamma);
         free(c->Pshift);
         free(c->s);
+        free(c->tau_coarse);
     }
     if (c->use_h2o_ctm && c->h2o_cc != NULL)
     {
@@ -518,9 +546,9 @@ int grt_add_molecule(GrtContext_t *context,
         WaterVaporContinuumCoefs_t h2o_cc;
         check(get_water_vapor_continuum_coefs(&h2o_cc,
                                               context->h2o_ctm_dir,
-                                              context->num_wpoints,
+                                              context->num_wpoints_fine,
                                               context->w0,
-                                              context->wres));
+                                              context->wres_fine));
         check(malloc_ptr((void **) (&context->h2o_cc),
                          sizeof(*(context->h2o_cc))));
         if (context->gpu_id != HOST_ONLY)
@@ -548,9 +576,9 @@ int grt_add_molecule(GrtContext_t *context,
         OzoneContinuumCoefs_t o3_cc;
         check(get_ozone_continuum_coefs(&o3_cc,
                                         context->o3_ctm_dir,
-                                        context->num_wpoints,
+                                        context->num_wpoints_fine,
                                         context->w0,
-                                        context->wres));
+                                        context->wres_fine));
         check(malloc_ptr((void **) (&context->o3_cc),
                          sizeof(*(context->o3_cc))));
         if (context->gpu_id != HOST_ONLY)
@@ -691,7 +719,7 @@ int grt_calculate_optical_depth(GrtContext_t *context,
                      context->use_o3_ctm,
                      context->o3_cc,
                      context->tau));
-        num_elements = context->num_layers*context->num_wpoints;
+        num_elements = context->num_layers*context->num_wpoints_fine;
         HANDLE_ERROR(cudaMemcpy(optical_depth,
                                 context->tau,
                                 sizeof(*optical_depth)*num_elements,
@@ -721,14 +749,18 @@ int grt_calculate_optical_depth(GrtContext_t *context,
                        context->molecule_bit_field,
                        context->line_params,
                        context->w0,
-                       context->wres,
-                       context->num_wpoints,
+                       context->wres_fine,
+                       context->wres_coarse,
+                       context->num_wpoints_fine,
+                       context->num_wpoints_coarse,
                        context->wcutoff,
                        context->use_h2o_ctm,
                        context->h2o_cc,
                        context->use_o3_ctm,
                        context->o3_cc,
-                       optical_depth));
+                       optical_depth,
+                       context->tau_coarse,
+                       context->fine_factor));
     }
     free(p);
     return SUCCESS;
@@ -758,7 +790,7 @@ int grt_get_spectral_grid_size(GrtContext_t const * const context,
 {
     not_null(context);
     not_null(n);
-    *n = context->num_wpoints;
+    *n = context->num_wpoints_fine;
     return SUCCESS;
 }
 
