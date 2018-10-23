@@ -169,12 +169,13 @@ int grt_context_init(GrtContext_t **context, /**< Library context.*/
                                                     exists on the system, or else
                                                     set to -1 (corresponding to
                                                     a host only run.*/
-                     int const * const num_threads /**< If running on the host CPU,
-                                                        determines the maximum number
-                                                        of OpenMP threads that will
-                                                        be used.  If NULL, default to
-                                                        omp_get_max_threads (or one
-                                                        if not build with OpenMP).*/
+                     int const * const num_threads, /**< If running on the host CPU,
+                                                         determines the maximum number
+                                                         of OpenMP threads that will
+                                                         be used.  If NULL, default to
+                                                         omp_get_max_threads (or one
+                                                         if not build with OpenMP).*/
+                     double const * const fine_factor
                     );
 
 

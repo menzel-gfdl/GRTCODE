@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "coarse_to_fine.h"
 #ifdef __NVCC__
 #include "cuda_helpers.cuh"
 #else
@@ -38,24 +39,31 @@ int launch(int const num_levels,
            uint64_t const molecule_bit_field,
            LineParams_t ** const line_params,
            double const w0,
-           double const wres,
-           uint64_t const num_wpoints,
+           double const wres_fine,
+           double const wres_coarse,
+           uint64_t const num_wpoints_fine,
+           uint64_t const num_wpoints_coarse,
            double const wcutoff,
            int const use_h2o_ctm,
            WaterVaporContinuumCoefs_t * const h2o_cc,
            int const use_o3_ctm,
            OzoneContinuumCoefs_t const * const o3_cc,
-           fp_t * const tau)
+           fp_t * const tau_fine,
+           fp_t * const tau_coarse,
+           fp_t const fine_factor)
 {
     /*Zero out buffers used to accumulate results.*/
     int num_layers = num_levels - 1;
-    HANDLE_ERROR(cudaMemset(tau,
+    HANDLE_ERROR(cudaMemset(tau_fine,
                             0,
-                            sizeof(*tau)*num_layers*num_wpoints));
+                            sizeof(*tau_fine)*num_layers*num_wpoints_fine));
+    HANDLE_ERROR(cudaMemset(tau_coarse,
+                            0,
+                            sizeof(*tau_coarse)*num_layers*num_wpoints_coarse));
 
     /*Calculate the total number density of air moleucles integrated across
       each layer.*/
-    log_info("Integration total number density across %d layers.",
+    log_info("Integrating total number density across %d layers.",
              num_layers);
     integrated_N<<<1,num_layers,0,0>>>(num_layers,
                                        P,
@@ -236,9 +244,11 @@ int launch(int const num_levels,
         dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
         eval_profile<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(m,
                                                                                  num_lines,
-                                                                                 num_wpoints,
+                                                                                 num_wpoints_fine,
+                                                                                 num_wpoints_coarse,
                                                                                  w0,
-                                                                                 wres,
+                                                                                 wres_fine,
+                                                                                 wres_coarse,
                                                                                  num_layers,
                                                                                  wcutoff,
                                                                                  Tavg,
@@ -246,7 +256,9 @@ int launch(int const num_levels,
                                                                                  Pshift,
                                                                                  s,
                                                                                  Ns,
-                                                                                 tau);
+                                                                                 tau_fine,
+                                                                                 tau_coarse,
+                                                                                 fine_factor);
 
         if (use_h2o_ctm && m == H2O)
         {
@@ -260,9 +272,9 @@ int launch(int const num_levels,
                                                             0,
                                                             ((int)num_lines)));
             dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
-            calc_water_vapor_ctm_optical_depth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_wpoints,
+            calc_water_vapor_ctm_optical_depth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_wpoints_fine,
                                                                                                            num_layers,
-                                                                                                           tau,
+                                                                                                           tau_fine,
                                                                                                            h2o_cc->coefs[MTCKD25_S296],
                                                                                                            Tavg,
                                                                                                            Psavg,
@@ -284,13 +296,32 @@ int launch(int const num_levels,
                                                             0,
                                                             ((int)num_lines)));
             dim_grid = (((int)num_lines) + dim_block - 1)/dim_block;
-            calc_ozone_ctm_optical_depth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_wpoints,
+            calc_ozone_ctm_optical_depth<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_wpoints_fine,
                                                                                                      num_layers,
                                                                                                      o3_cc->cross_section,
                                                                                                      Ns,
-                                                                                                     tau);
+                                                                                                     tau_fine);
         }
         m++;
     }
+
+    /*Interpolate from coarse to fine grid.*/
+    log_info("Interpolating from coarse to fine spectral grids across"
+                 " %d layers.",
+             num_layers);
+    HANDLE_ERROR(cudaOccupancyMaxPotentialBlockSize(&min_grid_size,
+                                                    &dim_block,
+                                                    calc_ozone_ctm_optical_depth,
+                                                    0,
+                                                    ((int)(num_wpoints_coarse/2+1))));
+    dim_grid = (((int)(num_wpoints_coarse/2+1)) + dim_block - 1)/dim_block;
+    coarse_to_fine<<<((unsigned int)dim_grid),((unsigned int)dim_block),0,0>>>(num_layers,
+                                                                               w0,
+                                                                               wres_fine,
+                                                                               wres_coarse,
+                                                                               num_wpoints_fine,
+                                                                               num_wpoints_coarse,
+                                                                               tau_fine,
+                                                                               tau_coarse);
     return SUCCESS;
 }

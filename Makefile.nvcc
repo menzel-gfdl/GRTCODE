@@ -16,6 +16,7 @@ OBJ = ${LIB_NAME}_fhl.o \
       host_launch.o \
       ozone_continuum.o \
       water_vapor_continuum.o \
+      coarse_to_fine.o \
       eval_profile.o \
       eval_snn_correction.o \
       eval_pshift.o \

@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -215,19 +213,6 @@ int launch_h(int const num_levels,
                        tau_coarse,
                        fine_factor);
 
-        int k;
-        int h;
-        FILE *foo;
-        foo = fopen("coarse.spectra","w");
-        for (h=0;h<num_layers;++h)
-        {
-            for (k=0;k<num_wpoints_coarse;++k)
-            {
-                fprintf(foo,"%d %d %e %e\n",h,k,w0+k*wres_coarse,tau_coarse[h*num_wpoints_coarse+k]);
-            }
-        }
-        fclose(foo);
-
         if (use_h2o_ctm && m == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
@@ -267,14 +252,13 @@ int launch_h(int const num_levels,
     log_info("Interpolating from coarse to fine spectral grids across"
                  " %d layers.",
              num_layers);
-    coarse_to_fine(num_layers,
-                   w0,
-                   wres_fine,
-                   wres_coarse,
-                   num_wpoints_fine,
-                   num_wpoints_coarse,
-                   tau_fine,
-                   tau_coarse);
-
+    coarse_to_fine_h(num_layers,
+                     w0,
+                     wres_fine,
+                     wres_coarse,
+                     num_wpoints_fine,
+                     num_wpoints_coarse,
+                     tau_fine,
+                     tau_coarse);
     return SUCCESS;
 }

@@ -115,7 +115,8 @@ int grt_context_init(GrtContext_t **context,
                      char const * const o3_ctm_dir,
                      double const * const wcutoff,
                      int const * const gpu_id,
-                     int const * const num_threads)
+                     int const * const num_threads,
+                     double const * const fine_factor)
 {
     /*Guard against bad constants.*/
     assert(MIN_NUM_LEVELS >= 2);
@@ -382,7 +383,14 @@ int grt_context_init(GrtContext_t **context,
                          sizeof(*(c.tau_coarse))*c.num_layers*
                          c.num_wpoints_coarse));
     }
-    c.fine_factor = 2.5;
+    if (fine_factor != NULL)
+    {
+        c.fine_factor = *fine_factor;
+    }
+    else
+    {
+        c.fine_factor = 10.;
+    }
 
     /*Copy data into the input context.*/
     not_null(context);
@@ -711,17 +719,21 @@ int grt_calculate_optical_depth(GrtContext_t *context,
                      context->molecule_bit_field,
                      context->line_params,
                      context->w0,
-                     context->wres,
-                     context->num_wpoints,
+                     context->wres_fine,
+                     context->wres_coarse,
+                     context->num_wpoints_fine,
+                     context->num_wpoints_coarse,
                      context->wcutoff,
                      context->use_h2o_ctm,
                      context->h2o_cc,
                      context->use_o3_ctm,
                      context->o3_cc,
-                     context->tau));
+                     context->tau_fine,
+                     context->tau_coarse,
+                     context->fine_factor));
         num_elements = context->num_layers*context->num_wpoints_fine;
         HANDLE_ERROR(cudaMemcpy(optical_depth,
-                                context->tau,
+                                context->tau_fine,
                                 sizeof(*optical_depth)*num_elements,
                                 cudaMemcpyDeviceToHost));
 #endif

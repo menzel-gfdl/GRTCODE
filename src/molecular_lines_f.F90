@@ -170,7 +170,8 @@ module molecular_lines_f
                                   o3_ctm_dir, &
                                   wcutoff, &
                                   gpu_id, &
-                                  num_threads) &
+                                  num_threads, &
+                                  fine_factor) &
             result(return_code) &
             bind(c)
             use iso_c_binding
@@ -186,6 +187,7 @@ module molecular_lines_f
             real(kind=c_double),intent(in),optional :: wcutoff
             integer(kind=c_int),intent(in),optional :: gpu_id
             integer(kind=c_int),intent(in),optional :: num_threads
+            real(kind=c_double),intent(in),optional :: fine_factor
             integer(kind=c_int) :: return_code
         end function grt_context_init
     end interface
@@ -342,7 +344,8 @@ module molecular_lines_f
                                     o3_ctm_dir, &
                                     wcutoff, &
                                     gpu_id, &
-                                    num_threads) &
+                                    num_threads, &
+                                    fine_factor) &
             result(return_code)
             type(GrtContext_t),intent(inout) :: context !< Library context.
             integer(kind=c_int),intent(in) :: num_levels !< Number of atmospheric levels.
@@ -377,6 +380,7 @@ module molecular_lines_f
                                                                    !! be used.  Defaults to
                                                                    !! omp_get_max_threads (or one
                                                                    !! if not build with OpenMP).
+            real(kind=c_double),intent(in),optional :: fine_factor
             integer(kind=c_int) :: return_code
             character(len=1024) :: hbuf
             character(len=1024) :: obuf
@@ -400,7 +404,8 @@ module molecular_lines_f
                                            trim(obuf), &
                                            wcutoff, &
                                            gpu_id, &
-                                           num_threads)
+                                           num_threads, &
+                                           fine_factor)
         end function grt_context_init_f
 
 
