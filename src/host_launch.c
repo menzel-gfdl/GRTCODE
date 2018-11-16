@@ -1,264 +1,196 @@
-#include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
-#include "coarse_to_fine.h"
+#include "calc_optical_depth.h"
 #include "debug.h"
-#include "eval_gamma.h"
-#include "eval_profile.h"
-#include "eval_pshift.h"
-#include "eval_snn_correction.h"
 #include "floating_point_type.h"
 #include "host_launch.h"
-#include "integrate_layer.h"
+#include "molecular_lines.h"
 #include "molecules.h"
+#include "spectral_bin.h"
+
+#ifdef FOO
 #include "ozone_continuum.h"
-#include "parse_HITRAN_file.h"
-#include "pre_eval_snn.h"
-#include "utils.h"
 #include "water_vapor_continuum.h"
+#endif
 
 
-int launch_h(int const num_levels,
-             fp_t const * const P,
-             fp_t const * const T,
-             fp_t const * const x,
-             fp_t * const Pavg,
-             fp_t * const Tavg,
-             fp_t * const N,
-             fp_t * const Ns,
-             fp_t * const Psavg,
-             fp_t * const snn_ref,
-             fp_t * const gamma,
-             fp_t * const Pshift,
-             fp_t * const s,
-             LineParams_t *lines,
-             uint64_t const molecule_bit_field,
-             LineParams_t ** const line_params,
-             double const w0,
-             double const wres_fine,
-             double const wres_coarse,
-             uint64_t const num_wpoints_fine,
-             uint64_t const num_wpoints_coarse,
-             double const wcutoff,
-             int const use_h2o_ctm,
-             WaterVaporContinuumCoefs_t * const h2o_cc,
-             int const use_o3_ctm,
-             OzoneContinuumCoefs_t const * const o3_cc,
-             fp_t * const tau_fine,
-             fp_t * const tau_coarse,
-             fp_t const fine_factor)
+int launch_h(GrtContext_t * const context,
+             fp_t const * const p,
+             fp_t const * const t,
+             fp_t * const tau)
+
 {
-    not_null(P);
-    not_null(T);
-    not_null(x);
-    not_null(Pavg);
-    not_null(Tavg);
-    not_null(N);
-    not_null(Ns);
-    not_null(Psavg);
-    not_null(snn_ref);
-    not_null(gamma);
-    not_null(Pshift);
-    not_null(s);
-    not_null(line_params);
-    not_null(tau_fine);
-    not_null(tau_coarse);
+    not_null(context);
+    not_null(p);
+    not_null(t);
+    not_null(tau);
 
     /*Zero out buffers used to accumulate results.*/
-    int num_layers = num_levels - 1;
-    memset(tau_fine,
+    memset(tau,
            0,
-           sizeof(*tau_fine)*num_layers*num_wpoints_fine);
-    memset(tau_coarse,
+           sizeof(*tau)*context->num_layers*context->num_wpoints);
+    memset(context->bins.tau,
            0,
-           sizeof(*tau_coarse)*num_layers*num_wpoints_coarse);
+           sizeof(*(context->bins.tau))*context->bins.isize);
 
-    /*Calculate the total number density of air moleucles integrated across
+    /*Calculate the total number density of air molecules integrated across
       each layer.*/
     log_info("Integrating total number density across %d layers.",
-             num_layers);
-    check(integrated_N_h(num_layers,
-                         P,
-                         N));
+             context->num_layers);
+    check(calc_number_densities(context->num_layers,
+                                p,
+                                context->n));
 
     /*Calculate integrated average layer quantities.*/
-    log_info("Calculating Curtis-Godson pressure and temperature across"
+    log_info("Calculating Curtis-Godson pressures and temperatures across"
                  " %d layers.",
-             num_layers);
-    check(Curtis_Godson_PT_h(num_layers,
-                             P,
-                             T,
-                             Pavg,
-                             Tavg));
+             context->num_layers);
+    check(calc_pressures_and_temperatures(context->num_layers,
+                                          p,
+                                          t,
+                                          context->pavg,
+                                          context->tavg));
 
     /*Loop over the molecules and calculate the optical depths.*/
-    int mol;
-    int m = 1;
-    for (mol=0;mol<NUM_MOLS;++mol)
+    int m;
+    for (m=0;m<context->num_molecules;++m)
     {
-        char mol_name[8];
-        if (is_molecule_active(molecule_bit_field,m))
-        {
-            check(get_mol_name(m,
-                               mol_name,
-                               8));
-        }
-        else
-        {
-            m++;
-            continue;
-        }
-
-        /*Point to the molecules line parameter structure.*/
+        Molecule_t *mol = &(context->mols[m]);
         int index;
-        check(molecule_hash(m,
+        check(molecule_hash(mol->id,
                             &index));
-        lines = line_params[index];
-
-        /*Copy the snn_ref array.*/
-        unsigned int num_lines = lines->num_lines;
-        memcpy(snn_ref,
-               lines->snn_ref,
-               sizeof(*snn_ref)*num_lines);
-
-        /*Calculate the initial Snn_ref correction.*/
-        log_info("Launching kernel pre_eval_snn_h across %d layers"
-                     " for molecule %s.",
-                 num_layers,
-                 mol_name);
-        pre_eval_snn_h(num_lines,
-                       m,
-                       lines->iso,
-                       lines->vnn,
-                       lines->en,
-                       snn_ref);
 
         /*Calculate the integrated average layer partial pressure.*/
-        fp_t const *xp = &(x[index*num_levels]);
-        log_info("Calculating Curtis-Godson partial pressure and abundance"
+        fp_t const *xp = &(context->x[index*context->num_levels]);
+        log_info("Calculating Curtis-Godson partial pressures and abundances"
                      " across %d layers for molecule %s.",
-                 num_layers,
-                 mol_name);
-        Curtis_Godson_PsNs_h(num_layers,
-                             P,
-                             xp,
-                             N,
-                             Psavg,
-                             Ns);
+                 context->num_layers,
+                 mol->name);
+        check(calc_partial_pressures_and_number_densities(context->num_layers,
+                                                          p,
+                                                          xp,
+                                                          context->n,
+                                                          context->psavg,
+                                                          context->ns));
 
-        /*Calcluate the lorentz half-width at half-max (HWHM).*/
-        log_info("Launching kernel eval_gamma_h across %d layers"
-                     " for molecule %s.",
-                 num_layers,
-                 mol_name);
-        eval_gamma_h(num_layers,
-                     num_lines,
-                     Pavg,
-                     Tavg,
-                     Psavg,
-                     lines->yself,
-                     lines->yair,
-                     lines->n,
-                     gamma);
+        /*Calculate pressure shifted line center positions.*/
+        log_info("Calculating pressure-shifted line center positions"
+                     " across %d layers for molecule %s.",
+                 context->num_layers,
+                 mol->name);
+        check(calc_line_centers(mol->line_params.num_lines,
+                                context->num_layers,
+                                mol->line_params.vnn,
+                                mol->line_params.d,
+                                context->pavg,
+                                context->linecenter));
 
-        /*Calcluate the shift in the line center frequency due to the
-          pressure.*/
-        log_info("Launching kernel eval_pshift_h across %d layers"
-                     " for molecule %s.",
-                 num_layers,
-                 mol_name);
-        eval_pshift_h(num_layers,
-                      num_lines,
-                      Pavg,
-                      lines->vnn,
-                      lines->d,
-                      Pshift);
+        /*Calculate temperature-corrected line strengths.*/
+        log_info("Calculating temperature-corrected line strengths"
+                     " across %d layers for molecule %s.",
+                 context->num_layers,
+                 mol->name);
+        check(calc_line_strengths(mol->line_params.num_lines,
+                                  context->num_layers,
+                                  mol->id,
+                                  mol->line_params.iso,
+                                  mol->line_params.snn,
+                                  mol->line_params.vnn,
+                                  mol->line_params.en,
+                                  context->tavg,
+                                  context->snn));
 
-        /*Calculate the remainder of the Snn_ref correction.*/
-        log_info("Launching kernel eval_snn_correction_h across %d layers"
-                     " for molecule %s.",
-                 num_layers,
-                 mol_name);
-        eval_snn_correction_h(num_layers,
-                              num_lines,
-                              m,
-                              Tavg,
-                              lines->iso,
-                              lines->vnn,
-                              lines->en,
-                              snn_ref,
-                              s);
+        /*Calcluate temperature and pressure corrected lorentz half-widths.*/
+        log_info("Calculating temperature- and pressure-corrected lorentz"
+                     " half-widths across %d layers for molecule %s.",
+                 context->num_layers,
+                 mol->name);
+        check(calc_lorentz_hw(mol->line_params.num_lines,
+                              context->num_layers,
+                              mol->line_params.n,
+                              mol->line_params.yair,
+                              mol->line_params.yself,
+                              context->tavg,
+                              context->pavg,
+                              context->psavg,
+                              context->gamma));
+
+        /*Calculate doppler half-widths.*/
+        log_info("Calculating doppler half-widths across %d layers for"
+                     " molecule %s.",
+                 context->num_layers,
+                 mol->name);
+        check(calc_doppler_hw(mol->line_params.num_lines,
+                              context->num_layers,
+                              mol->mass,
+                              context->linecenter,
+                              context->tavg,
+                              context->alpha));
 
         /*Calculate the molecule's optical depths and add them to existing
           values.*/
-        log_info("Launching kernel eval_profile_h across %d layers"
-                     " for molecule %s.",
-                 num_layers,
-                 mol_name);
-        eval_profile_h(m,
-                       num_lines,
-                       num_wpoints_fine,
-                       num_wpoints_coarse,
-                       w0,
-                       wres_fine,
-                       wres_coarse,
-                       num_layers,
-                       wcutoff,
-                       Tavg,
-                       gamma,
-                       Pshift,
-                       s,
-                       Ns,
-                       tau_fine,
-                       tau_coarse,
-                       fine_factor);
+        log_info("Calculating optical depths across %d layers for molecule"
+                     " %s.",
+                 context->num_layers,
+                 mol->name);
+        check(calc_optical_depth(mol->line_params.num_lines,
+                                 context->num_layers,
+                                 context->linecenter,
+                                 context->snn,
+                                 context->gamma,
+                                 context->alpha,
+                                 context->ns,
+                                 &(context->bins),
+                                 tau));
 
-        if (use_h2o_ctm && m == H2O)
+/*
+        check(calc_optical_depth_old(mol->line_params.num_lines,
+                                     context->num_layers,
+                                     context->linecenter,
+                                     context->snn,
+                                     context->gamma,
+                                     context->alpha,
+                                     context->ns,
+                                     &(context->bins),
+                                     tau));
+*/
+
+        if (context->use_h2o_ctm && mol->id == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
-            not_null(h2o_cc);
-            log_info("Calculating optical depth due to the water vapor"
-                         " continuum across %d layers.",
-                     num_layers);
-            calc_water_vapor_ctm_optical_depth_h(num_wpoints_fine,
-                                                 num_layers,
-                                                 tau_fine,
-                                                 h2o_cc->coefs[MTCKD25_S296],
-                                                 Tavg,
-                                                 Psavg,
-                                                 Ns,
-                                                 h2o_cc->coefs[CKDS],
-                                                 h2o_cc->coefs[MTCKD25_F296],
-                                                 Pavg,
-                                                 h2o_cc->coefs[CKDF]);
+            log_info("Calculating optical depth contribution due to the"
+                         " water vapor continuum across %d layers.",
+                     context->num_layers);
+            calc_water_vapor_ctm_optical_depth_h(context->bins.num_wpoints,
+                                                 context->num_layers,
+                                                 tau,
+                                                 context->h2o_cc.coefs[MTCKD25_S296],
+                                                 context->tavg,
+                                                 context->psavg,
+                                                 context->ns,
+                                                 context->h2o_cc.coefs[CKDS],
+                                                 context->h2o_cc.coefs[MTCKD25_F296],
+                                                 context->pavg,
+                                                 context->h2o_cc.coefs[CKDF]);
         }
-        else if (use_o3_ctm && m == O3)
+        else if (context->use_o3_ctm && mol->id == O3)
         {
             /*Calculate the ozone continuum optical depths.*/
-            not_null(o3_cc);
-            log_info("Calculating optical depth due to the ozone"
-                         " continuum across %d layers.",
-                     num_layers);
-            calc_ozone_ctm_optical_depth_h(num_wpoints_fine,
-                                           num_layers,
-                                           o3_cc->cross_section,
-                                           Ns,
-                                           tau_fine);
+            log_info("Calculating optical depth contribution due to the"
+                         " ozone continuum across %d layers.",
+                     context->num_layers);
+            calc_ozone_ctm_optical_depth_h(context->bins.num_wpoints,
+                                           context->num_layers,
+                                           context->o3_cc.cross_section,
+                                           context->ns,
+                                           tau);
         }
-        m++;
     }
 
-    /*Interpolate from coarse to fine grid.*/
-    log_info("Interpolating from coarse to fine spectral grids across"
+    /*Interpolate line wing optical depth contributions.*/
+    log_info("Interpolating line wing optical depth contributions across"
                  " %d layers.",
-             num_layers);
-    coarse_to_fine_h(num_layers,
-                     w0,
-                     wres_fine,
-                     wres_coarse,
-                     num_wpoints_fine,
-                     num_wpoints_coarse,
-                     tau_fine,
-                     tau_coarse);
+             context->num_layers);
+    check(interpolate(&(context->bins),
+                      tau));
     return SUCCESS;
 }

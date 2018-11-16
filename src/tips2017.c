@@ -127826,11 +127826,16 @@ int QT_CS2(fp_t const T,
     }
     return SUCCESS;
 }
+
+
 #ifdef __NVCC__
 __host__ __device__
 #endif
-void QT(int const mol_id,fp_t const T,int const iso,fp_t * const Qt)
+fp_t Q(int const mol_id,
+       fp_t const T,
+       int const iso)
 {
+    fp_t Qt;
     int i = iso - 1;
     if (i == -1)
     {
@@ -127839,163 +127844,163 @@ void QT(int const mol_id,fp_t const T,int const iso,fp_t * const Qt)
     switch (mol_id)
     {
         case H2O:
-            QT_H2O(T,i,Qt);
+            QT_H2O(T,i,&Qt);
             break;
         case CO2:
-            QT_CO2(T,i,Qt);
+            QT_CO2(T,i,&Qt);
             break;
         case O3:
-            QT_O3(T,i,Qt);
+            QT_O3(T,i,&Qt);
             break;
         case N2O:
-            QT_N2O(T,i,Qt);
+            QT_N2O(T,i,&Qt);
             break;
         case CO:
-            QT_CO(T,i,Qt);
+            QT_CO(T,i,&Qt);
             break;
         case CH4:
-            QT_CH4(T,i,Qt);
+            QT_CH4(T,i,&Qt);
             break;
         case O2:
-            QT_O2(T,i,Qt);
+            QT_O2(T,i,&Qt);
             break;
         case NO:
-            QT_NO(T,i,Qt);
+            QT_NO(T,i,&Qt);
             break;
         case SO2:
-            QT_SO2(T,i,Qt);
+            QT_SO2(T,i,&Qt);
             break;
         case NO2:
-            QT_NO2(T,i,Qt);
+            QT_NO2(T,i,&Qt);
             break;
         case NH3:
-            QT_NH3(T,i,Qt);
+            QT_NH3(T,i,&Qt);
             break;
         case HNO3:
-            QT_HNO3(T,i,Qt);
+            QT_HNO3(T,i,&Qt);
             break;
         case OH:
-            QT_OH(T,i,Qt);
+            QT_OH(T,i,&Qt);
             break;
         case HF:
-            QT_HF(T,i,Qt);
+            QT_HF(T,i,&Qt);
             break;
         case HCl:
-            QT_HCl(T,i,Qt);
+            QT_HCl(T,i,&Qt);
             break;
         case HBr:
-            QT_HBr(T,i,Qt);
+            QT_HBr(T,i,&Qt);
             break;
         case HI:
-            QT_HI(T,i,Qt);
+            QT_HI(T,i,&Qt);
             break;
         case ClO:
-            QT_ClO(T,i,Qt);
+            QT_ClO(T,i,&Qt);
             break;
         case OCS:
-            QT_OCS(T,i,Qt);
+            QT_OCS(T,i,&Qt);
             break;
         case H2CO:
-            QT_H2CO(T,i,Qt);
+            QT_H2CO(T,i,&Qt);
             break;
         case HOCl:
-            QT_HOCl(T,i,Qt);
+            QT_HOCl(T,i,&Qt);
             break;
         case N2:
-            QT_N2(T,i,Qt);
+            QT_N2(T,i,&Qt);
             break;
         case HCN:
-            QT_HCN(T,i,Qt);
+            QT_HCN(T,i,&Qt);
             break;
         case CH3Cl:
-            QT_CH3Cl(T,i,Qt);
+            QT_CH3Cl(T,i,&Qt);
             break;
         case H2O2:
-            QT_H2O2(T,i,Qt);
+            QT_H2O2(T,i,&Qt);
             break;
         case C2H2:
-            QT_C2H2(T,i,Qt);
+            QT_C2H2(T,i,&Qt);
             break;
         case C2H6:
-            QT_C2H6(T,i,Qt);
+            QT_C2H6(T,i,&Qt);
             break;
         case PH3:
-            QT_PH3(T,i,Qt);
+            QT_PH3(T,i,&Qt);
             break;
         case COF2:
-            QT_COF2(T,i,Qt);
+            QT_COF2(T,i,&Qt);
             break;
         case SF6:
-            QT_SF6(T,i,Qt);
+            QT_SF6(T,i,&Qt);
             break;
         case H2S:
-            QT_H2S(T,i,Qt);
+            QT_H2S(T,i,&Qt);
             break;
         case HCOOH:
-            QT_HCOOH(T,i,Qt);
+            QT_HCOOH(T,i,&Qt);
             break;
         case HO2:
-            QT_HO2(T,i,Qt);
+            QT_HO2(T,i,&Qt);
             break;
         case ClONO2:
-            QT_ClONO2(T,i,Qt);
+            QT_ClONO2(T,i,&Qt);
             break;
         case NOp:
-            QT_NOp(T,i,Qt);
+            QT_NOp(T,i,&Qt);
             break;
         case HOBr:
-            QT_HOBr(T,i,Qt);
+            QT_HOBr(T,i,&Qt);
             break;
         case C2H4:
-            QT_C2H4(T,i,Qt);
+            QT_C2H4(T,i,&Qt);
             break;
         case CH3OH:
-            QT_CH3OH(T,i,Qt);
+            QT_CH3OH(T,i,&Qt);
             break;
         case CH3Br:
-            QT_CH3Br(T,i,Qt);
+            QT_CH3Br(T,i,&Qt);
             break;
         case CH3CN:
-            QT_CH3CN(T,i,Qt);
+            QT_CH3CN(T,i,&Qt);
             break;
         case CF4:
-            QT_CF4(T,i,Qt);
+            QT_CF4(T,i,&Qt);
             break;
         case C4H2:
-            QT_C4H2(T,i,Qt);
+            QT_C4H2(T,i,&Qt);
             break;
         case HC3N:
-            QT_HC3N(T,i,Qt);
+            QT_HC3N(T,i,&Qt);
             break;
         case H2:
-            QT_H2(T,i,Qt);
+            QT_H2(T,i,&Qt);
             break;
         case CS:
-            QT_CS(T,i,Qt);
+            QT_CS(T,i,&Qt);
             break;
         case SO3:
-            QT_SO3(T,i,Qt);
+            QT_SO3(T,i,&Qt);
             break;
         case C2N2:
-            QT_C2N2(T,i,Qt);
+            QT_C2N2(T,i,&Qt);
             break;
         case COCl2:
-            QT_COCl2(T,i,Qt);
+            QT_COCl2(T,i,&Qt);
             break;
         case SO:
-            QT_SO(T,i,Qt);
+            QT_SO(T,i,&Qt);
             break;
         case C3H4:
-            QT_C3H4(T,i,Qt);
+            QT_C3H4(T,i,&Qt);
             break;
         case CH3:
-            QT_CH3(T,i,Qt);
+            QT_CH3(T,i,&Qt);
             break;
         case CS2:
-            QT_CS2(T,i,Qt);
+            QT_CS2(T,i,&Qt);
             break;
         default:
             kernel_err("Molecule id %d not found.",mol_id);
     }
-    return;
+    return Qt;
 }

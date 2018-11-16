@@ -5,187 +5,269 @@
 #include "molecules.h"
 
 
-static int const MIN_NAME_LEN = 8;
-
-
-int get_mol_name(int const id,
-                 char * const name,
-                 int const name_len)
+/** @brief Initialize a molecule.  Read in its line parameters from the
+           input HITRAN database file.
+    @return SUCCESS or an error code.*/
+int molecule(Molecule_t * const mol, /**< Molecule object.*/
+             int const id, /**< HITRAN molecule id.*/
+             char const * const hitran_path, /**< Path to HITRAN database
+                                                  file.*/
+             double const min_line_center, /**< Lower bound [1/cm] for
+                                                spectral line centers.*/
+             double const max_line_center /**< Upper bound [1/cm] for
+                                               spectral line centers.*/
+            )
 {
-    if (name_len < MIN_NAME_LEN)
-    {
-        fatal(VALUE_ERR,
-              "input name buffer must be at least %d characters long.",
-              MIN_NAME_LEN);
-    }
-    switch(id)
+    not_null(mol);
+    mol->id = id;
+    switch(mol->id)
     {
         case H2O:
-            snprintf(name,name_len,"H2O");
+            snprintf(mol->name,MOL_NAME_LEN,"H2O");
+            mol->mass = 18.010565f;
             break;
         case CO2:
-            snprintf(name,name_len,"CO2");
+            snprintf(mol->name,MOL_NAME_LEN,"CO2");
+            mol->mass = 43.98983f;
             break;
         case O3:
-            snprintf(name,name_len,"O3");
+            snprintf(mol->name,MOL_NAME_LEN,"O3");
+            mol->mass = 47.984745f;
             break;
         case N2O:
-            snprintf(name,name_len,"N2O");
+            snprintf(mol->name,MOL_NAME_LEN,"N2O");
+            mol->mass = 44.001062f;
             break;
         case CO:
-            snprintf(name,name_len,"CO");
+            snprintf(mol->name,MOL_NAME_LEN,"CO");
+            mol->mass = 27.994915f;
             break;
         case CH4:
-            snprintf(name,name_len,"CH4");
+            snprintf(mol->name,MOL_NAME_LEN,"CH4");
+            mol->mass = 16.0313f;
             break;
         case O2:
-            snprintf(name,name_len,"O2");
+            snprintf(mol->name,MOL_NAME_LEN,"O2");
+            mol->mass = 31.98983f;
             break;
         case NO:
-            snprintf(name,name_len,"NO");
+            snprintf(mol->name,MOL_NAME_LEN,"NO");
+            mol->mass = 29.997989f;
             break;
         case SO2:
-            snprintf(name,name_len,"SO2");
+            snprintf(mol->name,MOL_NAME_LEN,"SO2");
+            mol->mass = 63.961901f;
             break;
         case NO2:
-            snprintf(name,name_len,"NO2");
+            snprintf(mol->name,MOL_NAME_LEN,"NO2");
+            mol->mass = 45.992904f;
             break;
         case NH3:
-            snprintf(name,name_len,"NH3");
+            snprintf(mol->name,MOL_NAME_LEN,"NH3");
+            mol->mass = 17.026549f;
             break;
         case HNO3:
-            snprintf(name,name_len,"HNO3");
+            snprintf(mol->name,MOL_NAME_LEN,"HNO3");
+            mol->mass = 62.995644f;
             break;
         case OH:
-            snprintf(name,name_len,"OH");
+            snprintf(mol->name,MOL_NAME_LEN,"OH");
+            mol->mass = 17.00274f;
             break;
         case HF:
-            snprintf(name,name_len,"HF");
+            snprintf(mol->name,MOL_NAME_LEN,"HF");
+            mol->mass = 20.006229f;
             break;
         case HCl:
-            snprintf(name,name_len,"HCl");
+            snprintf(mol->name,MOL_NAME_LEN,"HCl");
+            mol->mass = 35.976678f;
             break;
         case HBr:
-            snprintf(name,name_len,"HBr");
+            snprintf(mol->name,MOL_NAME_LEN,"HBr");
+            mol->mass = 79.92616f;
             break;
         case HI:
-            snprintf(name,name_len,"HI");
+            snprintf(mol->name,MOL_NAME_LEN,"HI");
+            mol->mass = 127.912297f;
             break;
         case ClO:
-            snprintf(name,name_len,"ClO");
+            snprintf(mol->name,MOL_NAME_LEN,"ClO");
+            mol->mass = 50.963768f;
             break;
         case OCS:
-            snprintf(name,name_len,"OCS");
+            snprintf(mol->name,MOL_NAME_LEN,"OCS");
+            mol->mass = 59.966986f;
             break;
         case H2CO:
-            snprintf(name,name_len,"H2CO");
+            snprintf(mol->name,MOL_NAME_LEN,"H2CO");
+            mol->mass = 30.010565f;
             break;
         case HOCl:
-            snprintf(name,name_len,"HOCl");
+            snprintf(mol->name,MOL_NAME_LEN,"HOCl");
+            mol->mass = 51.971593f;
             break;
         case N2:
-            snprintf(name,name_len,"N2");
+            snprintf(mol->name,MOL_NAME_LEN,"N2");
+            mol->mass = 28.006148f;
             break;
         case HCN:
-            snprintf(name,name_len,"HCN");
+            snprintf(mol->name,MOL_NAME_LEN,"HCN");
+            mol->mass = 27.010899f;
             break;
         case CH3Cl:
-            snprintf(name,name_len,"CH3Cl");
+            snprintf(mol->name,MOL_NAME_LEN,"CH3Cl");
+            mol->mass = 49.992328f;
             break;
         case H2O2:
-            snprintf(name,name_len,"H2O2");
+            snprintf(mol->name,MOL_NAME_LEN,"H2O2");
+            mol->mass = 34.00548f;
             break;
         case C2H2:
-            snprintf(name,name_len,"C2H2");
+            snprintf(mol->name,MOL_NAME_LEN,"C2H2");
+            mol->mass = 26.01565f;
             break;
         case C2H6:
-            snprintf(name,name_len,"C2H6");
+            snprintf(mol->name,MOL_NAME_LEN,"C2H6");
+            mol->mass = 30.04695f;
             break;
         case PH3:
-            snprintf(name,name_len,"PH3");
+            snprintf(mol->name,MOL_NAME_LEN,"PH3");
+            mol->mass = 33.997238f;
             break;
         case COF2:
-            snprintf(name,name_len,"COF2");
+            snprintf(mol->name,MOL_NAME_LEN,"COF2");
+            mol->mass = 65.991722f;
             break;
         case SF6:
-            snprintf(name,name_len,"SF6");
+            snprintf(mol->name,MOL_NAME_LEN,"SF6");
+            mol->mass = 145.962492f;
             break;
         case H2S:
-            snprintf(name,name_len,"H2S");
+            snprintf(mol->name,MOL_NAME_LEN,"H2S");
+            mol->mass = 33.987721f;
             break;
         case HCOOH:
-            snprintf(name,name_len,"HCOOH");
+            snprintf(mol->name,MOL_NAME_LEN,"HCOOH");
+            mol->mass = 46.00548f;
             break;
         case HO2:
-            snprintf(name,name_len,"HO2");
+            snprintf(mol->name,MOL_NAME_LEN,"HO2");
+            mol->mass = 32.997655f;
             break;
         case O:
-            snprintf(name,name_len,"O");
+            snprintf(mol->name,MOL_NAME_LEN,"O");
+            mol->mass = 15.994915f;
             break;
         case ClONO2:
-            snprintf(name,name_len,"ClONO2");
+            snprintf(mol->name,MOL_NAME_LEN,"ClONO2");
+            mol->mass = 96.956672f;
             break;
         case NOp:
-            snprintf(name,name_len,"NO+");
+            snprintf(mol->name,MOL_NAME_LEN,"NO+");
+            mol->mass = 29.997989f;
             break;
         case HOBr:
-            snprintf(name,name_len,"HOBr");
+            snprintf(mol->name,MOL_NAME_LEN,"HOBr");
+            mol->mass = 95.921076f;
             break;
         case C2H4:
-            snprintf(name,name_len,"C2H4");
+            snprintf(mol->name,MOL_NAME_LEN,"C2H4");
+            mol->mass = 28.0313f;
             break;
         case CH3OH:
-            snprintf(name,name_len,"CH3OH");
+            snprintf(mol->name,MOL_NAME_LEN,"CH3OH");
+            mol->mass = 32.026215f;
             break;
         case CH3Br:
-            snprintf(name,name_len,"CH3Br");
+            snprintf(mol->name,MOL_NAME_LEN,"CH3Br");
+            mol->mass = 93.941811f;
             break;
         case CH3CN:
-            snprintf(name,name_len,"CH3CN");
+            snprintf(mol->name,MOL_NAME_LEN,"CH3CN");
+            mol->mass = 41.026549f;
             break;
         case CF4:
-            snprintf(name,name_len,"CF4");
+            snprintf(mol->name,MOL_NAME_LEN,"CF4");
+            mol->mass = 87.993616f;
             break;
         case C4H2:
-            snprintf(name,name_len,"C4H2");
+            snprintf(mol->name,MOL_NAME_LEN,"C4H2");
+            mol->mass = 50.01565f;
             break;
         case HC3N:
-            snprintf(name,name_len,"HC3N");
+            snprintf(mol->name,MOL_NAME_LEN,"HC3N");
+            mol->mass = 51.010899f;
             break;
         case H2:
-            snprintf(name,name_len,"H2");
+            snprintf(mol->name,MOL_NAME_LEN,"H2");
+            mol->mass = 2.01565f;
             break;
         case CS:
-            snprintf(name,name_len,"CS");
+            snprintf(mol->name,MOL_NAME_LEN,"CS");
+            mol->mass = 43.971036f;
             break;
         case SO3:
-            snprintf(name,name_len,"SO3");
+            snprintf(mol->name,MOL_NAME_LEN,"SO3");
+            mol->mass = 79.95682f;
             break;
         case C2N2:
-            snprintf(name,name_len,"C2N2");
+            snprintf(mol->name,MOL_NAME_LEN,"C2N2");
+            mol->mass = 52.006148f;
             break;
         case COCl2:
-            snprintf(name,name_len,"COCl2");
+            snprintf(mol->name,MOL_NAME_LEN,"COCl2");
+            mol->mass = 97.9326199796f;
             break;
         case SO:
-            snprintf(name,name_len,"SO");
+            snprintf(mol->name,MOL_NAME_LEN,"SO");
+            mol->mass = 48.0644f;
             break;
         case C3H4:
-            snprintf(name,name_len,"C3H4");
+            snprintf(mol->name,MOL_NAME_LEN,"C3H4");
+            mol->mass = 40.0639f;
             break;
         case CH3:
-            snprintf(name,name_len,"CH3");
+            snprintf(mol->name,MOL_NAME_LEN,"CH3");
+            mol->mass = 15.035f;
             break;
         case CS2:
-            snprintf(name,name_len,"CS2");
+            snprintf(mol->name,MOL_NAME_LEN,"CS2");
+            mol->mass = 76.139f;
             break;
         default:
             fatal(VALUE_ERR,
                   "unrecognized molecule id %d.",
-                  id);
+                  mol->id);
     }
+    mol->mass /= 6.023E23;
+    check(parse_hitran_file(&(mol->line_params),
+                            hitran_path,
+                            mol->id,
+                            min_line_center,
+                            max_line_center));
     return SUCCESS;
 }
+
+
+/** @brief Free memory stored by the molecule object.
+    @return SUCCESS or an error code.*/
+int free_molecule(Molecule_t * const mol /**< Molecule.*/
+                 )
+{
+    not_null(mol);
+    check(free_line_params(&(mol->line_params)));
+    return SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
 
 
 int molecule_hash(int const mol_id,

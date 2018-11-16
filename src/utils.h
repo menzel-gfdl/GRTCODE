@@ -10,6 +10,14 @@ int malloc_ptr(void ** const p,
                size_t const num_bytes);
 
 
+int free_ptr(void ** const p);
+
+
+int copy_str(char * const dest,
+             char const * const src,
+             size_t const len);
+
+
 #define open_file(f,n,a) \
     {f=fopen(n,a); if (f == NULL) {fatal(IO_ERR,"failed to open file %s.",n);}}
 

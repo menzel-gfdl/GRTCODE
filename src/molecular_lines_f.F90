@@ -170,8 +170,7 @@ module molecular_lines_f
                                   o3_ctm_dir, &
                                   wcutoff, &
                                   gpu_id, &
-                                  num_threads, &
-                                  fine_factor) &
+                                  num_threads) &
             result(return_code) &
             bind(c)
             use iso_c_binding
@@ -187,7 +186,6 @@ module molecular_lines_f
             real(kind=c_double),intent(in),optional :: wcutoff
             integer(kind=c_int),intent(in),optional :: gpu_id
             integer(kind=c_int),intent(in),optional :: num_threads
-            real(kind=c_double),intent(in),optional :: fine_factor
             integer(kind=c_int) :: return_code
         end function grt_context_init
     end interface
@@ -208,16 +206,16 @@ module molecular_lines_f
     interface
         function grt_add_molecule(context, &
                                   molecule_id, &
-                                  min_line_center_wavenumber, &
-                                  max_line_center_wavenumber) &
+                                  min_line_center, &
+                                  max_line_center) &
             result(return_code) &
             bind(c)
             use iso_c_binding
             implicit none
             type(c_ptr),value,intent(in) :: context
             integer(kind=c_int),value,intent(in) :: molecule_id
-            real(kind=c_double),intent(in),optional :: min_line_center_wavenumber
-            real(kind=c_double),intent(in),optional :: max_line_center_wavenumber
+            real(kind=c_double),intent(in),optional :: min_line_center
+            real(kind=c_double),intent(in),optional :: max_line_center
             integer(kind=c_int) :: return_code
         end function grt_add_molecule
     end interface
@@ -344,8 +342,7 @@ module molecular_lines_f
                                     o3_ctm_dir, &
                                     wcutoff, &
                                     gpu_id, &
-                                    num_threads, &
-                                    fine_factor) &
+                                    num_threads) &
             result(return_code)
             type(GrtContext_t),intent(inout) :: context !< Library context.
             integer(kind=c_int),intent(in) :: num_levels !< Number of atmospheric levels.
@@ -380,7 +377,6 @@ module molecular_lines_f
                                                                    !! be used.  Defaults to
                                                                    !! omp_get_max_threads (or one
                                                                    !! if not build with OpenMP).
-            real(kind=c_double),intent(in),optional :: fine_factor
             integer(kind=c_int) :: return_code
             character(len=1024) :: hbuf
             character(len=1024) :: obuf
@@ -404,8 +400,7 @@ module molecular_lines_f
                                            trim(obuf), &
                                            wcutoff, &
                                            gpu_id, &
-                                           num_threads, &
-                                           fine_factor)
+                                           num_threads)
         end function grt_context_init_f
 
 
@@ -428,25 +423,25 @@ module molecular_lines_f
         !! @return 0 if completed successfully, or else an error code.
         function grt_add_molecule_f(context, &
                                     molecule_id, &
-                                    min_line_center_wavenumber, &
-                                    max_line_center_wavenumber) &
+                                    min_line_center, &
+                                    max_line_center) &
             result(return_code)
             type(GrtContext_t),intent(in) :: context !< Library context.
             integer(kind=c_int),intent(in) :: molecule_id !< Id that is associated with the molecule.
-            real(kind=c_double),intent(in),optional :: min_line_center_wavenumber !< Lower bound [1/cm] of spectral range.
-                                                                                  !! Only lines with line center wavenumbers
-                                                                                  !! greater than or eqaul to this will be
-                                                                                  !! computed.  Defaults to 1 [1/cm].
-            real(kind=c_double),intent(in),optional :: max_line_center_wavenumber !< Upper bound [1/cm] of spectral range.
-                                                                                  !! Only lines with line center wavenumbers
-                                                                                  !! less than or equal to this will be
-                                                                                  !! computed.  Defaults to 3250 [1/cm].
+            real(kind=c_double),intent(in),optional :: min_line_center !< Lower bound [1/cm] of spectral range.
+                                                                       !! Only lines with line center wavenumbers
+                                                                       !! greater than or eqaul to this will be
+                                                                       !! computed.  Defaults to 1 [1/cm].
+            real(kind=c_double),intent(in),optional :: max_line_center !< Upper bound [1/cm] of spectral range.
+                                                                       !! Only lines with line center wavenumbers
+                                                                       !! less than or equal to this will be
+                                                                       !! computed.  Defaults to 3250 [1/cm].
             integer(kind=c_int) :: return_code
 
             return_code = grt_add_molecule(context%p, &
                                            molecule_id, &
-                                           min_line_center_wavenumber, &
-                                           max_line_center_wavenumber)
+                                           min_line_center, &
+                                           max_line_center)
         end function grt_add_molecule_f
 
 

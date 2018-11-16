@@ -2,6 +2,10 @@
 #define MOLECULES_H_
 
 #include <stdint.h>
+#include "parse_HITRAN_file.h"
+
+
+#define MOL_NAME_LEN 8
 
 
 /*Note: these numbers are assigned by the HITRAN database.*/
@@ -64,9 +68,34 @@ typedef enum HitranMoleculeId
 } HitranMoleculeId_t;
 
 
-int get_mol_name(int const id,
-                 char * const name,
-                 int const name_len);
+/** @brief Molecule type.*/
+typedef struct Molecule
+{
+    char name[MOL_NAME_LEN]; /**< Name.*/
+    int id; /**< HITRAN id.*/
+    fp_t mass; /**< Mass [g].*/
+    LineParams_t line_params; /**< Line parameters.*/
+} Molecule_t;
+
+
+/** @brief Initialize a molecule.  Read in its line parameters from the
+           input HITRAN database file.
+    @return SUCCESS or an error code.*/
+int molecule(Molecule_t * const mol, /**< Molecule object.*/
+             int const id, /**< HITRAN molecule id.*/
+             char const * const hitran_path, /**< Path to HITRAN database
+                                                  file.*/
+             double const min_line_center, /**< Lower bound [1/cm] for
+                                                spectral line centers.*/
+             double const max_line_center /**< Upper bound [1/cm] for
+                                               spectral line centers.*/
+            );
+
+
+/** @brief Free memory stored by the molecule object.
+    @return SUCCESS or an error code.*/
+int free_molecule(Molecule_t * const mol /**< Molecule.*/
+                 );
 
 
 int molecule_hash(int const mol_id,

@@ -3,8 +3,14 @@
 
 #ifdef SINGLE_PRECISION
 #define TYPE float
+#define EXP expf
+#define POW powf
+#define SQRT sqrtf
 #else
 #define TYPE double
+#define EXP exp
+#define POW pow
+#define SQRT sqrt
 #endif
 
 typedef TYPE fp_t;

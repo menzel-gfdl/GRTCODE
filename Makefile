@@ -9,21 +9,11 @@ OBJ = ${LIB_NAME}_fhl.o \
       ${LIB_NAME}_f.o \
       ${LIB_NAME}.o \
       host_launch.o \
+      calc_optical_depth.o \
+      spectral_bin.o \
       ozone_continuum.o \
       water_vapor_continuum.o \
-      coarse_to_fine.o \
-      eval_profile.o \
-      eval_snn_correction.o \
-      eval_pshift.o \
-      eval_gamma.o \
-      pre_eval_snn.o \
-      integrate_layer.o \
-      line_shape_utils.o \
-      gas_properties.o \
       RFM_voigt.o \
-      ida_voigt.o \
-      doppler.o \
-      lorentz.o \
       tips2017.o \
       parse_HITRAN_file.o \
       parse_csv.o \

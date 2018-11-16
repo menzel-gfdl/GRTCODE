@@ -1,4 +1,5 @@
 #include <float.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,27 +7,9 @@
 #include <unistd.h>
 #include "debug.h"
 #include "floating_point_type.h"
-#include "molecules.h"
 #include "parse_HITRAN_file.h"
+#include "tips2017.h"
 #include "utils.h"
-
-#ifdef __NVCC__
-#include "cuda_helpers.cuh"
-#endif
-
-
-typedef enum RefLinePtrIdx
-{
-    mol_pidx,
-    iso_pidx,
-    Vnn_pidx,
-    Snn_ref_pidx,
-    Yair_pidx,
-    Yself_pidx,
-    En_pidx,
-    n_pidx,
-    d_pidx
-} RefLinePtrIdx_t;
 
 
 typedef enum HITRAN2012_cols
@@ -98,137 +81,85 @@ static unsigned int const HITRAN2012_fmt[NCOLS][2] =
 };
 
 
-static int alloc_line_params_host(LineParams_t ** const line_params,
-                                  unsigned int const num_lines,
-                                  LineFlags_t const flags)
+static int alloc_line_params(LineParams_t * const line_params,
+                             uint64_t const num_lines)
 {
     not_null(line_params);
-    unsigned int const cuflags = flags.cumemset_host_flags;
-    LineParams_t *self = NULL;
-    check(malloc_ptr((void **)(&(self)),
-                     sizeof(*self)));
-    self->num_lines = num_lines;
-    self->mol = -1;
-    if (cuflags != ((unsigned int)-1))
-    {
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaHostAlloc(&(self->iso),
-                                   num_lines*sizeof(*(self->iso)),
-                                   cuflags));
-        HANDLE_ERROR(cudaHostAlloc(&(self->vnn),
-                                   num_lines*sizeof(*(self->vnn)),
-                                   cuflags));
-        HANDLE_ERROR(cudaHostAlloc(&(self->snn_ref),
-                                   num_lines*sizeof(*(self->snn_ref)),
-                                   cuflags));
-        HANDLE_ERROR(cudaHostAlloc(&(self->yair),
-                                   num_lines*sizeof(*(self->yair)),
-                                   cuflags));
-        HANDLE_ERROR(cudaHostAlloc(&(self->yself),
-                                   num_lines*sizeof(*(self->yself)),
-                                   cuflags));
-        HANDLE_ERROR(cudaHostAlloc(&(self->en),
-                                   num_lines*sizeof(*(self->en)),
-                                   cuflags));
-        HANDLE_ERROR(cudaHostAlloc(&(self->n),
-                                   num_lines*sizeof(*(self->n)),
-                                   cuflags));
-        HANDLE_ERROR(cudaHostAlloc(&(self->d),
-                                   num_lines*sizeof(*(self->d)),
-                                   cuflags));
-#endif
-    }
-    else
-    {
-        check(malloc_ptr((void **)(&(self->iso)),
-                         sizeof(*(self->iso))*num_lines));
-        check(malloc_ptr((void **)(&(self->vnn)),
-                         sizeof(*(self->vnn))*num_lines));
-        check(malloc_ptr((void **)(&(self->snn_ref)),
-                         sizeof(*(self->snn_ref))*num_lines));
-        check(malloc_ptr((void **)(&(self->yair)),
-                         sizeof(*(self->yair))*num_lines));
-        check(malloc_ptr((void **)(&(self->yself)),
-                         sizeof(*(self->yself))*num_lines));
-        check(malloc_ptr((void **)(&(self->en)),
-                         sizeof(*(self->en))*num_lines));
-        check(malloc_ptr((void **)(&(self->n)),
-                         sizeof(*(self->n))*num_lines));
-        check(malloc_ptr((void **)(&(self->d)),
-                         sizeof(*(self->n))*num_lines));
-    }
-    *line_params = self;
+    line_params->num_lines = num_lines;
+    check(malloc_ptr((void **)(&(line_params->iso)),
+                     sizeof(*(line_params->iso))*num_lines));
+    check(malloc_ptr((void **)(&(line_params->vnn)),
+                     sizeof(*(line_params->vnn))*num_lines));
+    check(malloc_ptr((void **)(&(line_params->snn)),
+                     sizeof(*(line_params->snn))*num_lines));
+    check(malloc_ptr((void **)(&(line_params->yair)),
+                     sizeof(*(line_params->yair))*num_lines));
+    check(malloc_ptr((void **)(&(line_params->yself)),
+                     sizeof(*(line_params->yself))*num_lines));
+    check(malloc_ptr((void **)(&(line_params->en)),
+                     sizeof(*(line_params->en))*num_lines));
+    check(malloc_ptr((void **)(&(line_params->n)),
+                     sizeof(*(line_params->n))*num_lines));
+    check(malloc_ptr((void **)(&(line_params->d)),
+                     sizeof(*(line_params->n))*num_lines));
     return SUCCESS;
 }
 
 
-int free_line_params_host(LineParams_t ** const line_params,
-                          LineFlags_t const flags)
+int free_line_params(LineParams_t * const line_params)
 {
     not_null(line_params);
-    if (*line_params != NULL)
-    {
-        LineParams_t *self = *line_params;
-        unsigned int const cuflags = flags.cumemset_host_flags;
-        if (cuflags != ((unsigned int)-1))
-        {
-#ifdef __NVCC__
-            HANDLE_ERROR(cudaFreeHost(self->iso));
-            HANDLE_ERROR(cudaFreeHost(self->vnn));
-            HANDLE_ERROR(cudaFreeHost(self->snn_ref));
-            HANDLE_ERROR(cudaFreeHost(self->yair));
-            HANDLE_ERROR(cudaFreeHost(self->yself));
-            HANDLE_ERROR(cudaFreeHost(self->en));
-            HANDLE_ERROR(cudaFreeHost(self->n));
-            HANDLE_ERROR(cudaFreeHost(self->d));
-#endif
-        }
-        else
-        {
-            free(self->iso);
-            free(self->vnn);
-            free(self->snn_ref);
-            free(self->yair);
-            free(self->yself);
-            free(self->en);
-            free(self->n);
-            free(self->d);
-        }
-        free(self);
-        *line_params = NULL;
-    }
+    check(free_ptr((void **)&(line_params->iso)));
+    check(free_ptr((void **)&(line_params->vnn)));
+    check(free_ptr((void **)&(line_params->snn)));
+    check(free_ptr((void **)&(line_params->yair)));
+    check(free_ptr((void **)&(line_params->yself)));
+    check(free_ptr((void **)&(line_params->en)));
+    check(free_ptr((void **)&(line_params->n)));
+    check(free_ptr((void **)&(line_params->d)));
     return SUCCESS;
 }
 
 
-static int realloc_line_params_host(LineParams_t ** const line_params,
-                                    LineFlags_t const old_flags,
-                                    LineFlags_t const new_flags)
+static int realloc_line_params(LineParams_t * const line_params)
 {
     not_null(line_params);
-    not_null(*line_params);
-    LineParams_t *old_ptr = *line_params;
-    LineParams_t *new_ptr = NULL;
-    check(alloc_line_params_host(&new_ptr,
-                                 old_ptr->num_lines,
-                                 new_flags));
-    new_ptr->mol = old_ptr->mol;
-    new_ptr->num_lines = old_ptr->num_lines;
-    unsigned int i;
-    for (i=0;i<old_ptr->num_lines;++i)
-    {
-        new_ptr->iso[i] = old_ptr->iso[i];
-        new_ptr->vnn[i] = old_ptr->vnn[i];
-        new_ptr->snn_ref[i] = old_ptr->snn_ref[i];
-        new_ptr->yair[i] = old_ptr->yair[i];
-        new_ptr->yself[i] = old_ptr->yself[i];
-        new_ptr->en[i] = old_ptr->en[i];
-        new_ptr->n[i] = old_ptr->n[i];
-        new_ptr->d[i] = old_ptr->d[i];
-    }
-    check(free_line_params_host(&old_ptr,
-                                old_flags));
-    *line_params = new_ptr;
+    LineParams_t t;
+    t.iso = line_params->iso;
+    t.vnn = line_params->vnn;
+    t.snn = line_params->snn;
+    t.yair = line_params->yair;
+    t.yself = line_params->yself;
+    t.en = line_params->en;
+    t.n = line_params->n;
+    t.d = line_params->d;
+    check(alloc_line_params(line_params,
+                            line_params->num_lines));
+    memcpy(line_params->iso,
+           t.iso,
+           sizeof(*(t.iso))*line_params->num_lines);
+    memcpy(line_params->vnn,
+           t.vnn,
+           sizeof(*(t.vnn))*line_params->num_lines);
+    memcpy(line_params->snn,
+           t.snn,
+           sizeof(*(t.snn))*line_params->num_lines);
+    memcpy(line_params->yair,
+           t.yair,
+           sizeof(*(t.yair))*line_params->num_lines);
+    memcpy(line_params->yself,
+           t.yself,
+           sizeof(*(t.yself))*line_params->num_lines);
+    memcpy(line_params->en,
+           t.en,
+           sizeof(*(t.en))*line_params->num_lines);
+    memcpy(line_params->n,
+           t.n,
+           sizeof(*(t.n))*line_params->num_lines);
+    memcpy(line_params->d,
+           t.d,
+           sizeof(*(t.d))*line_params->num_lines);
+    check(free_line_params(&t));
     return SUCCESS;
 }
 
@@ -280,9 +211,8 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
 }
 
 
-int parse_hitran_file(LineParams_t ** const line_params,
+int parse_hitran_file(LineParams_t * const line_params,
                       char const * const filename,
-                      LineFlags_t const flags,
                       int const mol_id,
                       double const w0,
                       double const wn)
@@ -300,11 +230,15 @@ int parse_hitran_file(LineParams_t ** const line_params,
 
     /*Count the number of lines in the file.*/
     size_t const max_line = 163;
-    char* buf = (char *)calloc(max_line,sizeof(*buf));
-    not_null(buf);
+    char* buf;
+    check(malloc_ptr((void **) &buf,
+                     sizeof(*buf)*max_line));
+    memset(buf,
+           0,
+           sizeof(*buf)*max_line);
     ssize_t ll = 0;
     size_t l = 0;
-    unsigned int n = 0;
+    uint64_t n = 0;
     while ((ll=getline(&buf,&l,fp)) != -1)
     {
         ++n;
@@ -312,11 +246,8 @@ int parse_hitran_file(LineParams_t ** const line_params,
     rewind(fp);
 
     /*Malloc space.*/
-    LineParams_t *lines = NULL;
-    check(alloc_line_params_host(&lines,
-                                 n,
-                                 flags));
-    lines->mol = mol_id;
+    check(alloc_line_params(line_params,
+                            n));
 
     /*Parse out the line parameters.*/
     n = 0;
@@ -366,42 +297,57 @@ int parse_hitran_file(LineParams_t ** const line_params,
                 check(HITRAN2012_cast(&val,
                                       col,
                                       tmp));
+
+                /*Column indices for parsing.*/
+                enum RefLinePtrIdx
+                {
+                    mol_pidx,
+                    iso_pidx,
+                    Vnn_pidx,
+                    Snn_ref_pidx,
+                    Yair_pidx,
+                    Yself_pidx,
+                    En_pidx,
+                    n_pidx,
+                    d_pidx
+                };
+
                 switch (val_idx)
                 {
                     case mol_pidx:
-                        if (val.i != lines->mol)
+                        if (val.i != mol_id)
                         {
                             go_to_next_line = 1;
                             continue;
                         }
                         break;
                     case iso_pidx:
-                        lines->iso[n] = val.i;
+                        line_params->iso[n] = val.i;
                         break;
                     case Vnn_pidx:
-                        lines->vnn[n] = (fp_t)(val.d);
+                        line_params->vnn[n] = (fp_t)(val.d);
                         break;
                     case Snn_ref_pidx:
-                        lines->snn_ref[n] = (fp_t)(val.d);
+                        line_params->snn[n] = (fp_t)(val.d);
                         break;
                     case Yair_pidx:
-                        lines->yair[n] = val.f;
+                        line_params->yair[n] = val.f;
                         break;
                     case Yself_pidx:
-                        lines->yself[n] = val.f;
+                        line_params->yself[n] = val.f;
                         break;
                     case En_pidx:
-                        lines->en[n] = val.f;
+                        line_params->en[n] = val.f;
                         break;
                     case n_pidx:
-                        lines->n[n] = val.f;
+                        line_params->n[n] = val.f;
                         break;
                     case d_pidx:
-                        lines->d[n] = val.f;
+                        line_params->d[n] = val.f;
                         break;
                     default:
                         fatal(VALUE_ERR,
-                              "Unknown column index (%d) on line %u in file"
+                              "Unknown column index (%d) on line %zu in file"
                                   "%s.",
                               val_idx,
                               n,
@@ -412,12 +358,8 @@ int parse_hitran_file(LineParams_t ** const line_params,
         }
         if (!go_to_next_line)
         {
-            if ((w0 < 0) && (wn < 0))
-            {
-                /*Include the line for the calculation.*/
-                ++n;
-            }
-            else if ((lines->vnn[n] >= w0) && (lines->vnn[n] <= wn))
+            if ((w0 < 0 && wn < 0) || (line_params->vnn[n] >= w0 &&
+                line_params->vnn[n] <= wn))
             {
                 /*Include the line for the calculation.*/
                 ++n;
@@ -425,9 +367,6 @@ int parse_hitran_file(LineParams_t ** const line_params,
         }
     }
     free(buf);
-
-    /*Set the number of lines that will be used in the calculation.*/
-    lines->num_lines = n;
 
     /*Close the file.*/
     if (fclose(fp))
@@ -437,65 +376,26 @@ int parse_hitran_file(LineParams_t ** const line_params,
               filename);
     }
 
-    if ((w0 >= 0) || (wn >= 0))
+    /*Reallocate if necessary.*/
+    if (line_params->num_lines != n)
     {
-        check(realloc_line_params_host(&lines,
-                                       flags,
-                                       flags));
+        line_params->num_lines = n;
+        check(realloc_line_params(line_params));
     }
-    *line_params = lines;
-    return SUCCESS;
-}
 
-
-int alloc_line_params_device(LineParams_t ** const line_params,
-                             unsigned int const num_lines)
-{
-    not_null(line_params);
-    LineParams_t *self = NULL;
-    check(malloc_ptr((void **)(&self),
-                     sizeof(*self)));
-    self->num_lines = num_lines;
-    self->mol = -1;
-#ifdef __NVCC__
-    HANDLE_ERROR(cudaMalloc(&(self->iso),
-                            num_lines*sizeof(*(self->iso))));
-    HANDLE_ERROR(cudaMalloc(&(self->vnn),
-                            num_lines*sizeof(*(self->vnn))));
-    HANDLE_ERROR(cudaMalloc(&(self->snn_ref),
-                            num_lines*sizeof(*(self->snn_ref))));
-    HANDLE_ERROR(cudaMalloc(&(self->yair),
-                            num_lines*sizeof(*(self->yair))));
-    HANDLE_ERROR(cudaMalloc(&(self->yself),
-                            num_lines*sizeof(*(self->yself))));
-    HANDLE_ERROR(cudaMalloc(&(self->en),
-                            num_lines*sizeof(*(self->en))));
-    HANDLE_ERROR(cudaMalloc(&(self->n),
-                            num_lines*sizeof(*(self->n))));
-    HANDLE_ERROR(cudaMalloc(&(self->d),
-                            num_lines*sizeof(*(self->d))));
-#endif
-    *line_params = self;
-    return SUCCESS;
-}
-
-
-int free_line_params_device(LineParams_t ** const line_params)
-{
-    not_null(line_params);
-    not_null(*line_params);
-    LineParams_t *self = *line_params;
-#ifdef __NVCC__
-    HANDLE_ERROR(cudaFree(self->iso));
-    HANDLE_ERROR(cudaFree(self->vnn));
-    HANDLE_ERROR(cudaFree(self->snn_ref));
-    HANDLE_ERROR(cudaFree(self->yair));
-    HANDLE_ERROR(cudaFree(self->yself));
-    HANDLE_ERROR(cudaFree(self->en));
-    HANDLE_ERROR(cudaFree(self->n));
-    HANDLE_ERROR(cudaFree(self->d));
-#endif
-    free(self);
-    *line_params = NULL;
+    /*Adjust the raw read-in line strengths.*/
+    fp_t const tref = 296.f;
+    fp_t const c2 = -1.4387686f;
+    fp_t *snn = line_params->snn;
+    int *iso = line_params->iso;
+    fp_t *en = line_params->en;
+    fp_t *vnn = line_params->vnn;
+    uint64_t i;
+#pragma omp parallel for default(none) private(i) shared(snn,iso,en,vnn,n)
+    for (i=0;i<n;++i)
+    {
+        snn[i] *= Q(mol_id,tref,iso[i])/(EXP(c2*en[i]/tref)*
+                  (1.f - EXP(c2*vnn[i]/tref)));
+    }
     return SUCCESS;
 }

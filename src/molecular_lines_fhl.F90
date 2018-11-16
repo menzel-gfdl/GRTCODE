@@ -160,7 +160,6 @@ module molecular_lines_fhl
     real(kind=c_double) :: w0 = 1._c_double !Lower bound of spectral grid.
     real(kind=c_double) :: wn = 3250._c_double !Upper bound of spectral grid.
     real(kind=c_double) :: wres = 0.1_c_double !Resolution of spectral grid.
-    real(kind=c_double) :: fine_factor = 10._c_double
     character(len=1024) :: hitran_path = "HITRAN_files/hitran2016.par" !Path to the hitran
                                                                        !database file.
     logical :: do_h2o = .true. !Use water vapor.
@@ -186,7 +185,6 @@ module molecular_lines_fhl
                                    w0, &
                                    wn, &
                                    wres, &
-                                   fine_factor, &
                                    hitran_path, &
                                    do_h2o, &
                                    do_co2, &
@@ -397,8 +395,7 @@ module molecular_lines_fhl
                                              o3_ctm_dir, &
                                              wcutoff, &
                                              gpu_id, &
-                                             num_threads, &
-                                             fine_factor)
+                                             num_threads)
             call check_rc(return_code)
 
             !Add the molecules associated with the input HITRAN files to

@@ -5,6 +5,18 @@
 #include <stdint.h>
 #include "floating_point_type.h"
 #include "molecules.h"
+#include "ozone_continuum.h"
+#include "spectral_bin.h"
+#include "water_vapor_continuum.h"
+
+
+/*Macros.*/
+#define DIR_PATH_LEN 1024
+#ifdef __cplusplus
+#define EXTERN extern "C"
+#else
+#define EXTERN
+#endif
 
 
 /**
@@ -130,7 +142,61 @@
 /** @ingroup capi
     @brief Library context.
 */
-typedef struct GrtContext GrtContext_t;
+typedef struct GrtContext
+{
+    /*--- Parameters directly supplied by the user. ---*/
+    int gpu_id; /**< Id of the GPU that is associated with this context.*/
+    int num_threads; /**< Number of CPU threads that will be used to calculate
+                          the lines (if not using a GPU).*/
+    int num_levels; /**< Number of atmospheric levels.*/
+    double w0; /**< First point of the spectral grid [1/cm].*/
+    double wn; /**< Last point of the spectral grid [1/cm].*/
+    double wres; /**< Spectral grid resolution [1/cm].*/
+    double wcutoff; /**< Cutoff from spectral line center [1/cm].*/
+    char hitran_path[DIR_PATH_LEN]; /**< Path to the HITRAN database file.*/
+    char h2o_ctm_dir[DIR_PATH_LEN]; /**< Path to the water vapor continuum
+                                         directory.*/
+    char o3_ctm_dir[DIR_PATH_LEN]; /**< Path to the ozone continuum
+                                        directory.*/
+
+    /*--- Parameters implicitly defined by the code. ---*/
+    int num_layers; /**< Number of atmospheric layers (num_levels-1).*/
+    int num_molecules; /**< Number of molecules.*/
+    uint64_t molecule_bit_field; /**< Bit field used to determine which
+                                      molecules are currently in use.*/
+    Molecule_t mols[NUM_MOLS]; /**< Array of molecule structures.*/
+    uint64_t num_wpoints; /**< Number of spectral grid points.*/
+    int use_h2o_ctm; /**< Flag indicating if using the water vapor
+                          continuum is used.*/
+    int use_o3_ctm; /**< Flag indicating if the ozone continuum is used.*/
+    SpectralBins_t bins; /**< Spectral bins.*/
+
+    fp_t *x; /**< Abundance (molecules,levels).*/
+    fp_t *n; /**< Total number of molecules [1/cm^2] (layers).*/
+    fp_t *pavg; /**< Pressure [atm] (layers).*/
+    fp_t *tavg; /**< Temperature [K] (layers).*/
+    fp_t *psavg; /**< Molecular partial pressure [atm] (layers).*/
+    fp_t *ns; /**< Number of molecules [1/cm^2] of a particular species
+                   (layers).*/
+    fp_t *linecenter; /**< Pressure-shifted line center positions [1/cm]
+                           (layers,lines).*/
+    fp_t *snn; /**< Line strength [1/cm] (layers,lines).*/
+    fp_t *gamma; /**< Temperature- and pressure-corrected lorentz
+                       half-width [1/cm] (layers,lines).*/
+    fp_t *alpha; /**< Doppler half-width [1/cm] (layers,lines).*/
+    WaterVaporContinuumCoefs_t h2o_cc; /**< Structure containing water vapor
+                                            continuum coefficients.*/
+    OzoneContinuumCoefs_t o3_cc; /**< Structure containing ozone continuum
+                                      coefficients.*/
+
+
+#ifdef FOO
+    fp_t *P; /**< Pressure [atm] at each level.*/
+    fp_t *T; /**< Temperatture [K] at each level.*/
+    fp_t *tau; /**< Optical depths (layer,wavenumber).*/
+    LineParams_t *lines; /**< Molecular line parameters.*/
+#endif
+} GrtContext_t;
 
 
 /**
@@ -138,45 +204,41 @@ typedef struct GrtContext GrtContext_t;
     @brief Initialize a context.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_context_init(GrtContext_t **context, /**< Library context.*/
-                     int const num_levels, /**< Number of atmospheric levels.*/
-                     double const w0, /**< Lowest wavenumber [1/cm] on spectral grid.*/
-                     double const wn, /**< Highest wavenumber [1/cm] on spectral grid.*/
-                     double const wres, /**< Spectral grid resolution [1/cm].*/
-                     char const * const hitran_path, /**< Path to the HITRAN
-                                                          database file.*/
-                     char const * const h2o_ctm_dir, /**< Directory containing the
-                                                          provided water vapor continuum
-                                                          input files.  If NULL, then
-                                                          the water vapor continuum
-                                                          is not included in the optical
-                                                          depth calculation.*/
-                     char const * const o3_ctm_dir, /**< Directory containing the
-                                                         provided ozone continuum
-                                                         input files.  If NULL, then
-                                                         the ozone continuum is not
-                                                         included in the optical depth
-                                                         calculation.*/
-                     double const * const wcutoff, /**< Cutoff [1/cm] from spectral
-                                                        line center.  If NULL, this
-                                                        defaults to 25 [1/cm].*/
-                     int const * const gpu_id, /**< Id of the GPU that will be associated
-                                                    with this context.  If NULL, then
-                                                    use GPU 0 if at least one GPU
-                                                    exists on the system, or else
-                                                    set to -1 (corresponding to
-                                                    a host only run.*/
-                     int const * const num_threads, /**< If running on the host CPU,
-                                                         determines the maximum number
-                                                         of OpenMP threads that will
-                                                         be used.  If NULL, default to
-                                                         omp_get_max_threads (or one
-                                                         if not build with OpenMP).*/
-                     double const * const fine_factor
-                    );
+EXTERN int grt_context_init(GrtContext_t **context, /**< Library context.*/
+                            int const num_levels, /**< Number of atmospheric levels.*/
+                            double const w0, /**< Lowest wavenumber [1/cm] on spectral grid.*/
+                            double const wn, /**< Highest wavenumber [1/cm] on spectral grid.*/
+                            double const wres, /**< Spectral grid resolution [1/cm].*/
+                            char const * const hitran_path, /**< Path to the HITRAN
+                                                                 database file.*/
+                            char const * const h2o_ctm_dir, /**< Directory containing the
+                                                                 provided water vapor continuum
+                                                                 input files.  If NULL, then
+                                                                 the water vapor continuum
+                                                                 is not included in the optical
+                                                                 depth calculation.*/
+                            char const * const o3_ctm_dir, /**< Directory containing the
+                                                                provided ozone continuum
+                                                                input files.  If NULL, then
+                                                                the ozone continuum is not
+                                                                included in the optical depth
+                                                                calculation.*/
+                            double const * const wcutoff, /**< Cutoff [1/cm] from spectral
+                                                               line center.  If NULL, this
+                                                               defaults to 25 [1/cm].*/
+                            int const * const gpu_id, /**< Id of the GPU that will be associated
+                                                           with this context.  If NULL, then
+                                                           use GPU 0 if at least one GPU
+                                                           exists on the system, or else
+                                                           set to -1 (corresponding to
+                                                           a host only run.*/
+                            int const * const num_threads /**< If running on the host CPU,
+                                                               determines the maximum number
+                                                               of OpenMP threads that will
+                                                               be used.  If NULL, default to
+                                                               omp_get_max_threads (or one
+                                                               if not build with OpenMP).*/
+                           );
 
 
 /**
@@ -184,11 +246,8 @@ int grt_context_init(GrtContext_t **context, /**< Library context.*/
     @brief Release memory allocated by the context.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_context_free(GrtContext_t **context /**< Library context.*/
-                    );
+EXTERN int grt_context_free(GrtContext_t **context /**< Library context.*/
+                           );
 
 
 /**
@@ -198,22 +257,19 @@ int grt_context_free(GrtContext_t **context /**< Library context.*/
            depth of each atmospheric layer at each spectral grid point.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
-                     int const molecule_id, /**< Id that is associated with the molecule. */
-                     double const * const min_line_center_wavenumber, /**< Lower bound [1/cm] of spectral range.
-                                                                           Only lines with line center wavenumbers
-                                                                           greater than or equal to this will be
-                                                                           computed.  If the value NULL is passed
-                                                                           in, this defaults to 1 [1/cm].*/
-                     double const * const max_line_center_wavenumber /**< Upper bound [1/cm] of spectral range.
-                                                                          Only lines with line center wavenumbers
-                                                                          less than or equal to this will be
-                                                                          computed.  If the value NULL is passed
-                                                                          in, this defaults to 3250 [1/cm].*/
-                    );
+EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
+                            int const molecule_id, /**< Id that is associated with the molecule. */
+                            double const * const min_line_center, /**< Lower bound [1/cm] of spectral range.
+                                                                       Only lines with line center wavenumbers
+                                                                       greater than or equal to this will be
+                                                                       computed.  If the value NULL is passed
+                                                                       in, this defaults to 1 [1/cm].*/
+                            double const * const max_line_center /**< Upper bound [1/cm] of spectral range.
+                                                                      Only lines with line center wavenumbers
+                                                                      less than or equal to this will be
+                                                                      computed.  If the value NULL is passed
+                                                                      in, this defaults to 3250 [1/cm].*/
+                           );
 
 
 /**
@@ -221,17 +277,14 @@ int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
     @brief Update the abundances [ppmv] for a molecule.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
-                          int const molecule_id, /**< Molecule id returned by
-                                                      @ref add_molecule.*/
-                          fp_t const * const ppmv /**< Array of molecular abundances [ppmv].
-                                                       The size of this array must be
-                                                       equal to the number of atmospheric
-                                                       levels.*/
-                         );
+EXTERN int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
+                                 int const molecule_id, /**< Molecule id returned by
+                                                             @ref add_molecule.*/
+                                 fp_t const * const ppmv /**< Array of molecular abundances [ppmv].
+                                                              The size of this array must be
+                                                              equal to the number of atmospheric
+                                                              levels.*/
+                                );
 
 
 /**
@@ -240,28 +293,25 @@ int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
            each spectral grid point.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
-                                fp_t const * const pressure, /**< Array of atmospheric pressures [mb].
-                                                                  The size of this array must be
-                                                                  equal to the number of atmospheric
-                                                                  levels.*/
-                                fp_t const * const temperature, /**< Array of atmospheric temperatures [K].
-                                                                     The size of this array must be
-                                                                     equal to the number of atmospheric
-                                                                     levels.*/
-                                fp_t *optical_depth /**< Array of atmospheric optical depths.
-                                                         The size of this array must be equal
-                                                         to the number of atmospheric layers
-                                                         times the number of spectral grid
-                                                         points.  Memory is layed out as
-                                                         (layer,wavenumber) (i.e., the
-                                                         fastest changing dimension is the
-                                                         one corresponding to the spectral
-                                                         grid.)*/
-                               );
+EXTERN int grt_calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
+                                       fp_t const * const pressure, /**< Array of atmospheric pressures [mb].
+                                                                         The size of this array must be
+                                                                         equal to the number of atmospheric
+                                                                         levels.*/
+                                       fp_t const * const temperature, /**< Array of atmospheric temperatures [K].
+                                                                            The size of this array must be
+                                                                            equal to the number of atmospheric
+                                                                            levels.*/
+                                       fp_t *optical_depth /**< Array of atmospheric optical depths.
+                                                                The size of this array must be equal
+                                                                to the number of atmospheric layers
+                                                                times the number of spectral grid
+                                                                points.  Memory is layed out as
+                                                                (layer,wavenumber) (i.e., the
+                                                                fastest changing dimension is the
+                                                                one corresponding to the spectral
+                                                                grid.)*/
+                                      );
 
 
 /**
@@ -269,12 +319,9 @@ int grt_calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
     @brief Get the number of molecules that have been added to the context.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_get_num_molecules(GrtContext_t const * const context, /**< Library context.*/
-                          int * const n /**< Number of molecules.*/
-                         );
+EXTERN int grt_get_num_molecules(GrtContext_t const * const context, /**< Library context.*/
+                                 int * const n /**< Number of molecules.*/
+                                );
 
 
 /**
@@ -282,12 +329,9 @@ int grt_get_num_molecules(GrtContext_t const * const context, /**< Library conte
     @brief Get the number of spectral grid points for the input context.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_get_spectral_grid_size(GrtContext_t const * const context, /**< Library context.*/
-                               uint64_t * const n /**< Spectral grid size.*/
-                              );
+EXTERN int grt_get_spectral_grid_size(GrtContext_t const * const context, /**< Library context.*/
+                                      uint64_t * const n /**< Spectral grid size.*/
+                                     );
 
 
 /**
@@ -295,28 +339,22 @@ int grt_get_spectral_grid_size(GrtContext_t const * const context, /**< Library 
     @brief Return a message describing the input return code.
     @return 0 if completed successfully, or else an error code.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_errstr(int const code, /**< Code returned from one of the
-                                    GRT functions.*/
-               char * const buf, /**< Buffer where message will be stored.*/
-               int const buf_size /**< Size of the input message buffer.*/
-              );
+EXTERN int grt_errstr(int const code, /**< Code returned from one of the
+                                           GRT functions.*/
+                      char * const buf, /**< Buffer where message will be stored.*/
+                      int const buf_size /**< Size of the input message buffer.*/
+                     );
 
 
 /**
     @ingroup capi
     @brief Set the verbosity level for the library.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-void grt_set_verbosity(int const level /**< Verbosity level.  Levels range
-                                            from 0 (least verbose) to 3
-                                            (most verbose).  The default
-                                            level is 0.*/
-                      );
+EXTERN void grt_set_verbosity(int const level /**< Verbosity level.  Levels range
+                                                   from 0 (least verbose) to 3
+                                                   (most verbose).  The default
+                                                   level is 0.*/
+                             );
 
 
 /**
@@ -324,10 +362,7 @@ void grt_set_verbosity(int const level /**< Verbosity level.  Levels range
     @brief Get the verbosity level for the library.
     @return Current verbosity level.
 */
-#ifdef __NVCC__
-extern "C"
-#endif
-int grt_get_verbosity(void);
+EXTERN int grt_get_verbosity(void);
 
 
 #endif

@@ -1,7 +1,9 @@
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "debug.h"
 #include "floating_point_type.h"
 #include "utils.h"
@@ -19,6 +21,42 @@ int malloc_ptr(void ** const p,
               "malloc of %zu bytes failed.",
               num_bytes);
     }
+    return SUCCESS;
+}
+
+
+/*Free malloced memory, with error check.*/
+int free_ptr(void ** const p)
+{
+    not_null(p);
+    if (*p == NULL)
+    {
+        fatal(NULL_ERR,
+              "attempting to free a non-null pointer at %p.",
+              *p);
+    }
+    free(*p);
+    *p = NULL;
+    return SUCCESS;
+}
+
+
+/*Copy a string into a buffer, checking its length.*/
+int copy_str(char * const dest,
+             char const * const src,
+             size_t const len)
+{
+    if (strlen(src) > len)
+    {
+        fatal(VALUE_ERR,
+              "input string (%s) is larger than the input buffer"
+                  " and would be truncated.",
+              src);
+    }
+    snprintf(dest,
+             len,
+             "%s",
+             src);
     return SUCCESS;
 }
 
