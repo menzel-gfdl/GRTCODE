@@ -443,6 +443,114 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
 
 /** @brief Calculate optical depths.
     @return SUCCESS or an error code.*/
+int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*/
+                         int const num_layers, /*Number of atmospheric layers.*/
+                         fp_t * const vnn, /*Pressure-shifted line
+                                             center positions [1/cm].
+                                             (layers,lines).*/
+                         fp_t * const snn, /*Line strength [1/cm]
+                                             (layers,lines).*/
+                         fp_t * const gamma, /*Lorentz halfwidth [1/cm]
+                                               (layers,lines).*/
+                         fp_t * const alpha, /*Doppler halfwidth [1/cm]
+                                               (layers,lines).*/
+                         fp_t const * const n, /*Integrated number density
+                                                 [cm^-2] (layers).*/
+                         SpectralBins_t * const bins, /*Spectral bins.*/
+                         fp_t * const tau /*Optical depth (layer,wavenumber).*/
+                        )
+{
+    int i;
+    uint64_t j;
+
+#pragma omp parallel for collapse(2) default(none) private(i,j)
+    for (i=0;i<num_layers;++i)
+    {
+        for (j=0;j<num_lines;++j)
+        {
+            uint64_t o = i*num_lines + j;
+            LineShapeInputs_t in;
+            in.line_center = vnn[o];
+            in.lorentz_hwhm = gamma[o];
+            in.doppler_hwhm = alpha[o];
+
+            /*Local lines.*/
+            fp_t wcutoff = 3.f;
+            fp_t leftw = in.line_center - wcutoff;
+            if (leftw < bins->w0)
+            {
+                leftw = bins->w0;
+            }
+            uint64_t left = floor((leftw-bins->w0)/bins->width);
+
+            fp_t rightw = in.line_center + wcutoff;
+            fp_t maxw = bins->w0 + bins->num_wpoints*bins->wres;
+            if (rightw > maxw)
+            {
+                rightw = maxw;
+            }
+            uint64_t right = ceil((rightw-bins->w0)/bins->width);
+
+            uint64_t k;
+            for (k=left;k<=right;++k)
+            {
+                uint64_t l;
+                for (l=bins->l[j];l<=bins->r[j];++l)
+                {
+                    in.w = bins->w0 + l*bins->wres;
+#pragma omp atomic update
+                    tau[i*bins->num_wpoints+l] += snn[o]*n[i]*
+                                                  rfm_voigt_line_shape(in);
+                }
+            }
+
+            /*Remote lines.*/
+            wcutoff = 25.f;
+            leftw = in.line_center - wcutoff;
+            if (leftw < bins->w0)
+            {
+                leftw = bins->w0;
+            }
+            uint64_t left_r = floor((leftw-bins->w0)/bins->width);
+            for (k=left_r;k<left;++k)
+            {
+                uint64_t l;
+                for (l=0;l<NIP;++l)
+                {
+                    uint64_t offset = i*bins->n*NIP + j*NIP + l;
+                    in.w = bins->w[j*NIP+l];
+#pragma omp atomic update
+                    bins->tau[offset] += snn[o]*n[i]*
+                                         rfm_voigt_line_shape(in);
+                }
+            }
+
+            rightw = in.line_center + wcutoff;
+            if (rightw > maxw)
+            {
+                rightw = maxw;
+            }
+            uint64_t right_r = ceil((rightw-bins->w0)/bins->width);
+            for (k=right+1;k<=right_r;++k)
+            {
+                uint64_t l;
+                for (l=0;l<NIP;++l)
+                {
+                    uint64_t offset = i*bins->n*NIP + j*NIP + l;
+                    in.w = bins->w[j*NIP+l];
+#pragma omp atomic update
+                    bins->tau[offset] += snn[o]*n[i]*
+                                         rfm_voigt_line_shape(in);
+                }
+            }
+        }
+    }
+    return SUCCESS;
+}
+
+
+/** @brief Calculate optical depths.
+    @return SUCCESS or an error code.*/
 int calc_optical_depth_old(uint64_t const num_lines, /*Number of molecular lines.*/
                            int const num_layers, /*Number of atmospheric layers.*/
                            fp_t * const vnn, /*Pressure-shifted line

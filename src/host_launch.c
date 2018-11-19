@@ -132,27 +132,42 @@ int launch_h(GrtContext_t * const context,
                      " %s.",
                  context->num_layers,
                  mol->name);
-        check(calc_optical_depth(mol->line_params.num_lines,
-                                 context->num_layers,
-                                 context->linecenter,
-                                 context->snn,
-                                 context->gamma,
-                                 context->alpha,
-                                 context->ns,
-                                 &(context->bins),
-                                 tau));
-
-/*
-        check(calc_optical_depth_old(mol->line_params.num_lines,
-                                     context->num_layers,
-                                     context->linecenter,
-                                     context->snn,
-                                     context->gamma,
-                                     context->alpha,
-                                     context->ns,
-                                     &(context->bins),
-                                     tau));
-*/
+        switch (context->optical_depth_method)
+        {
+            case wavenumber_sweep:
+                check(calc_optical_depth(mol->line_params.num_lines,
+                                         context->num_layers,
+                                         context->linecenter,
+                                         context->snn,
+                                         context->gamma,
+                                         context->alpha,
+                                         context->ns,
+                                         &(context->bins),
+                                         tau));
+                break;
+            case line_sweep:
+                check(calc_optical_depth_2(mol->line_params.num_lines,
+                                           context->num_layers,
+                                           context->linecenter,
+                                           context->snn,
+                                           context->gamma,
+                                           context->alpha,
+                                           context->ns,
+                                           &(context->bins),
+                                           tau));
+                break;
+            case line_sample:
+                check(calc_optical_depth_old(mol->line_params.num_lines,
+                                             context->num_layers,
+                                             context->linecenter,
+                                             context->snn,
+                                             context->gamma,
+                                             context->alpha,
+                                             context->ns,
+                                             &(context->bins),
+                                             tau));
+                break;
+        }
 
         if (context->use_h2o_ctm && mol->id == H2O)
         {
@@ -186,11 +201,14 @@ int launch_h(GrtContext_t * const context,
         }
     }
 
-    /*Interpolate line wing optical depth contributions.*/
-    log_info("Interpolating line wing optical depth contributions across"
-                 " %d layers.",
-             context->num_layers);
-    check(interpolate(&(context->bins),
-                      tau));
+    if (context->optical_depth_method != line_sample)
+    {
+        /*Interpolate line wing optical depth contributions.*/
+        log_info("Interpolating line wing optical depth contributions across"
+                     " %d layers.",
+                 context->num_layers);
+        check(interpolate(&(context->bins),
+                          tau));
+    }
     return SUCCESS;
 }

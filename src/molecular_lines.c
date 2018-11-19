@@ -56,7 +56,8 @@ EXTERN int grt_context_init(GrtContext_t **context,
                             char const * const o3_ctm_dir,
                             double const * const wcutoff,
                             int const * const gpu_id,
-                            int const * const num_threads)
+                            int const * const num_threads,
+                            int const * const optical_depth_method)
 {
     /*Set the size of the atmospheric column.*/
     GrtContext_t c;
@@ -185,6 +186,17 @@ EXTERN int grt_context_init(GrtContext_t **context,
         log_mesg("Using GPU device %d.",
                  c.gpu_id);
 #endif
+    }
+
+    /*Set the method that will be used to calculate the optical depths.*/
+    if (optical_depth_method != NULL)
+    {
+        in_range(*optical_depth_method,wavenumber_sweep,line_sample);
+        c.optical_depth_method = *optical_depth_method;
+    }
+    else
+    {
+        c.optical_depth_method = wavenumber_sweep;
     }
 
     /*Prepare to add molecules.*/

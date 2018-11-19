@@ -85,12 +85,14 @@ int create_spectral_bins(SpectralBins_t *bins,
     bins->w0 = w0;
     bins->wres = wres;
     bins->num_wpoints = n;
+    bins->width = bin_width;
+
 
     /*Determine the number of spectral points per bin.  Each bin will contain
       at least one spectral point.  Each spectral point may only exist in
       one bin.  Interpolation is only required if there are more than 3
       spectral points per bin.*/
-    bins->ppb = floor(bin_width/wres) + 1;
+    bins->ppb = floor(bins->width/wres) + 1;
     bins->do_interp = bins->ppb > 3 ? 1 : 0;
 
     /*The last bin might have a smaller number of spectral points than all

@@ -140,6 +140,9 @@ module molecular_lines_f
     integer(kind=c_int),parameter,public :: CO = 5
     integer(kind=c_int),parameter,public :: CH4 = 6
     integer(kind=c_int),parameter,public :: O2 = 7
+    integer(kind=c_int),parameter,public :: wavenumber_sweep = 0
+    integer(kind=c_int),parameter,public :: line_sweep = 1
+    integer(kind=c_int),parameter,public :: line_sample = 2
 
 
 #ifdef SINGLE_PRECISION
@@ -170,7 +173,8 @@ module molecular_lines_f
                                   o3_ctm_dir, &
                                   wcutoff, &
                                   gpu_id, &
-                                  num_threads) &
+                                  num_threads, &
+                                  optical_depth_method) &
             result(return_code) &
             bind(c)
             use iso_c_binding
@@ -186,6 +190,7 @@ module molecular_lines_f
             real(kind=c_double),intent(in),optional :: wcutoff
             integer(kind=c_int),intent(in),optional :: gpu_id
             integer(kind=c_int),intent(in),optional :: num_threads
+            integer(kind=c_int),intent(in),optional :: optical_depth_method
             integer(kind=c_int) :: return_code
         end function grt_context_init
     end interface
@@ -342,7 +347,8 @@ module molecular_lines_f
                                     o3_ctm_dir, &
                                     wcutoff, &
                                     gpu_id, &
-                                    num_threads) &
+                                    num_threads, &
+                                    optical_depth_method) &
             result(return_code)
             type(GrtContext_t),intent(inout) :: context !< Library context.
             integer(kind=c_int),intent(in) :: num_levels !< Number of atmospheric levels.
@@ -377,6 +383,11 @@ module molecular_lines_f
                                                                    !! be used.  Defaults to
                                                                    !! omp_get_max_threads (or one
                                                                    !! if not build with OpenMP).
+            integer(kind=c_int),intent(in),optional :: optical_depth_method !< Flag specifying which
+                                                                            !! method will be used to
+                                                                            !! calculate the optical
+                                                                            !! depths.  Defaults to
+                                                                            !! wavenumber_sweep.
             integer(kind=c_int) :: return_code
             character(len=1024) :: hbuf
             character(len=1024) :: obuf
@@ -400,7 +411,8 @@ module molecular_lines_f
                                            trim(obuf), &
                                            wcutoff, &
                                            gpu_id, &
-                                           num_threads)
+                                           num_threads, &
+                                           optical_depth_method)
         end function grt_context_init_f
 
 

@@ -158,6 +158,8 @@ typedef struct GrtContext
                                          directory.*/
     char o3_ctm_dir[DIR_PATH_LEN]; /**< Path to the ozone continuum
                                         directory.*/
+    int optical_depth_method; /**< Flag specifying which method will be
+                                   used to calculate the optical depths.*/
 
     /*--- Parameters implicitly defined by the code. ---*/
     int num_layers; /**< Number of atmospheric layers (num_levels-1).*/
@@ -199,6 +201,17 @@ typedef struct GrtContext
 } GrtContext_t;
 
 
+/** @ingroup capi
+    @brief Flags used to specifiy which method is used to calculate the
+           optical depths.*/
+enum OpticalDepthMethod
+{
+    wavenumber_sweep,
+    line_sweep,
+    line_sample
+};
+
+
 /**
     @ingroup capi
     @brief Initialize a context.
@@ -232,12 +245,17 @@ EXTERN int grt_context_init(GrtContext_t **context, /**< Library context.*/
                                                            exists on the system, or else
                                                            set to -1 (corresponding to
                                                            a host only run.*/
-                            int const * const num_threads /**< If running on the host CPU,
-                                                               determines the maximum number
-                                                               of OpenMP threads that will
-                                                               be used.  If NULL, default to
-                                                               omp_get_max_threads (or one
-                                                               if not build with OpenMP).*/
+                            int const * const num_threads, /**< If running on the host CPU,
+                                                                determines the maximum number
+                                                                of OpenMP threads that will
+                                                                be used.  If NULL, default to
+                                                                omp_get_max_threads (or one
+                                                                if not build with OpenMP).*/
+                            int const * const optical_depth_method /**< Flag specifying which
+                                                                        method will be used to
+                                                                        calculate the optical
+                                                                        depths.  Defaults to
+                                                                        wavenumber_sweep.*/
                            );
 
 

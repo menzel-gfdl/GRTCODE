@@ -19,6 +19,8 @@ typedef struct SpectralBins
     double wres; /**< Resolution [1/cm] of spectral grid.*/
     uint64_t num_wpoints; /**< Size of the spectral grid.*/
     uint64_t n; /**< Number of spectral bins.*/
+    double width; /**< The width [1/cm] of each bin (except potentially
+                       the last one).*/
     uint64_t isize; /**< Size of arrays that will be used to do the
                          interpolation.*/
     int ppb; /**< Spectral points in each bin.*/
