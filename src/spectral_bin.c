@@ -28,6 +28,7 @@ static int quad_bin_interp(fp_t const * const wb, /**< Wavenumbers [1/cm] in eac
     if (do_interp)
     {
         uint64_t i;
+#pragma omp parallel for default(none) private(i)
         for (i=0;i<num_bins;++i)
         {
             fp_t x[3];
@@ -56,6 +57,7 @@ static int quad_bin_interp(fp_t const * const wb, /**< Wavenumbers [1/cm] in eac
     else
     {
         uint64_t i;
+#pragma omp parallel for default(none) private(i)
         for (i=0;i<num_bins;++i)
         {
             uint64_t j;

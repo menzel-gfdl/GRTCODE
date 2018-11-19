@@ -171,6 +171,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
         {
             c.num_threads = max_num_threads;
         }
+        omp_set_num_threads(c.num_threads);
         log_mesg("Using %d OpenMP threads.",
                  c.num_threads);
     }

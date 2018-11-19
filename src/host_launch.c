@@ -5,12 +5,9 @@
 #include "host_launch.h"
 #include "molecular_lines.h"
 #include "molecules.h"
-#include "spectral_bin.h"
-
-#ifdef FOO
 #include "ozone_continuum.h"
+#include "spectral_bin.h"
 #include "water_vapor_continuum.h"
-#endif
 
 
 int launch_h(GrtContext_t * const context,
