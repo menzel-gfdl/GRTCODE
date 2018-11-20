@@ -41,7 +41,7 @@ ${STATIC_LIB}: ${OBJ}
 	ranlib $@
 
 ${SHARED_LIB}: ${OBJ}
-	${FC} -shared -fPIC -o $@ $^
+	${FC} -shared -fPIC -fopenmp -o $@ $^
 
 %.o: src/%.c
 	${CC} ${CFLAGS} ${CPPFLAGS} -fPIC -o $@ -c $<
