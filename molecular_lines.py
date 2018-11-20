@@ -91,19 +91,13 @@ class MolecularLines(object):
         """
         Release memory that was malloc'd on the c-side.
         """
-        pass
-#       self.ml.grt_context_free.argtypes= [byref(c_void_p())]
-#       self.ml.grt_context_free(byref(self.context))
+        self.ml.grt_context_free(byref(self.context))
 
     def add_molecule(self, molecule_id, min_line_center=None,
                      max_line_center=None):
         """
         Wrapper for grt_add_molecule.
         """
-#       self.ml.grt_add_molecule.argtypes = [c_void_p,
-#                                            c_int,
-#                                            pointer(c_int),
-#                                            pointer(c_int)]
         min_line_center = get_ctype(min_line_center,"double",pointer=True)
         max_line_center = get_ctype(max_line_center,"double",pointer=True)
         catch(self.ml.grt_add_molecule(self.context,
