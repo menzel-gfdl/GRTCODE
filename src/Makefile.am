@@ -1,6 +1,9 @@
 ## Build the c library (and optional fortran bindings).
 if USE_SINGLE_PRECISION
   PREC_FLAG = -DSINGLE_PRECISION
+  PREC_TYPE = c_float
+else
+  PREC_TYPE = c_double
 endif
 if CREATE_FORTRAN_BINDINGS
   FOBJ = molecular_lines_f.F90 molecular_lines_fhl.F90
@@ -16,14 +19,7 @@ libmolecular_lines_la_CPPFLAGS = ${PREC_FLAG}
 if HAVE_PYTHON
 pkgpython_PYTHON = molecular_lines.py __init__.py
 endif
-if USE_SINGLE_PRECISION
-  PREC_TYPE = c_float
-else
-  PREC_TYPE = c_double
-endif
-CLEANFILES = molecular_lines.py
+CLEANFILES = $(FHEADERS) molecular_lines.py
 EXTRA_DIST = molecular_lines.py.in
 molecular_lines.py: molecular_lines.py.in
 	sed -e 's/TYPE/${PREC_TYPE}/g' -e 's,LIBDIR,"${libdir}",g' $< > $@
-
-##	sed -e 's/TYPE/${PREC_TYPE}/g' -e 's/LIBDIR/"${libdir}"/g' $< > $@
