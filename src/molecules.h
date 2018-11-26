@@ -74,6 +74,7 @@ typedef struct Molecule
     char name[MOL_NAME_LEN]; /**< Name.*/
     int id; /**< HITRAN id.*/
     fp_t mass; /**< Mass [g].*/
+    int num_isotopologues; /**< Number of isotopologues.*/
     LineParams_t line_params; /**< Line parameters.*/
 } Molecule_t;
 

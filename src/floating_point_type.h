@@ -6,11 +6,13 @@
 #define EXP expf
 #define POW powf
 #define SQRT sqrtf
+#define ABS fabsf
 #else
 #define TYPE double
 #define EXP exp
 #define POW pow
 #define SQRT sqrt
+#define ABS fabs
 #endif
 
 typedef TYPE fp_t;

@@ -8,7 +8,8 @@
 #ifdef __NVCC__
 __host__ __device__
 #endif
-fp_t rfm_voigt_line_shape(LineShapeInputs_t const vals);
+int rfm_voigt_line_shape(LineShapeInputs_t const vals,
+                         fp_t * const K);
 
 
 #endif

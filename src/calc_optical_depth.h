@@ -60,7 +60,9 @@ int calc_line_centers(uint64_t const num_lines, /*Number of molecular lines.*/
 int calc_line_strengths(uint64_t const num_lines, /*Number of molecular lines.*/
                         int const num_layers, /*Number of atmospheric layers.*/
                         int const mol_id, /*Molecule id.*/
-                        int const * const iso, /*Isotope id (lines).*/
+                        int const num_iso, /*Number of molecular
+                                             isotopologues.*/
+                        int const * const iso, /*Isotopologue id (lines).*/
                         fp_t const * const s0, /*Uncorrected line strengths
                                                  [1/cm] (lines).*/
                         fp_t const * const vnn, /*Line center position [1/cm]

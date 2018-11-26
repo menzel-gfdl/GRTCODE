@@ -1,24 +1,26 @@
 #include <math.h>
+#include <stdint.h>
+#include "debug.h"
 #include "floating_point_type.h"
 #include "line_shape.h"
 #include "RFM_voigt.h"
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+#define M_PI 3.14159265358979323846f
 #endif
 
 /*pi^(-1/2).*/
 #ifdef RSQRPI
 #error
 #else
-#define RSQRPI 0.56418958
+#define RSQRPI 0.56418958f
 #endif
 
 /*(ln(2))^(1/2).*/
 #ifdef SQRLN2
 #error
 #else
-#define SQRLN2 0.832554611
+#define SQRLN2 0.832554611f
 #endif
 
 
@@ -34,228 +36,201 @@
 #ifdef __NVCC__
 __host__ __device__
 #endif
-fp_t rfm_voigt_line_shape(LineShapeInputs_t const vals)
+int rfm_voigt_line_shape(LineShapeInputs_t const vals,
+                         fp_t * const K)
 {
     fp_t const DWNO = vals.w;
     fp_t const WNOADJ = vals.line_center;
     fp_t const WIDADJ = vals.lorentz_hwhm;
     fp_t const DOPADJ = vals.doppler_hwhm;
-    fp_t K;
-    const float Y0 = 1.5;
-    const float Y0PY0 = Y0 + Y0; 
-    const float Y0Q = Y0*Y0;
-    int J;                       /*Loop variable.*/
-    int RG1;                     /*y polynomial flag.*/
-    int RG2;                     /*y polynomial flag.*/
-    int RG3;                     /*y polynomial flag.*/
-    float ABX;                   /*|x|.*/
-    float XQ;                    /*x^2.*/
-    float YQ;                    /*y^2.*/
-    float YRRTPI;                /*y/sqrt(pi).*/
-    float XLIM0;                 /*|x| on region boundary.*/
-    float XLIM1;                 /*|x| on region boundary.*/
-    float XLIM2;                 /*|x| on region boundary.*/
-    float XLIM3;                 /*|x| on region boundary.*/
-    float XLIM4;                 /*|x| on region boundary.*/
-    float A0;
-    float D0;
-    float D2;
-    float E0;
-    float E2;
-    float E4;
-    float H0;
-    float H2;
-    float H4;
-    float H6;
-    float C[6];
-    float S[6];
-    float T[6];
-    float P0;
-    float P2;
-    float P4;
-    float P6;
-    float P8;
-    float Z0;
-    float Z2;
-    float Z4;
-    float Z6;
-    float Z8;
-    float XP[6];
-    float XM[6];
-    float YP[6];
-    float YM[6];
-    float MQ[6];
-    float PQ[6];
-    float MF[6];
-    float PF[6];
-    float D;
-    float YF;
-    float YPY0;
-    float YPY0Q;
-    float REPWID;
-    float XI;
-    float Y;
+    fp_t const WRES = vals.wres;
+    uint64_t const N = vals.num_wpoints;
 
-    C[0] = 1.0117281;
-    C[1] = -0.75197147;
-    C[2] = 0.012557727;
-    C[3] = 0.010022008;
-    C[4] = -0.00024206814;
-    C[5] = 0.00000050084806;
-    S[0] = 1.393237;
-    S[1] = 0.23115241;
-    S[2] = -0.15535147;
-    S[3] = 0.0062183662;
-    S[4] = 0.000091908299;
-    S[5] = -0.00000062752596;
-    T[0] = 0.31424038;
-    T[1] = 0.94778839;
-    T[2] = 1.5976826;
-    T[3] = 2.2795071;
-    T[4] = 3.0206370;
-    T[5] = 3.8897249;
-
-    REPWID = SQRLN2/DOPADJ;
-    Y = REPWID*WIDADJ;
-    YQ = Y*Y;
-
-    if (Y >= 70.55)
+    float const REPWID = SQRLN2/DOPADJ;
+    float const Y = REPWID*WIDADJ;
+    float const YQ = Y*Y;
+    if (Y >= 70.55f)
     {
-        XI = ((float)(DWNO-WNOADJ))*REPWID;
-        K = REPWID*Y/(M_PI*(XI*XI+YQ));
-        return K;
+        uint64_t i;
+        for (i=0;i<N;++i)
+        {
+            float const XI = (DWNO + i*WRES - WNOADJ)*REPWID;
+            K[i] = REPWID*Y/(M_PI*(XI*XI+YQ));
+        }
+        return SUCCESS;
     }
 
-    RG1 = 1;
-    RG2 = 1;
-    RG3 = 1;
-
-    YRRTPI = Y*RSQRPI;
-    XLIM0 = sqrt(15100.0 + Y*(40.0 - Y*3.6));
-    if (Y >= 8.425)
+    float const YRRTPI = Y*RSQRPI;
+    float const XLIM0 = SQRT(15100.0f + Y*(40.0f - Y*3.6f));
+    float XLIM1;
+    if (Y >= 8.425f)
     {
-        XLIM1 = 0.0;
+        XLIM1 = 0.0f;
     }
     else
     {
-        XLIM1 = sqrt(164.0 - Y*(4.3 + Y*1.8));
+        XLIM1 = SQRT(164.0f - Y*(4.3f + Y*1.8f));
     }
-    XLIM2 = 6.8 - Y;
-    XLIM3 = 2.4*Y;
-    XLIM4 = 18.1*Y + 1.65;
-
-    if (Y <= 0.000001)
+    float XLIM2 = 6.8f - Y;
+    float const XLIM3 = 2.4f*Y;
+    float const XLIM4 = 18.1f*Y + 1.65f;
+    if (Y <= 0.000001f)
     {
         XLIM1 = XLIM0;
         XLIM2 = XLIM0;
     }
 
-    XI = ((float)(DWNO-WNOADJ))*REPWID;
-    ABX = fabs(XI);
-    XQ = ABX*ABX;
-    if (ABX >= XLIM0)
+    int RG1 = 1;
+    float A0;
+    float D0;
+    float D2;
+    int RG2 = 1;
+    float H0;
+    float H2;
+    float H4;
+    float H6;
+    float E0;
+    float E2;
+    float E4;
+    int RG3 = 1;
+    float Z0;
+    float Z2;
+    float Z4;
+    float Z6;
+    float Z8;
+    float P0;
+    float P2;
+    float P4;
+    float P6;
+    float P8;
+    float const Y0 = 1.5f;
+    float const Y0PY0 = 3.f; 
+    float const Y0Q = 2.25f;
+    float const YPY0 = Y + Y0;
+    float const YPY0Q = YPY0*YPY0;
+    float const C[6] = {1.0117281f, -0.75197147f, 0.012557727f,
+                        0.010022008f, -0.00024206814f, 0.00000050084806f};
+    float const S[6] = {1.393237f, 0.23115241f, -0.15535147f,
+                        0.0062183662f, 0.000091908299f, -0.00000062752596f};
+    float const T[6] = {0.31424038f, 0.94778839f, 1.5976826f,
+                        2.2795071f, 3.0206370f, 3.8897249f};
+    uint64_t i;
+    for (i=0;i<N;++i)
     {
-        K = YRRTPI/(XQ + YQ);
-    }
-    else if (ABX >= XLIM1)
-    {
-        if (RG1 != 0)
+        float const XI = (DWNO + i*WRES - WNOADJ)*REPWID;
+        float const ABX = ABS(XI);
+        float const XQ = ABX*ABX;
+        if (ABX >= XLIM0)
         {
-            RG1 = 0;
-            A0 = YQ + 0.5;
-            D0 = A0*A0;
-            D2 = YQ + YQ - 1.0;
+            K[i] = YRRTPI/(XQ + YQ);
         }
-        D = RSQRPI/(D0 + XQ*(D2 + XQ));
-        K = D*Y*(A0 + XQ);
-    }
-    else if (ABX >= XLIM2)
-    {
-        if (RG2 != 0)
+        else if (ABX >= XLIM1)
         {
-            RG2 = 0;
-            H0 = 0.5625 + YQ*(4.5 + YQ*(10.5 + YQ*(6.0 + YQ)));
-            H2 = -4.5 + YQ*(9.0 + YQ*(6.0 + YQ*4.0));
-            H4 = 10.5 - YQ*(6.0 - YQ*6.0);
-            H6 = -6.0 + YQ* 4.0;
-            E0 = 1.875 + YQ*(8.25 + YQ*(5.5 + YQ));
-            E2 = 5.25 + YQ*(1.0 + YQ*3.0);
-            E4 = 0.75*H6;
-        }
-        D = RSQRPI/(H0 + XQ*(H2 + XQ*(H4 + XQ*(H6 + XQ))));
-        K = D*Y*(E0 + XQ*(E2 + XQ*(E4 + XQ)));
-    }
-    else if (ABX < XLIM3)
-    {
-        if (RG3 != 0)
-        {
-            RG3 = 0;
-            Z0 = 272.1014 + Y*(1280.829 + Y*(2802.870 + Y*(3764.966
-                 + Y*(3447.629 + Y*(2256.981 + Y*(1074.409 + Y*(369.1989
-                 + Y*(88.26741 + Y*(13.39880 + Y)))))))));
-            Z2 = 211.678 + Y*(902.3066 + Y*(1758.336 + Y*(2037.310
-                 + Y*(1549.675 + Y*(793.4273 + Y*(266.2987
-                 + Y*(53.59518 + Y*5.0)))))));
-            Z4 = 78.86585 + Y*(308.1852 + Y*(497.3014 + Y*(479.2576
-                 + Y*(269.2916 + Y*(80.39278 + Y*10.0)))));
-            Z6 = 22.03523 + Y*(55.02933 + Y*(92.75679 + Y*(53.59518
-                 + Y*10.0)));
-            Z8 = 1.496460 + Y*(13.39880 + Y*5.0);
-            P0 = 153.5168 + Y*(549.3954 + Y*(919.4955 + Y*(946.8970
-                 + Y*(662.8097 + Y*(328.2151 + Y*(115.3772 + Y*(27.93941
-                 + Y*(4.264678 + Y*0.3183291))))))));
-            P2 = -34.16955 + Y*(-1.322256+ Y*(124.5975 + Y*(189.7730
-                 + Y*(139.4665 + Y*(56.81652 + Y*(12.79458
-                 + Y*1.2733163))))));
-            P4 = 2.584042 + Y*(10.46332 + Y*(24.01655 + Y*(29.81482
-                 + Y*(12.79568 + Y*1.9099744))));
-            P6 = -0.07272979 + Y*(0.9377051 + Y*(4.266322 + Y*1.273316));
-            P8 = 0.0005480304 + Y*0.3183291;
-        }
-        D = 1.7724538/(Z0 + XQ*(Z2 + XQ*(Z4 + XQ*(Z6 + XQ*(Z8+XQ)))));
-        K = D*(P0 + XQ*(P2 + XQ*(P4 + XQ*(P6 + XQ*P8))));
-    }
-    else
-    {
-        YPY0 = Y + Y0;
-        YPY0Q = YPY0*YPY0;
-        K = 0.0;
-        for (J=0;J<=5;J++)
-        {
-            D = XI - T[J];
-            MQ[J] = D*D;
-            MF[J] = 1.0/(MQ[J] + YPY0Q);
-            XM[J] = MF[J]*D;
-            YM[J] = MF[J]*YPY0;
-            D = XI + T[J];
-            PQ[J] = D*D;
-            PF[J] = 1.0/(PQ[J] + YPY0Q);
-            XP[J] = PF[J]*D;
-            YP[J] = PF[J]*YPY0;
-        }
-
-        if (ABX <= XLIM4)
-        {
-            for (J=0;J<=5;J++)
+            if (RG1 != 0)
             {
-                K = K + C[J]*(YM[J]+YP[J]) - S[J]*(XM[J]-XP[J]);
+                RG1 = 0;
+                A0 = YQ + 0.5;
+                D0 = A0*A0;
+                D2 = YQ + YQ - 1.0;
             }
+            float const D = RSQRPI/(D0 + XQ*(D2 + XQ));
+            K[i] = D*Y*(A0 + XQ);
+        }
+        else if (ABX >= XLIM2)
+        {
+            if (RG2 != 0)
+            {
+                RG2 = 0;
+                H0 = 0.5625f + YQ*(4.5f + YQ*(10.5f + YQ*(6.0f + YQ)));
+                H2 = -4.5f + YQ*(9.0f + YQ*(6.0f + YQ*4.0f));
+                H4 = 10.5f - YQ*(6.0f - YQ*6.0f);
+                H6 = -6.0f + YQ* 4.0f;
+                E0 = 1.875f + YQ*(8.25f + YQ*(5.5f + YQ));
+                E2 = 5.25f + YQ*(1.0f + YQ*3.0f);
+                E4 = 0.75f*H6;
+            }
+            float const D = RSQRPI/(H0 + XQ*(H2 + XQ*(H4 + XQ*(H6 + XQ))));
+            K[i] = D*Y*(E0 + XQ*(E2 + XQ*(E4 + XQ)));
+        }
+        else if (ABX < XLIM3)
+        {
+            if (RG3 != 0)
+            {
+                RG3 = 0;
+                Z0 = 272.1014f + Y*(1280.829f + Y*(2802.870f + Y*(3764.966f
+                     + Y*(3447.629f + Y*(2256.981f + Y*(1074.409f + Y*(369.1989f
+                     + Y*(88.26741f + Y*(13.39880f + Y)))))))));
+                Z2 = 211.678f + Y*(902.3066f + Y*(1758.336f + Y*(2037.310f
+                     + Y*(1549.675f + Y*(793.4273f + Y*(266.2987f
+                     + Y*(53.59518f + Y*5.0f)))))));
+                Z4 = 78.86585f + Y*(308.1852f + Y*(497.3014f + Y*(479.2576f
+                     + Y*(269.2916f + Y*(80.39278f + Y*10.0f)))));
+                Z6 = 22.03523f + Y*(55.02933f + Y*(92.75679f + Y*(53.59518f
+                     + Y*10.0f)));
+                Z8 = 1.496460f + Y*(13.39880f + Y*5.0f);
+                P0 = 153.5168f + Y*(549.3954f + Y*(919.4955f + Y*(946.8970f
+                     + Y*(662.8097f + Y*(328.2151f + Y*(115.3772f + Y*(27.93941f
+                     + Y*(4.264678f + Y*0.3183291f))))))));
+                P2 = -34.16955f + Y*(-1.322256f + Y*(124.5975f + Y*(189.7730f
+                     + Y*(139.4665f + Y*(56.81652f + Y*(12.79458f
+                     + Y*1.2733163f))))));
+                P4 = 2.584042f + Y*(10.46332f + Y*(24.01655f + Y*(29.81482f
+                     + Y*(12.79568f + Y*1.9099744f))));
+                P6 = -0.07272979f + Y*(0.9377051f + Y*(4.266322f + Y*1.273316f));
+                P8 = 0.0005480304f + Y*0.3183291f;
+            }
+            float const D = 1.7724538f/(Z0 + XQ*(Z2 + XQ*(Z4 + XQ*(Z6 +
+                            XQ*(Z8+XQ)))));
+            K[i] = D*(P0 + XQ*(P2 + XQ*(P4 + XQ*(P6 + XQ*P8))));
         }
         else
         {
-            YF = Y + Y0PY0;
+            K[i] = 0.0f;
+            float MQ[6];
+            float MF[6];
+            float XM[6];
+            float YM[6];
+            float PQ[6];
+            float PF[6];
+            float XP[6];
+            float YP[6];
+            int J;
             for (J=0;J<=5;J++)
             {
-                K = K
-                    + (C[J]*(MQ[J]*MF[J]-Y0*YM[J]) + S[J]*YF*XM[J])/
-                    (MQ[J]+Y0Q)
-                    + (C[J]*(PQ[J]*PF[J]-Y0*YP[J]) - S[J]*YF*XP[J])/
-                    (PQ[J]+Y0Q);
+                float D = XI - T[J];
+                MQ[J] = D*D;
+                MF[J] = 1.0f/(MQ[J] + YPY0Q);
+                XM[J] = MF[J]*D;
+                YM[J] = MF[J]*YPY0;
+                D = XI + T[J];
+                PQ[J] = D*D;
+                PF[J] = 1.0f/(PQ[J] + YPY0Q);
+                XP[J] = PF[J]*D;
+                YP[J] = PF[J]*YPY0;
             }
-            K = Y*K + exp(-XQ);
-        }
-    }
-    K = RSQRPI*REPWID*K;
 
-    return K;
+            if (ABX <= XLIM4)
+            {
+                for (J=0;J<=5;J++)
+                {
+                    K[i] = K[i] + C[J]*(YM[J]+YP[J]) - S[J]*(XM[J]-XP[J]);
+                }
+            }
+            else
+            {
+                float const YF = Y + Y0PY0;
+                for (J=0;J<=5;J++)
+                {
+                    K[i] = K[i]
+                           + (C[J]*(MQ[J]*MF[J]-Y0*YM[J]) + S[J]*YF*XM[J])/
+                           (MQ[J]+Y0Q)
+                           + (C[J]*(PQ[J]*PF[J]-Y0*YP[J]) - S[J]*YF*XP[J])/
+                           (PQ[J]+Y0Q);
+                }
+                K[i] = Y*K[i] + EXP(-XQ);
+            }
+        }
+        K[i] = RSQRPI*REPWID*K[i];
+    }
+    return SUCCESS;
 }

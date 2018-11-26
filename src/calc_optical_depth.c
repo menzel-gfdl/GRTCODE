@@ -207,7 +207,9 @@ int calc_line_centers(uint64_t const num_lines, /*Number of molecular lines.*/
 int calc_line_strengths(uint64_t const num_lines, /*Number of molecular lines.*/
                         int const num_layers, /*Number of atmospheric layers.*/
                         int const mol_id, /*Molecule id.*/
-                        int const * const iso, /*Isotope id (lines).*/
+                        int const num_iso, /*Number of molecular
+                                             isotopologues.*/
+                        int const * const iso, /*Isotopologue id (lines).*/
                         fp_t const * const s0, /*Uncorrected line strengths
                                                  [1/cm] (lines).*/
                         fp_t const * const vnn, /*Line center position [1/cm]
@@ -220,17 +222,27 @@ int calc_line_strengths(uint64_t const num_lines, /*Number of molecular lines.*/
                        )
 {
     fp_t const c2 = -1.4387686f;
-
+    fp_t q[num_layers*num_iso];
     int i;
     uint64_t j;
-#pragma omp parallel for collapse(2) default(none) private(i,j)
+
+#pragma omp parallel for collapse(2) default(none) shared(q) private(i,j)
+    for (i=0;i<num_layers;++i)
+    {
+        for (j=0;j<num_iso;++j)
+        {
+            q[i*num_iso+j] = 1.f/Q(mol_id,t[i],j+1);
+        }
+    }
+
+#pragma omp parallel for collapse(2) default(none) shared(q) private(i,j)
     for (i=0;i<num_layers;++i)
     {
         for (j=0;j<num_lines;++j)
         {
-            snn[i*num_lines+j] = (s0[j]*EXP(c2*en[j]/t[i])*
-                                 (1.f - EXP(c2*vnn[j]/t[i])))/
-                                 Q(mol_id,t[i],iso[j]);
+            snn[i*num_lines+j] = s0[j]*EXP(c2*en[j]/t[i])*
+                                 (1.f - EXP(c2*vnn[j]/t[i]))*
+                                 q[i*num_iso+iso[j]-1];
         }
     }
     return SUCCESS;
@@ -336,8 +348,9 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
                    g,
                    a));
 
+        fp_t t[bins->num_wpoints];
         uint64_t j;
-#pragma omp parallel for default(none) private(j) shared(v,s,g,a,i)
+#pragma omp parallel for default(none) private(j) shared(v,s,g,a,t,i)
         for (j=0;j<bins->n;++j)
         {
             uint64_t nbin_local = 1;
@@ -368,15 +381,18 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
             for (k=left;k<=right;++k)
             {
                 LineShapeInputs_t in;
+                in.w = bins->w0 + bins->l[j]*bins->wres;
+                in.num_wpoints = bins->r[j] - bins->l[j] + 1;
+                in.wres = bins->wres;
                 in.line_center = v[k];
                 in.lorentz_hwhm = g[k];
                 in.doppler_hwhm = a[k];
+                rfm_voigt_line_shape(in,
+                                     &t[bins->l[j]]);
                 uint64_t l;
                 for (l=bins->l[j];l<=bins->r[j];++l)
                 {
-                    in.w = bins->w0 + l*bins->wres;
-                    tau[i*bins->num_wpoints+l] += s[k]*n[i]*
-                                                  rfm_voigt_line_shape(in);
+                    tau[i*bins->num_wpoints+l] += s[k]*n[i]*t[l];
                 }
             }
 
@@ -395,16 +411,20 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
             for (k=left_r;k<left;++k)
             {
                 LineShapeInputs_t in;
+                in.w = bins->w[j*NIP];
+                in.num_wpoints = NIP;
+                in.wres = bins->w[j*NIP+1] - in.w;
                 in.line_center = v[k];
                 in.lorentz_hwhm = g[k];
                 in.doppler_hwhm = a[k];
+                fp_t t_r[NIP];
+                rfm_voigt_line_shape(in,
+                                     t_r);
                 uint64_t l;
                 for (l=0;l<NIP;++l)
                 {
                     uint64_t offset = i*bins->n*NIP + j*NIP + l;
-                    in.w = bins->w[j*NIP+l];
-                    bins->tau[offset] += s[k]*n[i]*
-                                         rfm_voigt_line_shape(in);
+                    bins->tau[offset] += s[k]*n[i]*t_r[l];
                 }
             }
 
@@ -423,16 +443,20 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
             for (k=right+1;k<=right_r;++k)
             {
                 LineShapeInputs_t in;
+                in.w = bins->w[j*NIP];
+                in.num_wpoints = NIP;
+                in.wres = bins->w[j*NIP+1] - in.w;
                 in.line_center = v[k];
                 in.lorentz_hwhm = g[k];
                 in.doppler_hwhm = a[k];
+                fp_t t_r[NIP];
+                rfm_voigt_line_shape(in,
+                                     t_r);
                 uint64_t l;
                 for (l=0;l<NIP;++l)
                 {
                     uint64_t offset = i*bins->n*NIP + j*NIP + l;
-                    in.w = bins->w[j*NIP+l];
-                    bins->tau[offset] += s[k]*n[i]*
-                                         rfm_voigt_line_shape(in);
+                    bins->tau[offset] += s[k]*n[i]*t_r[l];
                 }
             }
         }
@@ -460,6 +484,7 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
                          fp_t * const tau /*Optical depth (layer,wavenumber).*/
                         )
 {
+#ifdef NOTDONE
     int i;
     uint64_t j;
 
@@ -545,6 +570,7 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
             }
         }
     }
+#endif
     return SUCCESS;
 }
 
@@ -568,6 +594,7 @@ int calc_optical_depth_old(uint64_t const num_lines, /*Number of molecular lines
                            fp_t * const tau /*Optical depth (layer,wavenumber).*/
                           )
 {
+#ifdef NOTDONE
     int const fsteps = ceil(25.f/bins->wres);
     int lyr;
     uint64_t ltid;
@@ -609,5 +636,6 @@ int calc_optical_depth_old(uint64_t const num_lines, /*Number of molecular lines
             }
         }
     }
+#endif
     return SUCCESS;
 }
