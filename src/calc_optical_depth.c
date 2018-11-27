@@ -359,104 +359,131 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
             /*Find the "local" lines.*/
             uint64_t nbin = nbin_local;
             fp_t leftw = j > nbin ? bins->w[NIP*(j-nbin)] : bins->w[0];
-            uint64_t left;
-            uint64_t tmp;
-            bracket(num_lines,
-                    v,
-                    leftw,
-                    &left,
-                    &tmp);
-
             fp_t rightw = j >= (bins->n-1)-nbin ? bins->w[NIP*bins->n-1]
                           : bins->w[NIP*(j+nbin+1)-1];
-            uint64_t right;
-            bracket(num_lines - left,
-                    &(v[left]),
-                    rightw,
-                    &tmp,
-                    &right);
-            right += left;
 
-            uint64_t k;
-            for (k=left;k<=right;++k)
+            uint64_t left;
+            uint64_t right;
+            if (leftw <= v[num_lines-1] && rightw >= v[0])
             {
-                LineShapeInputs_t in;
-                in.w = bins->w0 + bins->l[j]*bins->wres;
-                in.num_wpoints = bins->r[j] - bins->l[j] + 1;
-                in.wres = bins->wres;
-                in.line_center = v[k];
-                in.lorentz_hwhm = g[k];
-                in.doppler_hwhm = a[k];
-                rfm_voigt_line_shape(in,
-                                     &t[bins->l[j]]);
-                uint64_t l;
-                for (l=bins->l[j];l<=bins->r[j];++l)
+                uint64_t tmp;
+                bracket(num_lines,
+                        v,
+                        leftw,
+                        &left,
+                        &tmp);
+                bracket(num_lines - left,
+                        &(v[left]),
+                        rightw,
+                        &tmp,
+                        &right);
+                right += left;
+
+                uint64_t k;
+                for (k=left;k<=right;++k)
                 {
-                    tau[i*bins->num_wpoints+l] += s[k]*n[i]*t[l];
+                    LineShapeInputs_t in;
+                    in.w = bins->w0 + bins->l[j]*bins->wres;
+                    in.num_wpoints = bins->r[j] - bins->l[j] + 1;
+                    in.wres = bins->wres;
+                    in.line_center = v[k];
+                    in.lorentz_hwhm = g[k];
+                    in.doppler_hwhm = a[k];
+                    rfm_voigt_line_shape(in,
+                                         &t[bins->l[j]]);
+                    uint64_t l;
+                    for (l=bins->l[j];l<=bins->r[j];++l)
+                    {
+                        tau[i*bins->num_wpoints+l] += s[k]*n[i]*t[l];
+                    }
                 }
+            }
+            else if (leftw > v[num_lines-1])
+            {
+                left = num_lines;
+            }
+            else
+            {
+                right = (uint64_t)(-1);
             }
 
             /*Find the "remote" lines.*/
             nbin = nbin_remote;
-            uint64_t left_r = left;
-            if (left_r > 0)
+            fp_t leftw_r = j > nbin ? bins->w[NIP*(j-nbin)] : bins->w[0];
+            if (leftw >= v[0] && leftw_r <= v[num_lines-1])
             {
-                leftw = j > nbin ? bins->w[NIP*(j-nbin)] : bins->w[0];
+                uint64_t left_r;
+                uint64_t tmp;
                 bracket(left,
                         v,
-                        leftw,
+                        leftw_r,
                         &left_r,
                         &tmp);
-            }
-            for (k=left_r;k<left;++k)
-            {
-                LineShapeInputs_t in;
-                in.w = bins->w[j*NIP];
-                in.num_wpoints = NIP;
-                in.wres = bins->w[j*NIP+1] - in.w;
-                in.line_center = v[k];
-                in.lorentz_hwhm = g[k];
-                in.doppler_hwhm = a[k];
-                fp_t t_r[NIP];
-                rfm_voigt_line_shape(in,
-                                     t_r);
-                uint64_t l;
-                for (l=0;l<NIP;++l)
+                uint64_t k;
+                for (k=left_r;k<left;++k)
                 {
-                    uint64_t offset = i*bins->n*NIP + j*NIP + l;
-                    bins->tau[offset] += s[k]*n[i]*t_r[l];
+                    LineShapeInputs_t in;
+                    in.w = bins->w[j*NIP];
+                    in.num_wpoints = NIP;
+                    in.wres = bins->w[j*NIP+1] - in.w;
+                    in.line_center = v[k];
+                    in.lorentz_hwhm = g[k];
+                    in.doppler_hwhm = a[k];
+                    fp_t t_r[NIP];
+                    rfm_voigt_line_shape(in,
+                                         t_r);
+                    uint64_t l;
+                    for (l=0;l<NIP;++l)
+                    {
+                        uint64_t offset = i*bins->n*NIP + j*NIP + l;
+                        bins->tau[offset] += s[k]*n[i]*t_r[l];
+                    }
                 }
             }
 
-            uint64_t right_r = right;
-            if (right_r < num_lines - 1)
+            fp_t rightw_r = j >= (bins->n-1)-nbin ? bins->w[NIP*bins->n-1]
+                            : bins->w[NIP*(j+nbin+1)-1];
+            if (rightw <= v[num_lines-1] && rightw_r >= v[0])
             {
-                rightw = j >= (bins->n-1)-nbin ? bins->w[NIP*bins->n-1]
-                         : bins->w[NIP*(j+nbin+1)-1];
-                bracket(num_lines - right,
-                        &(v[right]),
-                        rightw,
+                uint64_t f = 0;
+                if (right == (uint64_t)(-1))
+                {
+                    f = 1;
+                }
+                uint64_t right_r;
+                uint64_t tmp;
+                bracket(num_lines,
+                        v,
+                        rightw_r,
                         &tmp,
                         &right_r);
-                right_r += right;
-            }
-            for (k=right+1;k<=right_r;++k)
-            {
-                LineShapeInputs_t in;
-                in.w = bins->w[j*NIP];
-                in.num_wpoints = NIP;
-                in.wres = bins->w[j*NIP+1] - in.w;
-                in.line_center = v[k];
-                in.lorentz_hwhm = g[k];
-                in.doppler_hwhm = a[k];
-                fp_t t_r[NIP];
-                rfm_voigt_line_shape(in,
-                                     t_r);
-                uint64_t l;
-                for (l=0;l<NIP;++l)
+/*
+                bracket(num_lines - right + f,
+                        &(v[right+f]),
+                        rightw_r,
+                        &tmp,
+                        &right_r);
+                right_r += right + f;
+*/
+                uint64_t k;
+                for (k=right+1;k<=right_r;++k)
                 {
-                    uint64_t offset = i*bins->n*NIP + j*NIP + l;
-                    bins->tau[offset] += s[k]*n[i]*t_r[l];
+                    LineShapeInputs_t in;
+                    in.w = bins->w[j*NIP];
+                    in.num_wpoints = NIP;
+                    in.wres = bins->w[j*NIP+1] - in.w;
+                    in.line_center = v[k];
+                    in.lorentz_hwhm = g[k];
+                    in.doppler_hwhm = a[k];
+                    fp_t t_r[NIP];
+                    rfm_voigt_line_shape(in,
+                                         t_r);
+                    uint64_t l;
+                    for (l=0;l<NIP;++l)
+                    {
+                        uint64_t offset = i*bins->n*NIP + j*NIP + l;
+                        bins->tau[offset] += s[k]*n[i]*t_r[l];
+                    }
                 }
             }
         }
