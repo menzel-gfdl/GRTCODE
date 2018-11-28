@@ -452,19 +452,12 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
                 }
                 uint64_t right_r;
                 uint64_t tmp;
-                bracket(num_lines,
-                        v,
-                        rightw_r,
-                        &tmp,
-                        &right_r);
-/*
-                bracket(num_lines - right + f,
+                bracket(num_lines - (right + f),
                         &(v[right+f]),
                         rightw_r,
                         &tmp,
                         &right_r);
                 right_r += right + f;
-*/
                 uint64_t k;
                 for (k=right+1;k<=right_r;++k)
                 {
