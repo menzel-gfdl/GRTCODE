@@ -350,9 +350,8 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
              a);
     }
 
-    fp_t t[bins->num_wpoints];
     uint64_t j;
-#pragma omp parallel for collapse(2) default(none) private(i,j) shared(t)
+#pragma omp parallel for collapse(2) default(none) private(i,j)
     for (i=0;i<num_layers;++i)
     {
         for (j=0;j<bins->n;++j)
@@ -387,22 +386,23 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
                         &right);
                 right += left;
 
+                LineShapeInputs_t in;
+                in.w = bins->w0 + bins->l[j]*bins->wres;
+                in.num_wpoints = bins->r[j] - bins->l[j] + 1;
+                in.wres = bins->wres;
+                fp_t t[in.num_wpoints];
                 uint64_t k;
                 for (k=left;k<=right;++k)
                 {
-                    LineShapeInputs_t in;
-                    in.w = bins->w0 + bins->l[j]*bins->wres;
-                    in.num_wpoints = bins->r[j] - bins->l[j] + 1;
-                    in.wres = bins->wres;
                     in.line_center = v[k];
                     in.lorentz_hwhm = g[k];
                     in.doppler_hwhm = a[k];
                     rfm_voigt_line_shape(in,
-                                         &t[bins->l[j]]);
+                                         t);
                     uint64_t l;
                     for (l=bins->l[j];l<=bins->r[j];++l)
                     {
-                        tau[i*bins->num_wpoints+l] += s[k]*n[i]*t[l];
+                        tau[i*bins->num_wpoints+l] += s[k]*n[i]*t[l-bins->l[j]];
                     }
                 }
             }
@@ -427,17 +427,17 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
                         leftw_r,
                         &left_r,
                         &tmp);
+                LineShapeInputs_t in;
+                in.w = bins->w[j*NIP];
+                in.num_wpoints = NIP;
+                in.wres = bins->w[j*NIP+1] - in.w;
+                fp_t t_r[NIP];
                 uint64_t k;
                 for (k=left_r;k<left;++k)
                 {
-                    LineShapeInputs_t in;
-                    in.w = bins->w[j*NIP];
-                    in.num_wpoints = NIP;
-                    in.wres = bins->w[j*NIP+1] - in.w;
                     in.line_center = v[k];
                     in.lorentz_hwhm = g[k];
                     in.doppler_hwhm = a[k];
-                    fp_t t_r[NIP];
                     rfm_voigt_line_shape(in,
                                          t_r);
                     uint64_t l;
@@ -466,17 +466,17 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
                         &tmp,
                         &right_r);
                 right_r += right + f;
+                LineShapeInputs_t in;
+                in.w = bins->w[j*NIP];
+                in.num_wpoints = NIP;
+                in.wres = bins->w[j*NIP+1] - in.w;
+                fp_t t_r[NIP];
                 uint64_t k;
                 for (k=right+1;k<=right_r;++k)
                 {
-                    LineShapeInputs_t in;
-                    in.w = bins->w[j*NIP];
-                    in.num_wpoints = NIP;
-                    in.wres = bins->w[j*NIP+1] - in.w;
                     in.line_center = v[k];
                     in.lorentz_hwhm = g[k];
                     in.doppler_hwhm = a[k];
-                    fp_t t_r[NIP];
                     rfm_voigt_line_shape(in,
                                          t_r);
                     uint64_t l;
