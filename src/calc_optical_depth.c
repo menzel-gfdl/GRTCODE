@@ -16,7 +16,7 @@ static int sort(uint64_t const num_lines,
                 fp_t * const alpha)
 {
     uint64_t i;
-    for (i=0;i<num_lines;++i)
+    for (i=1;i<num_lines;++i)
     {
         fp_t value[4];
         value[0] = vnn[i];
@@ -24,7 +24,7 @@ static int sort(uint64_t const num_lines,
         value[2] = gamma[i];
         value[3] = alpha[i];
         uint64_t j = i;
-        while (j > 0 && vnn[i-1] > value[0])
+        while (j > 0 && vnn[j-1] > value[0])
         {
             vnn[j] = vnn[j-1];
             snn[j] = snn[j-1];
