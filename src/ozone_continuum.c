@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #ifdef _OPENMP
-#include "omp.h"
+#include <omp.h>
 #endif
 #ifdef __NVCC__
 #include "cuda_helpers.cuh"

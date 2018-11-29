@@ -156,12 +156,9 @@ EXTERN int grt_context_init(GrtContext_t **context,
     }
     if (c.gpu_id == HOST_ONLY)
     {
-        int const min_num_threads = 1;
 #ifdef _OPENMP
+        int const min_num_threads = 1;
         int const max_num_threads = omp_get_max_threads();
-#else
-        int const max_num_threads = min_num_threads;
-#endif
         if (num_threads != NULL)
         {
             in_range(*num_threads,min_num_threads,max_num_threads);
@@ -174,6 +171,9 @@ EXTERN int grt_context_init(GrtContext_t **context,
         omp_set_num_threads(c.num_threads);
         log_mesg("Using %d OpenMP threads.",
                  c.num_threads);
+#else
+        c.num_threads = 1;
+#endif
     }
     else
     {
