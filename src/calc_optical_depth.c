@@ -336,23 +336,31 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
                       )
 {
     int i;
+#pragma omp parallel for default(none) private(i)
     for (i=0;i<num_layers;++i)
     {
         fp_t *v = &(vnn[i*num_lines]);
         fp_t *s = &(snn[i*num_lines]);
         fp_t *g = &(gamma[i*num_lines]);
         fp_t *a = &(alpha[i*num_lines]);
-        check(sort(num_lines,
-                   v,
-                   s,
-                   g,
-                   a));
+        sort(num_lines,
+             v,
+             s,
+             g,
+             a);
+    }
 
-        fp_t t[bins->num_wpoints];
-        uint64_t j;
-#pragma omp parallel for default(none) private(j) shared(v,s,g,a,t,i)
+    fp_t t[bins->num_wpoints];
+    uint64_t j;
+#pragma omp parallel for collapse(2) default(none) private(i,j) shared(t)
+    for (i=0;i<num_layers;++i)
+    {
         for (j=0;j<bins->n;++j)
         {
+            fp_t *v = &(vnn[i*num_lines]);
+            fp_t *s = &(snn[i*num_lines]);
+            fp_t *g = &(gamma[i*num_lines]);
+            fp_t *a = &(alpha[i*num_lines]);
             uint64_t nbin_local = 1;
             uint64_t nbin_remote = 25;
 
