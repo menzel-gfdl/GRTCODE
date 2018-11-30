@@ -46,12 +46,21 @@ $ make
 $ make install
 ```
 
+If you have Python (3.5+) installed on your system, python bindings will
+also be installed.  These bindings require numpy, as well as setting the
+PYTHONPATH environment variable.  For example, in bash:
+
+```
+export PYTHONPATH="<prefix>/lib/python3.5/site-packages/molecular_lines"
+```
+
 As usual, the default compilers and flags can be
-overridden by specifying CC, FC, CFLAGS, and FFLAGS when running
+overridden by specifying CC, CFLAGS, LDFLAGS, FC, and FFLAGS when running
 configure in the usual fashion:
 
 ```
-$ ./configure CC=icc CFLAGS='-O3 -openmp' FC=ifort FFLAGS='-O3 -openmp'
+$ ./configure CC=icc CFLAGS='-O3 -qopenmp' LDFLAGS='-qopenmp' \
+              --enable-fortran-bindings FC=ifort FFLAGS='-O3 -qopenmp'
 ```
 
 This library can take advantage of thread-level parallelism through the
