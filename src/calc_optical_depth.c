@@ -627,12 +627,11 @@ int calc_optical_depth_old(uint64_t const num_lines, /*Number of molecular lines
                                                  (layers,lines).*/
                            fp_t const * const n, /*Integrated number density
                                                    [cm^-2] (layers).*/
-                           SpectralBins_t * const bins, /*Spectral bins.*/
+                           SpectralBins_t const * const bins, /*Spectral bins.*/
                            fp_t * const tau /*Optical depth (layer,wavenumber).*/
                           )
 {
-#ifdef NOTDONE
-    int const fsteps = ceil(25.f/bins->wres);
+    uint64_t const fsteps = ceil(25.f/bins->wres);
     int lyr;
     uint64_t ltid;
 
@@ -646,33 +645,28 @@ int calc_optical_depth_old(uint64_t const num_lines, /*Number of molecular lines
             in.line_center = vnn[loffset];
             in.lorentz_hwhm = gamma[loffset];
             in.doppler_hwhm = alpha[loffset];
-            unsigned int fcenterid = (2*((in.line_center-bins->w0)/bins->wres)+1)/2;
+            in.wres = bins->wres;
+            uint64_t fcenterid = floor((2*((in.line_center-bins->w0)/
+                                       bins->wres)+1)/2);
             if (fcenterid < bins->num_wpoints)
             {
-                int ftid;
-                for (ftid=((int)fcenterid)-fsteps;ftid<=((int)fcenterid);++ftid)
+                uint64_t s = (int64_t)(fcenterid-fsteps) < 0 ? 0 :
+                             fcenterid-fsteps;
+                uint64_t e = fcenterid+fsteps >= bins->num_wpoints ?
+                             bins->num_wpoints-1 : fcenterid+fsteps;
+                in.w = s*bins->wres + bins->w0;
+                in.num_wpoints = e - s + 1;
+                fp_t t[in.num_wpoints];
+                rfm_voigt_line_shape(in,
+                                     t);
+                uint64_t f;
+                for (f=s;f<=e;++f)
                 {
-                    if (ftid >= 0)
-                    {
-                        in.w = ftid*bins->wres + bins->w0;
 #pragma omp atomic update
-                        tau[lyr*bins->num_wpoints+ftid] += snn[loffset]*n[lyr]*
-                                                           rfm_voigt_line_shape(in);
-                    }
-                }
-                for (ftid=((int)fcenterid)+fsteps;ftid>((int)fcenterid);--ftid)
-                {
-                    if (ftid < ((int)bins->num_wpoints))
-                    {
-                        in.w = ftid*bins->wres + bins->w0;
-#pragma omp atomic update
-                        tau[lyr*bins->num_wpoints+ftid] += snn[loffset]*n[lyr]*
-                                                           rfm_voigt_line_shape(in);
-                    }
+                    tau[lyr*bins->num_wpoints+f] += snn[loffset]*n[lyr]*t[f-s];
                 }
             }
         }
     }
-#endif
     return SUCCESS;
 }

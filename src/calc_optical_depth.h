@@ -163,7 +163,7 @@ int calc_optical_depth_old(uint64_t const num_lines, /*Number of molecular lines
                                                  (layers,lines).*/
                            fp_t const * const n, /*Integrated number density
                                                    [cm^-2] (layers).*/
-                           SpectralBins_t * const bins, /*Spectral bins.*/
+                           SpectralBins_t const * const bins, /*Spectral bins.*/
                            fp_t * const tau /*Optical depth (layer,wavenumber).*/
                           );
 
