@@ -51,7 +51,7 @@ also be installed.  These bindings require numpy, as well as setting the
 PYTHONPATH environment variable.  For example, in bash:
 
 ```
-export PYTHONPATH="<prefix>/lib/python3.5/site-packages/molecular_lines"
+$ export PYTHONPATH="<prefix>/lib/python3.5/site-packages/molecular_lines"
 ```
 
 As usual, the default compilers and flags can be
