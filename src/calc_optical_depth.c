@@ -512,7 +512,7 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
                          fp_t * const tau /*Optical depth (layer,wavenumber).*/
                         )
 {
-#ifdef NOTDONE
+    fp_t const bin_width = bins->wres*bins->ppb;
     int i;
     uint64_t j;
 
@@ -526,15 +526,16 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
             in.line_center = vnn[o];
             in.lorentz_hwhm = gamma[o];
             in.doppler_hwhm = alpha[o];
+            in.wres = bins->wres;
 
             /*Local lines.*/
-            fp_t wcutoff = 3.f;
+            fp_t wcutoff = 1.5f;
             fp_t leftw = in.line_center - wcutoff;
             if (leftw < bins->w0)
             {
                 leftw = bins->w0;
             }
-            uint64_t left = floor((leftw-bins->w0)/bins->width);
+            uint64_t left = floor((leftw-bins->w0)/bin_width);
 
             fp_t rightw = in.line_center + wcutoff;
             fp_t maxw = bins->w0 + bins->num_wpoints*bins->wres;
@@ -542,18 +543,21 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
             {
                 rightw = maxw;
             }
-            uint64_t right = ceil((rightw-bins->w0)/bins->width);
+            uint64_t right = floor((rightw-bins->w0)/bin_width);
 
             uint64_t k;
             for (k=left;k<=right;++k)
             {
+                in.w = bins->w0 + bins->l[k]*bins->wres;
+                in.num_wpoints = bins->r[k] - bins->l[k] + 1;
+                fp_t t[in.num_wpoints];
+                rfm_voigt_line_shape(in,
+                                     t);
                 uint64_t l;
-                for (l=bins->l[j];l<=bins->r[j];++l)
+                for (l=bins->l[k];l<=bins->r[k];++l)
                 {
-                    in.w = bins->w0 + l*bins->wres;
 #pragma omp atomic update
-                    tau[i*bins->num_wpoints+l] += snn[o]*n[i]*
-                                                  rfm_voigt_line_shape(in);
+                    tau[i*bins->num_wpoints+l] += snn[o]*n[i]*t[l-bins->l[k]];
                 }
             }
 
@@ -564,17 +568,21 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
             {
                 leftw = bins->w0;
             }
-            uint64_t left_r = floor((leftw-bins->w0)/bins->width);
+            uint64_t left_r = floor((leftw-bins->w0)/bin_width);
+            in.num_wpoints = NIP;
+            fp_t t_r[NIP];
             for (k=left_r;k<left;++k)
             {
+                in.w = bins->w[k*NIP];
+                in.wres = bins->w[k*NIP+1] - in.w;
+                rfm_voigt_line_shape(in,
+                                     t_r);
                 uint64_t l;
                 for (l=0;l<NIP;++l)
                 {
-                    uint64_t offset = i*bins->n*NIP + j*NIP + l;
-                    in.w = bins->w[j*NIP+l];
+                    uint64_t offset = i*bins->n*NIP + k*NIP + l;
 #pragma omp atomic update
-                    bins->tau[offset] += snn[o]*n[i]*
-                                         rfm_voigt_line_shape(in);
+                    bins->tau[offset] += snn[o]*n[i]*t_r[l];
                 }
             }
 
@@ -583,22 +591,23 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
             {
                 rightw = maxw;
             }
-            uint64_t right_r = ceil((rightw-bins->w0)/bins->width);
+            uint64_t right_r = floor((rightw-bins->w0)/bin_width);
             for (k=right+1;k<=right_r;++k)
             {
+                in.w = bins->w[k*NIP];
+                in.wres = bins->w[k*NIP+1] - in.w;
+                rfm_voigt_line_shape(in,
+                                     t_r);
                 uint64_t l;
                 for (l=0;l<NIP;++l)
                 {
-                    uint64_t offset = i*bins->n*NIP + j*NIP + l;
-                    in.w = bins->w[j*NIP+l];
+                    uint64_t offset = i*bins->n*NIP + k*NIP + l;
 #pragma omp atomic update
-                    bins->tau[offset] += snn[o]*n[i]*
-                                         rfm_voigt_line_shape(in);
+                    bins->tau[offset] += snn[o]*n[i]*t_r[l];
                 }
             }
         }
     }
-#endif
     return SUCCESS;
 }
 
