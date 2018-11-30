@@ -14,6 +14,9 @@ N2O = 4
 CO = 5
 CH4 = 6
 O2 = 7
+wavenumber_sweep = 0
+line_sweep = 1
+line_sample = 2
 
 
 def get_ctype(val,t,pointer=False):
