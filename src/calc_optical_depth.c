@@ -56,11 +56,7 @@ static int bracket(uint64_t const array_size,
     {
         *left = l;
         *right = r;
-/*
-        fatal(RANGE_ERR,
-              "val %e is not in input array.",
-              val);
-*/
+        return RANGE_ERR;
     }
     if (array[l] == val)
     {
@@ -318,22 +314,22 @@ int calc_doppler_hw(uint64_t const num_lines, /*Number of molecular lines.*/
 
 /** @brief Calculate optical depths.
     @return SUCCESS or an error code.*/
-int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
-                       int const num_layers, /*Number of atmospheric layers.*/
-                       fp_t * const vnn, /*Pressure-shifted line
-                                           center positions [1/cm].
-                                           (layers,lines).*/
-                       fp_t * const snn, /*Line strength [1/cm]
-                                           (layers,lines).*/
-                       fp_t * const gamma, /*Lorentz halfwidth [1/cm]
-                                             (layers,lines).*/
-                       fp_t * const alpha, /*Doppler halfwidth [1/cm]
-                                             (layers,lines).*/
-                       fp_t const * const n, /*Integrated number density
-                                               [cm^-2] (layers).*/
-                       SpectralBins_t * const bins, /*Spectral bins.*/
-                       fp_t * const tau /*Optical depth (layer,wavenumber).*/
-                      )
+int calc_optical_depth_bin_sweep(uint64_t const num_lines, /*Number of molecular lines.*/
+                                 int const num_layers, /*Number of atmospheric layers.*/
+                                 fp_t * const vnn, /*Pressure-shifted line
+                                                     center positions [1/cm].
+                                                     (layers,lines).*/
+                                 fp_t * const snn, /*Line strength [1/cm]
+                                                     (layers,lines).*/
+                                 fp_t * const gamma, /*Lorentz halfwidth [1/cm]
+                                                       (layers,lines).*/
+                                 fp_t * const alpha, /*Doppler halfwidth [1/cm]
+                                                       (layers,lines).*/
+                                 fp_t const * const n, /*Integrated number density
+                                                         [cm^-2] (layers).*/
+                                 SpectralBins_t * const bins, /*Spectral bins.*/
+                                 fp_t * const tau /*Optical depth (layer,wavenumber).*/
+                                )
 {
     int i;
 #pragma omp parallel for default(none) private(i)
@@ -495,22 +491,22 @@ int calc_optical_depth(uint64_t const num_lines, /*Number of molecular lines.*/
 
 /** @brief Calculate optical depths.
     @return SUCCESS or an error code.*/
-int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*/
-                         int const num_layers, /*Number of atmospheric layers.*/
-                         fp_t * const vnn, /*Pressure-shifted line
-                                             center positions [1/cm].
-                                             (layers,lines).*/
-                         fp_t * const snn, /*Line strength [1/cm]
-                                             (layers,lines).*/
-                         fp_t * const gamma, /*Lorentz halfwidth [1/cm]
-                                               (layers,lines).*/
-                         fp_t * const alpha, /*Doppler halfwidth [1/cm]
-                                               (layers,lines).*/
-                         fp_t const * const n, /*Integrated number density
-                                                 [cm^-2] (layers).*/
-                         SpectralBins_t * const bins, /*Spectral bins.*/
-                         fp_t * const tau /*Optical depth (layer,wavenumber).*/
-                        )
+int calc_optical_depth_line_sweep(uint64_t const num_lines, /*Number of molecular lines.*/
+                                  int const num_layers, /*Number of atmospheric layers.*/
+                                  fp_t * const vnn, /*Pressure-shifted line
+                                                      center positions [1/cm].
+                                                      (layers,lines).*/
+                                  fp_t * const snn, /*Line strength [1/cm]
+                                                      (layers,lines).*/
+                                  fp_t * const gamma, /*Lorentz halfwidth [1/cm]
+                                                        (layers,lines).*/
+                                  fp_t * const alpha, /*Doppler halfwidth [1/cm]
+                                                        (layers,lines).*/
+                                  fp_t const * const n, /*Integrated number density
+                                                          [cm^-2] (layers).*/
+                                  SpectralBins_t * const bins, /*Spectral bins.*/
+                                  fp_t * const tau /*Optical depth (layer,wavenumber).*/
+                                 )
 {
     fp_t const bin_width = bins->wres*bins->ppb;
     int i;
@@ -612,24 +608,24 @@ int calc_optical_depth_2(uint64_t const num_lines, /*Number of molecular lines.*
 }
 
 
-/** @brief Calculate optical depths.
+/** @brief Calculate optical depths by sampling all lines.
     @return SUCCESS or an error code.*/
-int calc_optical_depth_old(uint64_t const num_lines, /*Number of molecular lines.*/
-                           int const num_layers, /*Number of atmospheric layers.*/
-                           fp_t * const vnn, /*Pressure-shifted line
-                                               center positions [1/cm].
-                                               (layers,lines).*/
-                           fp_t * const snn, /*Line strength [1/cm]
-                                               (layers,lines).*/
-                           fp_t * const gamma, /*Lorentz halfwidth [1/cm]
-                                                 (layers,lines).*/
-                           fp_t * const alpha, /*Doppler halfwidth [1/cm]
-                                                 (layers,lines).*/
-                           fp_t const * const n, /*Integrated number density
-                                                   [cm^-2] (layers).*/
-                           SpectralBins_t const * const bins, /*Spectral bins.*/
-                           fp_t * const tau /*Optical depth (layer,wavenumber).*/
-                          )
+int calc_optical_depth_line_sample(uint64_t const num_lines, /*Number of molecular lines.*/
+                                   int const num_layers, /*Number of atmospheric layers.*/
+                                   fp_t * const vnn, /*Pressure-shifted line
+                                                       center positions [1/cm].
+                                                       (layers,lines).*/
+                                   fp_t * const snn, /*Line strength [1/cm]
+                                                       (layers,lines).*/
+                                   fp_t * const gamma, /*Lorentz halfwidth [1/cm]
+                                                         (layers,lines).*/
+                                   fp_t * const alpha, /*Doppler halfwidth [1/cm]
+                                                         (layers,lines).*/
+                                   fp_t const * const n, /*Integrated number density
+                                                           [cm^-2] (layers).*/
+                                   SpectralBins_t const * const bins, /*Spectral bins.*/
+                                   fp_t * const tau /*Optical depth (layer,wavenumber).*/
+                                  )
 {
     uint64_t const fsteps = ceil(25.f/bins->wres);
     int lyr;

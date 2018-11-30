@@ -133,37 +133,37 @@ int launch_h(GrtContext_t * const context,
         switch (context->optical_depth_method)
         {
             case wavenumber_sweep:
-                check(calc_optical_depth(mol->line_params.num_lines,
-                                         context->num_layers,
-                                         context->linecenter,
-                                         context->snn,
-                                         context->gamma,
-                                         context->alpha,
-                                         context->ns,
-                                         &(context->bins),
-                                         tau));
+                check(calc_optical_depth_bin_sweep(mol->line_params.num_lines,
+                                                   context->num_layers,
+                                                   context->linecenter,
+                                                   context->snn,
+                                                   context->gamma,
+                                                   context->alpha,
+                                                   context->ns,
+                                                   &(context->bins),
+                                                   tau));
                 break;
             case line_sweep:
-                check(calc_optical_depth_2(mol->line_params.num_lines,
-                                           context->num_layers,
-                                           context->linecenter,
-                                           context->snn,
-                                           context->gamma,
-                                           context->alpha,
-                                           context->ns,
-                                           &(context->bins),
-                                           tau));
+                check(calc_optical_depth_line_sweep(mol->line_params.num_lines,
+                                                    context->num_layers,
+                                                    context->linecenter,
+                                                    context->snn,
+                                                    context->gamma,
+                                                    context->alpha,
+                                                    context->ns,
+                                                    &(context->bins),
+                                                    tau));
                 break;
             case line_sample:
-                check(calc_optical_depth_old(mol->line_params.num_lines,
-                                             context->num_layers,
-                                             context->linecenter,
-                                             context->snn,
-                                             context->gamma,
-                                             context->alpha,
-                                             context->ns,
-                                             &(context->bins),
-                                             tau));
+                check(calc_optical_depth_line_sample(mol->line_params.num_lines,
+                                                     context->num_layers,
+                                                     context->linecenter,
+                                                     context->snn,
+                                                     context->gamma,
+                                                     context->alpha,
+                                                     context->ns,
+                                                     &(context->bins),
+                                                     tau));
                 break;
         }
 
