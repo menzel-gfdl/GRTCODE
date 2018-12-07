@@ -28,7 +28,7 @@ enum return_codes
 #define backtrace() { \
     if (get_verbosity() >= ERROR) { \
         fprintf(stderr, \
-                "\t%s: %d\n", \
+                "\r\33[2K\t%s: %d\n", \
                 __FILE__, \
                 __LINE__); \
     }}
@@ -37,7 +37,7 @@ enum return_codes
 #define log_err(mesg,...) { \
     if (get_verbosity() >= ERROR) { \
         fprintf(stderr, \
-                "[%s] error: " mesg "\nBacktrace:\n", \
+                "\r\33[2K[%s] error: " mesg "\nBacktrace:\n", \
                 __func__, \
                 __VA_ARGS__); \
         backtrace(); \
@@ -47,7 +47,7 @@ enum return_codes
 #define log_warn(mesg,...) { \
     if (get_verbosity() >= WARN) { \
         fprintf(stderr, \
-                "[%s:%d] warning: " mesg "\n", \
+                "\r\33[2K[%s:%d] warning: " mesg "\n", \
                 __FILE__, \
                 __LINE__, \
                 __VA_ARGS__); \
@@ -57,7 +57,7 @@ enum return_codes
 #define log_info(mesg,...) {\
     if (get_verbosity() >= INFO) { \
         fprintf(stderr, \
-                "[%s:%d] info: " mesg "\n", \
+                "\r\33[2K[%s:%d] info: " mesg "\n", \
                 __FILE__, \
                 __LINE__, \
                 __VA_ARGS__); \
@@ -65,10 +65,11 @@ enum return_codes
 
 
 #define log_mesg(mesg,...) {\
+    if (get_verbosity() >= NONE) { \
         fprintf(stdout, \
-                mesg "\n", \
+                "\r\33[2K" mesg "\n", \
                 __VA_ARGS__); \
-    }
+    }}
 
 
 /*Macros that return error codes.*/
