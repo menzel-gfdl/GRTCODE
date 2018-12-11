@@ -15,12 +15,12 @@
 typedef struct SpectralBins
 {
     int num_layers; /**< Number of layers.*/
-    double w0; /**< Lower bound [1/cm] of spectral grid.*/
-    double wres; /**< Resolution [1/cm] of spectral grid.*/
+    fp_t w0; /**< Lower bound [1/cm] of spectral grid.*/
+    fp_t wres; /**< Resolution [1/cm] of spectral grid.*/
     uint64_t num_wpoints; /**< Size of the spectral grid.*/
     uint64_t n; /**< Number of spectral bins.*/
-    double width; /**< The width [1/cm] of each bin (except potentially
-                       the last one).*/
+    fp_t width; /**< The width [1/cm] of each bin (except potentially
+                     the last one).*/
     uint64_t isize; /**< Size of arrays that will be used to do the
                          interpolation.*/
     int ppb; /**< Spectral points in each bin.*/
@@ -30,7 +30,7 @@ typedef struct SpectralBins
     int do_last_interp; /**< Flag telling if interpolation is necessary for
                              the last bin (i.e., if it contains more than 3
                              spectral points).*/
-    double *w; /**< Wavenumbers [1/cm] in each bin (n,NIP).*/
+    fp_t *w; /**< Wavenumbers [1/cm] in each bin (n,NIP).*/
     fp_t *tau; /**< Optical depths in each bin (layer,n,NIP).*/
     uint64_t *l; /**< Index of left-most spectral point in each bin (n).*/
     uint64_t *r; /**< Index of right-most spectral point in each bin (n).*/
