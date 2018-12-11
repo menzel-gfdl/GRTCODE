@@ -22,7 +22,7 @@ static int copy_token(char * const token,
     if (s <= 0 || s >= MAXCHARSPERTOKEN)
     {
         /*The input token has an invalid size.*/
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "the size (%d) of the token %s on line %d must be in the"
                   " range [1,%d].",
               s,
@@ -60,7 +60,7 @@ int parse_csv(char const * const filepath,
     FILE *f = fopen(filepath,"r");
     if (f == NULL)
     {
-        fatal(IO_ERR,
+        raise(IO_ERR,
               "failed to open csv file %s.",
               filepath);
     }
@@ -75,7 +75,7 @@ int parse_csv(char const * const filepath,
         char *c = line;
         if (*c == '\n')
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "line %d in file %s is blank.",
                   *num_lines,
                   filepath);
@@ -92,7 +92,7 @@ int parse_csv(char const * const filepath,
             num_chars++;
             if (num_chars > MAXCHARSPERLINE)
             {
-                fatal(VALUE_ERR,
+                raise(VALUE_ERR,
                       "the number of characters (>=%d) on line %d of file %s"
                           " exceeds the maximum allowed (%d).",
                       num_chars,
@@ -107,7 +107,7 @@ int parse_csv(char const * const filepath,
         }
         else if (n != *num_cols)
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "the number of columns (%d) on line %d of file"
                       " %s differs from the number of columns (%d) on"
                       " the other lines.",
@@ -119,7 +119,7 @@ int parse_csv(char const * const filepath,
     }
     if (*num_lines == 0)
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "the file %s is empty.",
               filepath);
     }
@@ -132,19 +132,19 @@ int parse_csv(char const * const filepath,
         (*num_lines)--;
         if (*num_lines == 0)
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "the file %s only contains headers, no data.",
                   filepath);
         }
         fgets(line,MAXCHARSPERLINE,f);
     }
     int num_vals = (*num_cols)*(*num_lines);
-    check(malloc_ptr((void **)(&vals),
+    throw(malloc_ptr((void **)(&vals),
                      sizeof(*vals)*num_vals));
     int i;
     for (i=0;i<num_vals;++i)
     {
-        check(malloc_ptr((void **)(&(vals[i])),
+        throw(malloc_ptr((void **)(&(vals[i])),
                          sizeof(*(vals[i]))*MAXCHARSPERTOKEN));
         snprintf(vals[i],
                  MAXCHARSPERTOKEN,
@@ -158,7 +158,7 @@ int parse_csv(char const * const filepath,
     {
         int col_index = 0;
         char *token = strtok(line,",");
-        check(copy_token(token,
+        throw(copy_token(token,
                          col_index,
                          line_index,
                          *num_lines,
@@ -171,7 +171,7 @@ int parse_csv(char const * const filepath,
                 break;
             }
             col_index++;
-            check(copy_token(token,
+            throw(copy_token(token,
                              col_index,
                              line_index,
                              *num_lines,
@@ -184,7 +184,7 @@ int parse_csv(char const * const filepath,
     /*Close the file.*/
     if (0 != fclose(f))
     {
-        fatal(IO_ERR,
+        raise(IO_ERR,
               "failed to close csv file %s.",
               filepath);
     }

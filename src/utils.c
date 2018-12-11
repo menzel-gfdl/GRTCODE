@@ -17,7 +17,7 @@ int malloc_ptr(void ** const p,
     *p = malloc(num_bytes);
     if (*p == NULL)
     {
-        fatal(NULL_ERR,
+        raise(NULL_ERR,
               "malloc of %zu bytes failed.",
               num_bytes);
     }
@@ -25,13 +25,13 @@ int malloc_ptr(void ** const p,
 }
 
 
-/*Free malloced memory, with error check.*/
+/*Free malloced memory, with error checks.*/
 int free_ptr(void ** const p)
 {
     not_null(p);
     if (*p == NULL)
     {
-        fatal(NULL_ERR,
+        raise(NULL_ERR,
               "attempting to free a non-null pointer at %p.",
               *p);
     }
@@ -48,7 +48,7 @@ int copy_str(char * const dest,
 {
     if (strlen(src) > len)
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "input string (%s) is larger than the input buffer"
                   " and would be truncated.",
               src);
@@ -74,20 +74,20 @@ int to_int(char const * const s,
     {
         if (errno == ERANGE)
         {
-            fatal(RANGE_ERR,
+            raise(RANGE_ERR,
                   "the input string %s is out of range.",
                   s);
         }
         else if (end == s || errno == EINVAL)
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "invalid input string %s format, expecting the string to"
                       " contain an integer.",
                   s);
         }
         else
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "unknown errno code (%d) returned from strtol.",
                   errno);
         }
@@ -98,7 +98,7 @@ int to_int(char const * const s,
     }
     else
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "input string %s cannot be represented as an int.",
               s);
     }
@@ -119,20 +119,20 @@ int to_double(char const * const s,
     {
         if (errno == ERANGE)
         {
-            fatal(RANGE_ERR,
+            raise(RANGE_ERR,
                   "the input string %s is out of range.",
                   s);
         }
         else if (end == s)
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "invalid input string %s format, expecting the string to"
                       " contain a floating point number.",
                   s);
         }
         else
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "unknown errno code (%d) returned from strtod.",
                   errno);
         }
@@ -158,14 +158,14 @@ int to_fp_t(double const d,
         }
         else
         {
-            fatal(RANGE_ERR,
+            raise(RANGE_ERR,
                   "input double value %le cannot be represented as a float.",
                   d);
         }
     }
     else
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "fp_t (size=%lu) must be represent either float or double.",
               sizeof(fp_t));
     }
@@ -185,7 +185,7 @@ int linear_interp(double *in,
     /*Make sure sizes are compatible.*/
     if (out_size != in_size + 1)
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "currently the output array size (%d) must be equal to the"
                   " input array size (%d) + 1.",
               out_size,
@@ -236,7 +236,7 @@ int get_sorted_bounds(fp_t const val,
     not_null(right);
     if (array_size <= 0)
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "input array size (%d) must be >= 1.",
               array_size);
     }
@@ -310,7 +310,7 @@ int linear_interpolation(fp_t const * const x,
 
     int left;
     int right;
-    check(get_sorted_bounds(val,
+    throw(get_sorted_bounds(val,
                             x,
                             xy_size,
                             &left,

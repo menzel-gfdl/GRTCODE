@@ -78,7 +78,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
     c.wres = wres;
     if (wn <= w0)
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "Spectral grid upper bound (%e) must be > than the spectral"
                   " grid lower bound (%e).",
               wn,
@@ -95,7 +95,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
 
     /*Create the spectral bins.*/
     double bin_width = 1.;
-    check(create_spectral_bins(&(c.bins),
+    throw(create_spectral_bins(&(c.bins),
                                c.num_layers,
                                c.w0,
                                c.num_wpoints,
@@ -138,7 +138,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
       GPU or the host CPU.*/
 #ifdef __NVCC__
     int num_devices;
-    check(get_num_gpus(&num_devices));
+    throw(get_num_gpus(&num_devices));
 #else
     int num_devices = 0;
 #endif
@@ -178,7 +178,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
     else
     {
 #ifndef __NVCC__
-        fatal(COMPILER_ERR,
+        raise(COMPILER_ERR,
               "you must build with nvcc in order to use GPUs (gpu_id=%d.)",
               c.gpu_id);
 #else
@@ -211,7 +211,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
         if (strcmp(h2o_ctm_dir,"none") != 0)
         {
             c.use_h2o_ctm = 1;
-            check(copy_str(c.h2o_ctm_dir,
+            throw(copy_str(c.h2o_ctm_dir,
                            h2o_ctm_dir,
                            DIR_PATH_LEN));
         }
@@ -224,40 +224,50 @@ EXTERN int grt_context_init(GrtContext_t **context,
         if (strcmp(o3_ctm_dir,"none") != 0)
         {
             c.use_o3_ctm = 1;
-            check(copy_str(c.o3_ctm_dir,
+            throw(copy_str(c.o3_ctm_dir,
                            o3_ctm_dir,
                            DIR_PATH_LEN));
         }
     }
 
+#define malloc(ptr,size,loc) { \
+    if (loc == HOST_ONLY) \
+    { \
+        throw(malloc_ptr((void **)&p,size)); \
+    } \
+    else \
+    { \
+        gpu_catch(cudaMalloc(&p, s)); \
+    } \
+}
+
     /*Reserve memory.*/
     if (c.gpu_id == HOST_ONLY)
     {
-        check(malloc_ptr((void **)(&c.x),
+        throw(malloc_ptr((void **)(&c.x),
                          sizeof(*(c.x))*c.num_levels*NUM_MOLS));
-        check(malloc_ptr((void **)(&c.n),
+        throw(malloc_ptr((void **)(&c.n),
                          sizeof(*(c.n))*c.num_layers));
-        check(malloc_ptr((void **)(&c.pavg),
+        throw(malloc_ptr((void **)(&c.pavg),
                          sizeof(*(c.pavg))*c.num_layers));
-        check(malloc_ptr((void **)(&c.tavg),
+        throw(malloc_ptr((void **)(&c.tavg),
                          sizeof(*(c.tavg))*c.num_layers));
-        check(malloc_ptr((void **)(&c.psavg),
+        throw(malloc_ptr((void **)(&c.psavg),
                          sizeof(*(c.psavg))*c.num_layers));
-        check(malloc_ptr((void **)(&c.ns),
+        throw(malloc_ptr((void **)(&c.ns),
                          sizeof(*(c.ns))*c.num_layers));
-        check(malloc_ptr((void **)(&c.linecenter),
+        throw(malloc_ptr((void **)(&c.linecenter),
                          sizeof(*(c.linecenter))*c.num_layers*MAX_NUM_LINES));
-        check(malloc_ptr((void **)(&c.snn),
+        throw(malloc_ptr((void **)(&c.snn),
                          sizeof(*(c.snn))*c.num_layers*MAX_NUM_LINES));
-        check(malloc_ptr((void **)(&c.gamma),
+        throw(malloc_ptr((void **)(&c.gamma),
                          sizeof(*(c.gamma))*c.num_layers*MAX_NUM_LINES));
-        check(malloc_ptr((void **)(&c.alpha),
+        throw(malloc_ptr((void **)(&c.alpha),
                          sizeof(*(c.alpha))*c.num_layers*MAX_NUM_LINES));
     }
-
-/*
-    if (c.gpu_id != HOST_ONLY)
+    else
     {
+/*
 #ifdef __NVCC__
         size_t num_elements = c.num_levels;
         HANDLE_ERROR(cudaMalloc(&(c.P),
@@ -291,16 +301,16 @@ EXTERN int grt_context_init(GrtContext_t **context,
         num_elements = c.num_layers*c.num_wpoints;
         HANDLE_ERROR(cudaMalloc(&(c.tau),
                                 sizeof(*(c.tau))*num_elements));
-        check(inittips_d());
+        throw(inittips_d());
 #endif
-        check(alloc_line_params_device(&(c.lines),
+        throw(alloc_line_params_device(&(c.lines),
                                        MAX_NUM_LINES));
-    }
 */
+    }
 
     /*Copy data into the input context.*/
     not_null(context);
-    check(malloc_ptr((void **)context,
+    throw(malloc_ptr((void **)context,
                      sizeof(**context)));
     not_null(*context);
     memcpy(*context,
@@ -321,21 +331,21 @@ EXTERN int grt_context_free(GrtContext_t **context /**< Library context.*/
     int i;
     for (i=0;i<c->num_molecules;++i)
     {
-        check(free_molecule(&(c->mols[i])));
+        throw(free_molecule(&(c->mols[i])));
     }
-    check(destroy_spectral_bins(&(c->bins)));
+    throw(destroy_spectral_bins(&(c->bins)));
     if (c->gpu_id == HOST_ONLY)
     {
-        check(free_ptr((void **)&(c->x)));
-        check(free_ptr((void **)&(c->n)));
-        check(free_ptr((void **)&(c->pavg)));
-        check(free_ptr((void **)&(c->tavg)));
-        check(free_ptr((void **)&(c->psavg)));
-        check(free_ptr((void **)&(c->ns)));
-        check(free_ptr((void **)&(c->linecenter)));
-        check(free_ptr((void **)&(c->snn)));
-        check(free_ptr((void **)&(c->gamma)));
-        check(free_ptr((void **)&(c->alpha)));
+        throw(free_ptr((void **)&(c->x)));
+        throw(free_ptr((void **)&(c->n)));
+        throw(free_ptr((void **)&(c->pavg)));
+        throw(free_ptr((void **)&(c->tavg)));
+        throw(free_ptr((void **)&(c->psavg)));
+        throw(free_ptr((void **)&(c->ns)));
+        throw(free_ptr((void **)&(c->linecenter)));
+        throw(free_ptr((void **)&(c->snn)));
+        throw(free_ptr((void **)&(c->gamma)));
+        throw(free_ptr((void **)&(c->alpha)));
     }
 
 /*
@@ -355,7 +365,7 @@ EXTERN int grt_context_free(GrtContext_t **context /**< Library context.*/
         HANDLE_ERROR(cudaFree(c->Pshift));
         HANDLE_ERROR(cudaFree(c->s));
         HANDLE_ERROR(cudaFree(c->tau));
-        check(free_line_params_device(&(c->lines)));
+        throw(free_line_params_device(&(c->lines)));
 #endif
     }
 */
@@ -363,22 +373,22 @@ EXTERN int grt_context_free(GrtContext_t **context /**< Library context.*/
     {
         if (c->gpu_id == HOST_ONLY)
         {
-            check(free_water_vapor_continuum_coefs(&(c->h2o_cc)));
+            throw(free_water_vapor_continuum_coefs(&(c->h2o_cc)));
         }
         else
         {
-            check(remove_water_vapor_coefs_from_device(&(c->h2o_cc)));
+            throw(remove_water_vapor_coefs_from_device(&(c->h2o_cc)));
         }
     }
     if (c->use_o3_ctm && is_molecule_active(c->molecule_bit_field,O3))
     {
         if (c->gpu_id == HOST_ONLY)
         {
-            check(free_ozone_continuum_coefs(&(c->o3_cc)));
+            throw(free_ozone_continuum_coefs(&(c->o3_cc)));
         }
         else
         {
-            check(remove_ozone_coefs_from_device(&(c->o3_cc)));
+            throw(remove_ozone_coefs_from_device(&(c->o3_cc)));
         }
     }
     free(c);
@@ -402,14 +412,14 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
     not_null(context);
     if (is_molecule_active(context->molecule_bit_field,molecule_id))
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "molecule %d has already been added.",
               molecule_id);
     }
     int index = context->num_molecules;
     (context->num_molecules)++;
     in_range(context->num_molecules,1,NUM_MOLS);
-    check(activate_molecule(&(context->molecule_bit_field),
+    throw(activate_molecule(&(context->molecule_bit_field),
                             molecule_id));
     double w0;
     if (min_line_center != NULL)
@@ -432,7 +442,7 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
         wn = context->wn;
     }
     min_check(wn,w0);
-    check(molecule(&(context->mols[index]),
+    throw(molecule(&(context->mols[index]),
                    molecule_id,
                    context->hitran_path,
                    w0,
@@ -449,7 +459,7 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
                  context->mols[index].name);
 
         /*Read in the water vapor continuum coefficients.*/
-        check(get_water_vapor_continuum_coefs(&(context->h2o_cc),
+        throw(get_water_vapor_continuum_coefs(&(context->h2o_cc),
                                               context->h2o_ctm_dir,
                                               context->num_wpoints,
                                               context->w0,
@@ -459,7 +469,7 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
 #ifdef __NVCC__
             HANDLE_ERROR(cudaSetDevice(context->gpu_id));
 #endif
-            check(put_water_vapor_coefs_on_device(&(context->h2o_cc),
+            throw(put_water_vapor_coefs_on_device(&(context->h2o_cc),
                                                   &(context->h2o_cc)));
         }
     }
@@ -470,7 +480,7 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
                  context->mols[index].name);
 
         /*Read in the ozone continuum coefficients.*/
-        check(get_ozone_continuum_coefs(&(context->o3_cc),
+        throw(get_ozone_continuum_coefs(&(context->o3_cc),
                                         context->o3_ctm_dir,
                                         context->num_wpoints,
                                         context->w0,
@@ -480,7 +490,7 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
 #ifdef __NVCC__
             HANDLE_ERROR(cudaSetDevice(context->gpu_id));
 #endif
-            check(put_ozone_coefs_on_device(&(context->o3_cc),
+            throw(put_ozone_coefs_on_device(&(context->o3_cc),
                                             &(context->o3_cc)));
         }
     }
@@ -502,12 +512,12 @@ EXTERN int grt_set_molecule_ppmv(GrtContext_t *context,
         return SUCCESS;
     }
     int index;
-    check(molecule_hash(molecule_id,
+    throw(molecule_hash(molecule_id,
                         &index));
     int offset = index*context->num_levels;
     size_t num_bytes = sizeof(*ppmv)*context->num_levels;
     fp_t *a = NULL;
-    check(malloc_ptr((void **)(&a),
+    throw(malloc_ptr((void **)(&a),
                      num_bytes));
     int i;
     for (i=0;i<context->num_levels;++i)
@@ -548,7 +558,7 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
     not_null(optical_depth);
     fp_t const mbtoatm = 0.000986923f;
     fp_t *p = NULL;
-    check(malloc_ptr((void **)(&p),
+    throw(malloc_ptr((void **)(&p),
                      sizeof(*p)*context->num_levels));
     int i;
     for (i=0;i<context->num_levels;++i)
@@ -561,7 +571,7 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
                      " atmospheric layers on the host CPU.",
                  context->num_molecules,
                  context->num_levels-1);
-        check(launch_h(context,
+        throw(launch_h(context,
                        p,
                        temperature,
                        optical_depth));
@@ -585,7 +595,7 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
                                 temperature,
                                 sizeof(*temperature)*num_elements,
                                 cudaMemcpyHostToDevice));
-        check(launch(context->num_levels,
+        throw(launch(context->num_levels,
                      context->P,
                      context->T,
                      context->x,

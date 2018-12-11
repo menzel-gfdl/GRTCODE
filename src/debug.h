@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "utils.h"
 #include "verbosity.h"
 
 
@@ -21,7 +22,8 @@ enum return_codes
     RANGE_ERR,
     VALUE_ERR,
     COMPILER_ERR,
-    IO_ERR
+    IO_ERR,
+    GPU_ERR
 };
 
 
@@ -54,7 +56,7 @@ enum return_codes
     }}
 
 
-#define log_info(mesg,...) {\
+#define log_info(mesg,...) { \
     if (get_verbosity() >= INFO) { \
         fprintf(stderr, \
                 "\r\33[2K[%s:%d] info: " mesg "\n", \
@@ -64,7 +66,7 @@ enum return_codes
     }}
 
 
-#define log_mesg(mesg,...) {\
+#define log_mesg(mesg,...) { \
     if (get_verbosity() >= NONE) { \
         fprintf(stdout, \
                 "\r\33[2K" mesg "\n", \
@@ -73,13 +75,13 @@ enum return_codes
 
 
 /*Macros that return error codes.*/
-#define fatal(err,mesg,...) {\
+#define raise(err,mesg,...) { \
     log_err(mesg, \
             __VA_ARGS__); \
     return err;}
 
 
-#define check(val) {\
+#define throw(val) { \
     int e_ = val; \
     if (e_ != SUCCESS) \
     { \
@@ -88,8 +90,8 @@ enum return_codes
     }}
 
 
-#define sentinel() {\
-    fatal(SENTINEL_ERR, \
+#define sentinel() { \
+    raise(SENTINEL_ERR, \
           "This branch should never be reached (%s,%d).", \
           __FILE__, \
           __LINE__)};
@@ -97,88 +99,154 @@ enum return_codes
 
 /*Safety checks.*/
 #if defined(__CUDA_ARCH__) || defined(FAST)
-
-
 #define not_null(p) {}
 #define is_null(p) {}
 #define not_nan(v) {}
 #define min_check(v,min) {}
 #define max_check(v,max) {}
 #define in_range(v,min,max) {}
-
-
 #else
-
-
-#define not_null(p) {\
+#define not_null(p) { \
     if (p == NULL) \
     { \
-        fatal(NULL_ERR, \
+        raise(NULL_ERR, \
               "null pointer at address %p.",(void *)(&p)); \
     }}
 
 
-#define is_null(p) {\
+#define is_null(p) { \
     if (p != NULL) \
     { \
-        fatal(NON_NULL_ERR, \
+        raise(NON_NULL_ERR, \
               "pointer at address %p is not null.",(void *)(&p)); \
     }}
 
 
-#define not_nan(v) {\
+#define not_nan(v) { \
     if (isnan((double)v)) \
     { \
-        fatal(INVALID_ERR, \
+        raise(INVALID_ERR, \
               "input value (%e) is Nan.", \
               (double)v); \
     }}
 
 
-#define min_check(v,min) {\
+#define min_check(v,min) { \
     not_nan(v) \
     not_nan(min) \
     if (v < min) \
     { \
-        fatal(RANGE_ERR, \
+        raise(RANGE_ERR, \
               "value (%e) less than minimum allowed (%e).", \
               (double)v, \
               (double)min); \
     }}
 
 
-#define max_check(v,max) {\
+#define max_check(v,max) { \
     not_nan(v) \
     not_nan(max) \
     if (v > max) \
     { \
-        fatal(RANGE_ERR, \
+        raise(RANGE_ERR, \
               "value (%e) greater than maximum allowed (%e).", \
               (double)v, \
               (double)max); \
     }}
 
 
-#define in_range(v,min,max) {\
+#define in_range(v,min,max) { \
     if (min > max) \
     { \
-        fatal(RANGE_ERR, \
+        raise(RANGE_ERR, \
               "min value (%e) greater tha max value (%e).", \
               (double)min, \
               (double)max); \
     } \
     min_check(v,min); \
     max_check(v,max);}
-
-
 #endif
 
 
 #ifdef __NVCC__
-#define kernel_err(mesg,...) {}
+#define gpu_throw(val) {\
+    int e_ = val; \
+    if (e_ != cudaSuccess) \
+    { \
+        raise(GPU_ERR, \
+              "cuda: %s", \
+              cudaGetErrorString(e_)); \
+    }}
 #else
-#define kernel_err(mesg,...) {log_err(mesg,__VA_ARGS__);exit(1);}
+#define gpu_throw() {}
 #endif
+
+
+#ifndef _OPENMP
+#define omp_set_num_threads(n) {}
+#endif
+
+
+#define gmalloc(ptr,size,loc) { \
+    if (loc == HOST_ONLY) \
+    { \
+        throw(malloc_ptr((void **)&ptr,size)); \
+    } \
+    else \
+    { \
+        gpu_throw(cudaMalloc(&ptr,size)); \
+    }}
+
+
+#define gfree(ptr,loc) { \
+    if (loc == HOST_ONLY) \
+    { \
+        throw(free_ptr(&ptr)); \
+    } \
+    else \
+    { \
+        gpu_throw(cudaFree(ptr)); \
+    }}
+
+
+#define gmemset(ptr,val,size,loc) { \
+    if (loc == HOST_ONLY) \
+    { \
+        memset(ptr,val,size); \
+    } \
+    else \
+    { \
+        gpu_throw(cudaMemset(ptr,val,size)); \
+    }}
+
+
+#define gmemcpy(dst,src,size,loc,dir) { \
+    if (loc == HOST_ONLY) \
+    { \
+        memcpy(dst,src,size); \
+    } \
+    else \
+    { \
+        gpu_throw(cudaMemcpy(dst,src,size,dir)); \
+    }}
+
+
+#define glaunch(func,threads,loc,...) { \
+    if (loc == HOST_ONLY) \
+    { \
+        omp_set_num_threads((int)threads); \
+        throw(func(__VA_ARGS__)); \
+    } \
+    else \
+    { \
+        int min_grid_size; \
+        int dim_block; \
+        gpu_throw(cudaOccupancyMaxPotentialBlockSize(&min_grid_size, \
+                                                     &dim_block,func,0, \
+                                                     (int)threads)); \
+        int dim_grid = (((int)threads) + dim_block - 1)/dim_block; \
+        gpu_throw(func<<<dim_grid,dim_block,0,0>>>(__VA_ARGS__)); \
+    }}
 
 
 #endif

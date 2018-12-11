@@ -28,7 +28,7 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     /*Set file name.*/
     char *filepath;
     size_t s = strlen(o3_ctm_dir) + 64;
-    check(malloc_ptr((void **)(&filepath),
+    throw(malloc_ptr((void **)(&filepath),
                      sizeof(*filepath)*s));
     snprintf(filepath,
              s,
@@ -42,14 +42,14 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     int num_lines;
     int num_cols;
     char **buf;
-    check(parse_csv(filepath,
+    throw(parse_csv(filepath,
                     &num_lines,
                     &num_cols,
                     1,
                     &buf));
     if ((num_vals + 1) != num_cols)
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "The number of columns (%d) in file %s does not match"
                  " the expected number (%d).",
               num_cols,
@@ -60,15 +60,15 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     /*Convert the data from strings to floating point.*/
     fp_t *fbuf = NULL;
     int data_size = num_lines*num_cols;
-    check(malloc_ptr((void **)(&fbuf),
+    throw(malloc_ptr((void **)(&fbuf),
                      sizeof(*fbuf)*data_size));
     int j;
     for (j=0;j<data_size;++j)
     {
         double d;
-        check(to_double(buf[j],
+        throw(to_double(buf[j],
                         &d));
-        check(to_fp_t(d,
+        throw(to_fp_t(d,
                       &(fbuf[j])));
         free(buf[j]);
     }
@@ -77,7 +77,7 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     /*Allocate space for the coefficient values at each wavenumber.*/
     fp_t *c = NULL;
     int num_bytes = sizeof(*c)*num_wpoints;
-    check(malloc_ptr((void **)&c,
+    throw(malloc_ptr((void **)&c,
                      num_bytes));
     memset(c,
            0,
@@ -88,7 +88,7 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     fp_t *y = &(fbuf[num_lines]);
     for (j=0;(unsigned int)j<num_wpoints;++j)
     {
-        check(linear_interpolation(x,
+        throw(linear_interpolation(x,
                                    y,
                                    num_lines,
                                    (fp_t)(w0 + j*res),

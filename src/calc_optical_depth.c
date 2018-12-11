@@ -87,7 +87,7 @@ static int bracket(uint64_t const array_size,
             }
             if (l > r || l == r)
             {
-                fatal(VALUE_ERR,
+                raise(VALUE_ERR,
                       "Something went wrong (l=%zu,r=%zu).",
                       l,
                       r);

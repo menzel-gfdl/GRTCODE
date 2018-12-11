@@ -33,7 +33,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
     int i;
     for (i=0;i<NUM_COEFS;++i)
     {
-        check(malloc_ptr((void **)(&(filepath[i])),
+        throw(malloc_ptr((void **)(&(filepath[i])),
                          sizeof(**filepath)*s));
         switch (i)
         {
@@ -72,7 +72,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
 
     /*Allocate memory for each of the coefficient pointer.*/
     cc->coefs = NULL;
-    check(malloc_ptr((void **)(&(cc->coefs)),
+    throw(malloc_ptr((void **)(&(cc->coefs)),
                      sizeof(*(cc->coefs))*NUM_COEFS));
     for (i=0;i<NUM_COEFS;++i)
     {
@@ -83,14 +83,14 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
         int num_lines;
         int num_cols;
         char **buf;
-        check(parse_csv(filepath[i],
+        throw(parse_csv(filepath[i],
                         &num_lines,
                         &num_cols,
                         1,
                         &buf));
         if ((num_vals[i] + 1) != num_cols)
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "The number of columns (%d) in file %s does not match"
                       " the expected number (%d).",
                   num_cols,
@@ -101,15 +101,15 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
         /*Convert the data from strings to floating point.*/
         fp_t *fbuf = NULL;
         int data_size = num_lines*num_cols;
-        check(malloc_ptr((void **)(&fbuf),
+        throw(malloc_ptr((void **)(&fbuf),
                          sizeof(*fbuf)*data_size));
         int j;
         for (j=0;j<data_size;++j)
         {
             double d;
-            check(to_double(buf[j],
+            throw(to_double(buf[j],
                             &d));
-            check(to_fp_t(d,
+            throw(to_fp_t(d,
                           &(fbuf[j])));
             free(buf[j]);
         }
@@ -118,7 +118,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
         /*Allocate space for the coefficient values at each wavenumber.*/
         fp_t *c = NULL;
         int num_bytes = sizeof(*c)*num_wpoints;
-        check(malloc_ptr((void **)&c,
+        throw(malloc_ptr((void **)&c,
                          num_bytes));
         memset(c,
                0,
@@ -129,7 +129,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
         fp_t *y = &(fbuf[num_lines]);
         for (j=0;(unsigned int)j<num_wpoints;++j)
         {
-            check(linear_interpolation(x,
+            throw(linear_interpolation(x,
                                        y,
                                        num_lines,
                                        (fp_t)(w0 + j*res),
@@ -166,7 +166,7 @@ int put_water_vapor_coefs_on_device(WaterVaporContinuumCoefs_t const * const in,
 {
     not_null(in);
     not_null(out);
-    check(malloc_ptr((void **)(&(out->coefs)),
+    throw(malloc_ptr((void **)(&(out->coefs)),
                      sizeof(*(out->coefs))*NUM_COEFS));
     int i;
     for (i=0;i<NUM_COEFS;++i)

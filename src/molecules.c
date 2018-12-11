@@ -288,12 +288,12 @@ int molecule(Molecule_t * const mol, /**< Molecule object.*/
             mol->num_isotopologues = 4;
             break;
         default:
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "unrecognized molecule id %d.",
                   mol->id);
     }
     mol->mass /= 6.023E23;
-    check(parse_hitran_file(&(mol->line_params),
+    throw(parse_hitran_file(&(mol->line_params),
                             hitran_path,
                             mol->id,
                             min_line_center,
@@ -308,7 +308,7 @@ int free_molecule(Molecule_t * const mol /**< Molecule.*/
                  )
 {
     not_null(mol);
-    check(free_line_params(&(mol->line_params)));
+    throw(free_line_params(&(mol->line_params)));
     return SUCCESS;
 }
 
@@ -329,7 +329,7 @@ int molecule_hash(int const mol_id,
     not_null(hash);
     if (mol_id < H2O || mol_id > NUM_MOLS)
     {
-        fatal(VALUE_ERR,
+        raise(VALUE_ERR,
               "unrecognized molecule id %d.",
               mol_id);
     }

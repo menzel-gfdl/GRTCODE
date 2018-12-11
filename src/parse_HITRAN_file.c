@@ -86,21 +86,21 @@ static int alloc_line_params(LineParams_t * const line_params,
 {
     not_null(line_params);
     line_params->num_lines = num_lines;
-    check(malloc_ptr((void **)(&(line_params->iso)),
+    throw(malloc_ptr((void **)(&(line_params->iso)),
                      sizeof(*(line_params->iso))*num_lines));
-    check(malloc_ptr((void **)(&(line_params->vnn)),
+    throw(malloc_ptr((void **)(&(line_params->vnn)),
                      sizeof(*(line_params->vnn))*num_lines));
-    check(malloc_ptr((void **)(&(line_params->snn)),
+    throw(malloc_ptr((void **)(&(line_params->snn)),
                      sizeof(*(line_params->snn))*num_lines));
-    check(malloc_ptr((void **)(&(line_params->yair)),
+    throw(malloc_ptr((void **)(&(line_params->yair)),
                      sizeof(*(line_params->yair))*num_lines));
-    check(malloc_ptr((void **)(&(line_params->yself)),
+    throw(malloc_ptr((void **)(&(line_params->yself)),
                      sizeof(*(line_params->yself))*num_lines));
-    check(malloc_ptr((void **)(&(line_params->en)),
+    throw(malloc_ptr((void **)(&(line_params->en)),
                      sizeof(*(line_params->en))*num_lines));
-    check(malloc_ptr((void **)(&(line_params->n)),
+    throw(malloc_ptr((void **)(&(line_params->n)),
                      sizeof(*(line_params->n))*num_lines));
-    check(malloc_ptr((void **)(&(line_params->d)),
+    throw(malloc_ptr((void **)(&(line_params->d)),
                      sizeof(*(line_params->n))*num_lines));
     return SUCCESS;
 }
@@ -109,14 +109,14 @@ static int alloc_line_params(LineParams_t * const line_params,
 int free_line_params(LineParams_t * const line_params)
 {
     not_null(line_params);
-    check(free_ptr((void **)&(line_params->iso)));
-    check(free_ptr((void **)&(line_params->vnn)));
-    check(free_ptr((void **)&(line_params->snn)));
-    check(free_ptr((void **)&(line_params->yair)));
-    check(free_ptr((void **)&(line_params->yself)));
-    check(free_ptr((void **)&(line_params->en)));
-    check(free_ptr((void **)&(line_params->n)));
-    check(free_ptr((void **)&(line_params->d)));
+    throw(free_ptr((void **)&(line_params->iso)));
+    throw(free_ptr((void **)&(line_params->vnn)));
+    throw(free_ptr((void **)&(line_params->snn)));
+    throw(free_ptr((void **)&(line_params->yair)));
+    throw(free_ptr((void **)&(line_params->yself)));
+    throw(free_ptr((void **)&(line_params->en)));
+    throw(free_ptr((void **)&(line_params->n)));
+    throw(free_ptr((void **)&(line_params->d)));
     return SUCCESS;
 }
 
@@ -133,7 +133,7 @@ static int realloc_line_params(LineParams_t * const line_params)
     t.en = line_params->en;
     t.n = line_params->n;
     t.d = line_params->d;
-    check(alloc_line_params(line_params,
+    throw(alloc_line_params(line_params,
                             line_params->num_lines));
     memcpy(line_params->iso,
            t.iso,
@@ -159,7 +159,7 @@ static int realloc_line_params(LineParams_t * const line_params)
     memcpy(line_params->d,
            t.d,
            sizeof(*(t.d))*line_params->num_lines);
-    check(free_line_params(&t));
+    throw(free_line_params(&t));
     return SUCCESS;
 }
 
@@ -177,12 +177,12 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
             val->nil = NULL;
             break;
         case I32:
-            check(to_int(sval,
+            throw(to_int(sval,
                          &(val->i)));
             break;
         case F64:
         case F32:
-            check(to_double(sval,
+            throw(to_double(sval,
                             &(val->d)));
             if (typ == F32)
             {
@@ -192,7 +192,7 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
                 }
                 else
                 {
-                    fatal(VALUE_ERR,
+                    raise(VALUE_ERR,
                           "value %e from column %d cannot be safely"
                               " cast as a float.",
                           val->d,
@@ -201,7 +201,7 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
             }
             break;
         default:
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "cast failed on col %d, LookupCast_t %d, sval: %s.",
                   HITRAN2012_fmt[col][0],
                   HITRAN2012_fmt[col][1],
@@ -231,7 +231,7 @@ int parse_hitran_file(LineParams_t * const line_params,
     /*Count the number of lines in the file.*/
     size_t const max_line = 163;
     char* buf;
-    check(malloc_ptr((void **) &buf,
+    throw(malloc_ptr((void **) &buf,
                      sizeof(*buf)*max_line));
     memset(buf,
            0,
@@ -246,7 +246,7 @@ int parse_hitran_file(LineParams_t * const line_params,
     rewind(fp);
 
     /*Malloc space.*/
-    check(alloc_line_params(line_params,
+    throw(alloc_line_params(line_params,
                             n));
 
     /*Parse out the line parameters.*/
@@ -257,7 +257,7 @@ int parse_hitran_file(LineParams_t * const line_params,
         line_count++;
         if ((ll-HITRAN2012_recordLen) > HITRAN2012_pad)
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "Found bad record at line %zu (%zu exceeds max %zu chars)"
                       " in file %s.",
                   line_count,
@@ -267,7 +267,7 @@ int parse_hitran_file(LineParams_t * const line_params,
         }
         else if (ll < HITRAN2012_recordLen)
         {
-            fatal(VALUE_ERR,
+            raise(VALUE_ERR,
                   "Found bad record at line %zu (%zu less than %zu chars)"
                       " in file %s.",
                   line_count,
@@ -294,7 +294,7 @@ int parse_hitran_file(LineParams_t * const line_params,
             if (t != NIL)
             {
                 HITRAN2012_vals_t val;
-                check(HITRAN2012_cast(&val,
+                throw(HITRAN2012_cast(&val,
                                       col,
                                       tmp));
 
@@ -346,7 +346,7 @@ int parse_hitran_file(LineParams_t * const line_params,
                         line_params->d[n] = val.f;
                         break;
                     default:
-                        fatal(VALUE_ERR,
+                        raise(VALUE_ERR,
                               "Unknown column index (%d) on line %zu in file"
                                   "%s.",
                               val_idx,
@@ -371,7 +371,7 @@ int parse_hitran_file(LineParams_t * const line_params,
     /*Close the file.*/
     if (fclose(fp))
     {
-        fatal(IO_ERR,
+        raise(IO_ERR,
               "error closing file %s.",
               filename);
     }
@@ -380,7 +380,7 @@ int parse_hitran_file(LineParams_t * const line_params,
     if (line_params->num_lines != n)
     {
         line_params->num_lines = n;
-        check(realloc_line_params(line_params));
+        throw(realloc_line_params(line_params));
     }
 
     /*Adjust the raw read-in line strengths.*/

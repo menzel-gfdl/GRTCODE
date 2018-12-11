@@ -33,7 +33,7 @@ int launch_h(GrtContext_t * const context,
       each layer.*/
     log_info("Integrating total number density across %d layers.",
              context->num_layers);
-    check(calc_number_densities(context->num_layers,
+    throw(calc_number_densities(context->num_layers,
                                 p,
                                 context->n));
 
@@ -41,7 +41,7 @@ int launch_h(GrtContext_t * const context,
     log_info("Calculating Curtis-Godson pressures and temperatures across"
                  " %d layers.",
              context->num_layers);
-    check(calc_pressures_and_temperatures(context->num_layers,
+    throw(calc_pressures_and_temperatures(context->num_layers,
                                           p,
                                           t,
                                           context->pavg,
@@ -53,7 +53,7 @@ int launch_h(GrtContext_t * const context,
     {
         Molecule_t *mol = &(context->mols[m]);
         int index;
-        check(molecule_hash(mol->id,
+        throw(molecule_hash(mol->id,
                             &index));
 
         /*Calculate the integrated average layer partial pressure.*/
@@ -62,7 +62,7 @@ int launch_h(GrtContext_t * const context,
                      " across %d layers for molecule %s.",
                  context->num_layers,
                  mol->name);
-        check(calc_partial_pressures_and_number_densities(context->num_layers,
+        throw(calc_partial_pressures_and_number_densities(context->num_layers,
                                                           p,
                                                           xp,
                                                           context->n,
@@ -74,7 +74,7 @@ int launch_h(GrtContext_t * const context,
                      " across %d layers for molecule %s.",
                  context->num_layers,
                  mol->name);
-        check(calc_line_centers(mol->line_params.num_lines,
+        throw(calc_line_centers(mol->line_params.num_lines,
                                 context->num_layers,
                                 mol->line_params.vnn,
                                 mol->line_params.d,
@@ -86,7 +86,7 @@ int launch_h(GrtContext_t * const context,
                      " across %d layers for molecule %s.",
                  context->num_layers,
                  mol->name);
-        check(calc_line_strengths(mol->line_params.num_lines,
+        throw(calc_line_strengths(mol->line_params.num_lines,
                                   context->num_layers,
                                   mol->id,
                                   mol->num_isotopologues,
@@ -102,7 +102,7 @@ int launch_h(GrtContext_t * const context,
                      " half-widths across %d layers for molecule %s.",
                  context->num_layers,
                  mol->name);
-        check(calc_lorentz_hw(mol->line_params.num_lines,
+        throw(calc_lorentz_hw(mol->line_params.num_lines,
                               context->num_layers,
                               mol->line_params.n,
                               mol->line_params.yair,
@@ -117,7 +117,7 @@ int launch_h(GrtContext_t * const context,
                      " molecule %s.",
                  context->num_layers,
                  mol->name);
-        check(calc_doppler_hw(mol->line_params.num_lines,
+        throw(calc_doppler_hw(mol->line_params.num_lines,
                               context->num_layers,
                               mol->mass,
                               context->linecenter,
@@ -133,7 +133,7 @@ int launch_h(GrtContext_t * const context,
         switch (context->optical_depth_method)
         {
             case wavenumber_sweep:
-                check(calc_optical_depth_bin_sweep(mol->line_params.num_lines,
+                throw(calc_optical_depth_bin_sweep(mol->line_params.num_lines,
                                                    context->num_layers,
                                                    context->linecenter,
                                                    context->snn,
@@ -144,7 +144,7 @@ int launch_h(GrtContext_t * const context,
                                                    tau));
                 break;
             case line_sweep:
-                check(calc_optical_depth_line_sweep(mol->line_params.num_lines,
+                throw(calc_optical_depth_line_sweep(mol->line_params.num_lines,
                                                     context->num_layers,
                                                     context->linecenter,
                                                     context->snn,
@@ -155,7 +155,7 @@ int launch_h(GrtContext_t * const context,
                                                     tau));
                 break;
             case line_sample:
-                check(calc_optical_depth_line_sample(mol->line_params.num_lines,
+                throw(calc_optical_depth_line_sample(mol->line_params.num_lines,
                                                      context->num_layers,
                                                      context->linecenter,
                                                      context->snn,
@@ -205,7 +205,7 @@ int launch_h(GrtContext_t * const context,
         log_info("Interpolating line wing optical depth contributions across"
                      " %d layers.",
                  context->num_layers);
-        check(interpolate(&(context->bins),
+        throw(interpolate(&(context->bins),
                           tau));
     }
     return SUCCESS;

@@ -111,14 +111,14 @@ int create_spectral_bins(SpectralBins_t *bins,
     {
         (bins->n)++;
     }
-    check(malloc_ptr((void **)(&(bins->l)),
+    throw(malloc_ptr((void **)(&(bins->l)),
                      sizeof(*(bins->l))*bins->n));
-    check(malloc_ptr((void **)(&(bins->r)),
+    throw(malloc_ptr((void **)(&(bins->r)),
                      sizeof(*(bins->r))*bins->n));
     bins->isize = NIP*bins->n;
-    check(malloc_ptr((void **)(&(bins->w)),
+    throw(malloc_ptr((void **)(&(bins->w)),
                      sizeof(*(bins->w))*bins->isize));
-    check(malloc_ptr((void **)(&(bins->tau)),
+    throw(malloc_ptr((void **)(&(bins->tau)),
                      sizeof(*(bins->tau))*bins->isize*bins->num_layers));
 
     /*Interpolation wavenumbers defined as follows:
@@ -173,7 +173,7 @@ int interpolate(SpectralBins_t const * const bins,
         fp_t *t = &(tau[i*bins->num_wpoints]);
 
         /*Do the interpolation on all but the last bin.*/
-        check(quad_bin_interp(w,
+        throw(quad_bin_interp(w,
                               taub,
                               l,
                               r,
@@ -191,7 +191,7 @@ int interpolate(SpectralBins_t const * const bins,
         taub = taub + o*NIP;
 
         /*Do the interpolation on the last bin.*/
-        check(quad_bin_interp(wlast,
+        throw(quad_bin_interp(wlast,
                               taub,
                               llast,
                               rlast,
