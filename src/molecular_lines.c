@@ -40,8 +40,6 @@ static int const MAX_NUM_LINES = 524288; /**< Largest number of spectral
 static double const DEFAULT_CUTOFF = 25.; /**< Default cut-off [1/cm] from
                                                a line center.*/
 static int const DEFAULT_GPU = 0; /**< Default GPU device to use.*/
-static int const HOST_ONLY = -1; /**< Flag indicating that the code should
-                                      only run the host CPU.*/
 
 
 /** @brief Initialize a library context.
@@ -59,6 +57,54 @@ EXTERN int grt_context_init(GrtContext_t **context,
                             int const * const num_threads,
                             int const * const optical_depth_method)
 {
+    /*Determine whether this context will be associated with a specific
+      GPU or the host CPU.*/
+    int num_devices = 0;
+    gpu_throw(get_num_gpus(&num_devices));
+    if (gpu_id != NULL)
+    {
+        c.gpu_id = *gpu_id;
+    }
+    else if (num_devices > 0)
+    {
+        c.gpu_id = DEFAULT_GPU;
+    }
+    else
+    {
+        c.gpu_id = HOST_ONLY;
+    }
+    if (c.gpu_id == HOST_ONLY)
+    {
+        int const min_num_threads = 1;
+        int const max_num_threads = omp_get_max_threads();
+        if (num_threads != NULL)
+        {
+            in_range(*num_threads,min_num_threads,max_num_threads);
+            c.num_threads = *num_threads;
+        }
+        else
+        {
+            c.num_threads = max_num_threads;
+        }
+        omp_set_num_threads(c.num_threads);
+#ifdef _OPENMP
+        log_mesg("Using %d OpenMP threads.",
+                 c.num_threads);
+#endif
+    }
+    else
+    {
+#ifdef __NVCC__
+        in_range(c.gpu_id,0,num_devices);
+        log_mesg("Using GPU device %d.",
+                 c.gpu_id);
+#else
+        raise(COMPILER_ERR,
+              "you must build with nvcc in order to use GPUs (gpu_id=%d.)",
+              c.gpu_id);
+#endif
+    }
+
     /*Set the size of the atmospheric column.*/
     GrtContext_t c;
     in_range(num_levels,MIN_NUM_LEVELS,MAX_NUM_LEVELS);
@@ -134,60 +180,6 @@ EXTERN int grt_context_init(GrtContext_t **context,
     log_mesg("Using spectral line cut-off of %e [1/cm].",
              c.wcutoff);
 
-    /*Determine whether this context will be associated with a specific
-      GPU or the host CPU.*/
-#ifdef __NVCC__
-    int num_devices;
-    throw(get_num_gpus(&num_devices));
-#else
-    int num_devices = 0;
-#endif
-    if (gpu_id != NULL)
-    {
-        c.gpu_id = *gpu_id;
-    }
-    else if (num_devices > 0)
-    {
-        c.gpu_id = DEFAULT_GPU;
-    }
-    else
-    {
-        c.gpu_id = HOST_ONLY;
-    }
-    if (c.gpu_id == HOST_ONLY)
-    {
-#ifdef _OPENMP
-        int const min_num_threads = 1;
-        int const max_num_threads = omp_get_max_threads();
-        if (num_threads != NULL)
-        {
-            in_range(*num_threads,min_num_threads,max_num_threads);
-            c.num_threads = *num_threads;
-        }
-        else
-        {
-            c.num_threads = max_num_threads;
-        }
-        omp_set_num_threads(c.num_threads);
-        log_mesg("Using %d OpenMP threads.",
-                 c.num_threads);
-#else
-        c.num_threads = 1;
-#endif
-    }
-    else
-    {
-#ifndef __NVCC__
-        raise(COMPILER_ERR,
-              "you must build with nvcc in order to use GPUs (gpu_id=%d.)",
-              c.gpu_id);
-#else
-        in_range(c.gpu_id,0,num_devices);
-        HANDLE_ERROR(cudaSetDevice(c.gpu_id));
-        log_mesg("Using GPU device %d.",
-                 c.gpu_id);
-#endif
-    }
 
     /*Set the method that will be used to calculate the optical depths.*/
     if (optical_depth_method != NULL)
@@ -230,82 +222,22 @@ EXTERN int grt_context_init(GrtContext_t **context,
         }
     }
 
-#define malloc(ptr,size,loc) { \
-    if (loc == HOST_ONLY) \
-    { \
-        throw(malloc_ptr((void **)&p,size)); \
-    } \
-    else \
-    { \
-        gpu_catch(cudaMalloc(&p, s)); \
-    } \
-}
-
     /*Reserve memory.*/
-    if (c.gpu_id == HOST_ONLY)
+    gmalloc(c.x,c.num_levels*NUM_MOLS,c.gpu_id);
+    gmalloc(c.n,c.num_layers,c.gpu_id);
+    gmalloc(c.pavg,c.num_layers,c.gpu_id);
+    gmalloc(c.tavg,c.num_layers,c.gpu_id);
+    gmalloc(c.psavg,c.num_layers,c.gpu_id);
+    gmalloc(c.ns,c.num_layers,c.gpu_id);
+    gmalloc(c.linecenter,c.num_layers*MAX_NUM_LINES,c.gpu_id);
+    gmalloc(c.snn,c.num_layers*MAX_NUM_LINES,c.gpu_id);
+    gmalloc(c.gamma,c.num_layers*MAX_NUM_LINES,c.gpu_id);
+    gmalloc(c.alpha,c.num_layers*MAX_NUM_LINES,c.gpu_id);
+    if (c.gpu_id != HOST_ONLY)
     {
-        throw(malloc_ptr((void **)(&c.x),
-                         sizeof(*(c.x))*c.num_levels*NUM_MOLS));
-        throw(malloc_ptr((void **)(&c.n),
-                         sizeof(*(c.n))*c.num_layers));
-        throw(malloc_ptr((void **)(&c.pavg),
-                         sizeof(*(c.pavg))*c.num_layers));
-        throw(malloc_ptr((void **)(&c.tavg),
-                         sizeof(*(c.tavg))*c.num_layers));
-        throw(malloc_ptr((void **)(&c.psavg),
-                         sizeof(*(c.psavg))*c.num_layers));
-        throw(malloc_ptr((void **)(&c.ns),
-                         sizeof(*(c.ns))*c.num_layers));
-        throw(malloc_ptr((void **)(&c.linecenter),
-                         sizeof(*(c.linecenter))*c.num_layers*MAX_NUM_LINES));
-        throw(malloc_ptr((void **)(&c.snn),
-                         sizeof(*(c.snn))*c.num_layers*MAX_NUM_LINES));
-        throw(malloc_ptr((void **)(&c.gamma),
-                         sizeof(*(c.gamma))*c.num_layers*MAX_NUM_LINES));
-        throw(malloc_ptr((void **)(&c.alpha),
-                         sizeof(*(c.alpha))*c.num_layers*MAX_NUM_LINES));
-    }
-    else
-    {
-/*
-#ifdef __NVCC__
-        size_t num_elements = c.num_levels;
-        HANDLE_ERROR(cudaMalloc(&(c.P),
-                                sizeof(*(c.P))*num_elements));
-        HANDLE_ERROR(cudaMalloc(&(c.T),
-                                sizeof(*(c.T))*num_elements));
-        num_elements *= sizeof(*(c.x))*MAX_NUM_MOLECULES;
-        HANDLE_ERROR(cudaMalloc(&(c.x),
-                                num_elements));
-        HANDLE_ERROR(cudaMemset(c.x,
-                                0,
-                                num_elements));
-        num_elements = c.num_layers;
-        HANDLE_ERROR(cudaMalloc(&(c.Pavg),
-                                sizeof(*(c.Pavg))*num_elements));
-        HANDLE_ERROR(cudaMalloc(&(c.Tavg),
-                                sizeof(*(c.Tavg))*num_elements));
-        HANDLE_ERROR(cudaMalloc(&(c.N),
-                                sizeof(*(c.N))*num_elements));
-        HANDLE_ERROR(cudaMalloc(&(c.Ns),
-                                sizeof(*(c.Ns))*num_elements));
-        HANDLE_ERROR(cudaMalloc(&(c.Psavg),
-                                sizeof(*(c.Psavg))*num_elements));
-        num_elements *= MAX_NUM_LINES;
-        HANDLE_ERROR(cudaMalloc(&(c.gamma),
-                                sizeof(*(c.gamma))*num_elements));
-        HANDLE_ERROR(cudaMalloc(&(c.Pshift),
-                                sizeof(*(c.Pshift))*num_elements));
-        HANDLE_ERROR(cudaMalloc(&(c.s),
-                                sizeof(*(c.s))*num_elements));
-        num_elements = c.num_layers*c.num_wpoints;
-        HANDLE_ERROR(cudaMalloc(&(c.tau),
-                                sizeof(*(c.tau))*num_elements));
-        throw(inittips_d());
-#endif
-        throw(alloc_line_params_device(&(c.lines),
-                                       MAX_NUM_LINES));
-*/
+        gmalloc(c.p,c.num_levels,c.gpu_id);
+        gmalloc(c.t,c.num_levels,c.gpu_id);
+        gmalloc(c.tau,c.num_layers*c.num_wpoints,c.gpu_id);
     }
 
     /*Copy data into the input context.*/
@@ -334,41 +266,22 @@ EXTERN int grt_context_free(GrtContext_t **context /**< Library context.*/
         throw(free_molecule(&(c->mols[i])));
     }
     throw(destroy_spectral_bins(&(c->bins)));
-    if (c->gpu_id == HOST_ONLY)
-    {
-        throw(free_ptr((void **)&(c->x)));
-        throw(free_ptr((void **)&(c->n)));
-        throw(free_ptr((void **)&(c->pavg)));
-        throw(free_ptr((void **)&(c->tavg)));
-        throw(free_ptr((void **)&(c->psavg)));
-        throw(free_ptr((void **)&(c->ns)));
-        throw(free_ptr((void **)&(c->linecenter)));
-        throw(free_ptr((void **)&(c->snn)));
-        throw(free_ptr((void **)&(c->gamma)));
-        throw(free_ptr((void **)&(c->alpha)));
-    }
-
-/*
+    gfree(c->x,c->gpu_id);
+    gfree(c->n,c->gpu_id);
+    gfree(c->pavg,c->gpu_id);
+    gfree(c->tavg,c->gpu_id);
+    gfree(c->psavg,c->gpu_id);
+    gfree(c->ns,c->gpu_id);
+    gfree(c->linecenter,c->gpu_id);
+    gfree(c->snn,c->gpu_id);
+    gfree(c->gamma,c->gpu_id);
+    gfree(c->alpha,c->gpu_id);
     if (c->gpu_id != HOST_ONLY)
     {
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaSetDevice(c->gpu_id));
-        HANDLE_ERROR(cudaFree(c->P));
-        HANDLE_ERROR(cudaFree(c->T));
-        HANDLE_ERROR(cudaFree(c->x));
-        HANDLE_ERROR(cudaFree(c->Pavg));
-        HANDLE_ERROR(cudaFree(c->Tavg));
-        HANDLE_ERROR(cudaFree(c->N));
-        HANDLE_ERROR(cudaFree(c->Ns));
-        HANDLE_ERROR(cudaFree(c->Psavg));
-        HANDLE_ERROR(cudaFree(c->gamma));
-        HANDLE_ERROR(cudaFree(c->Pshift));
-        HANDLE_ERROR(cudaFree(c->s));
-        HANDLE_ERROR(cudaFree(c->tau));
-        throw(free_line_params_device(&(c->lines)));
-#endif
+        gfree(c->p,c->gpu_id);
+        gfree(c->t,c->gpu_id);
+        gfree(c->tau,c->gpu_id);
     }
-*/
     if (c->use_h2o_ctm && is_molecule_active(c->molecule_bit_field,H2O))
     {
         if (c->gpu_id == HOST_ONLY)
@@ -466,9 +379,6 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
                                               context->wres));
         if (context->gpu_id != HOST_ONLY)
         {
-#ifdef __NVCC__
-            HANDLE_ERROR(cudaSetDevice(context->gpu_id));
-#endif
             throw(put_water_vapor_coefs_on_device(&(context->h2o_cc),
                                                   &(context->h2o_cc)));
         }
@@ -487,9 +397,6 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
                                         context->wres));
         if (context->gpu_id != HOST_ONLY)
         {
-#ifdef __NVCC__
-            HANDLE_ERROR(cudaSetDevice(context->gpu_id));
-#endif
             throw(put_ozone_coefs_on_device(&(context->o3_cc),
                                             &(context->o3_cc)));
         }
@@ -527,7 +434,6 @@ EXTERN int grt_set_molecule_ppmv(GrtContext_t *context,
     if (context->gpu_id != HOST_ONLY)
     {
 #ifdef __NVCC__
-        HANDLE_ERROR(cudaSetDevice(context->gpu_id));
         HANDLE_ERROR(cudaMemcpy(&(context->x[offset]),
                                 a,
                                 num_bytes,
@@ -585,7 +491,6 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
                  context->num_levels-1,
                  context->gpu_id);
 #ifdef __NVCC__
-        HANDLE_ERROR(cudaSetDevice(context->gpu_id));
         size_t num_elements = context->num_levels;
         HANDLE_ERROR(cudaMemcpy(context->P,
                                 p,

@@ -177,34 +177,44 @@ enum return_codes
               "cuda: %s", \
               cudaGetErrorString(e_)); \
     }}
+#define FROM_HOST 
+#define FROM_DEVICE 
 #else
-#define gpu_throw() {}
+#define gpu_throw(val) {}
+#define FROM_HOST cudaMemcpyHostToDevice
+#define FROM_DEVICE cudaMemcpyDeviceToHost
 #endif
 
 
 #ifndef _OPENMP
 #define omp_set_num_threads(n) {}
+#define omp_get_max_threads() 1
 #endif
+
+
+#define HOST_ONLY -1
 
 
 #define gmalloc(ptr,size,loc) { \
     if (loc == HOST_ONLY) \
     { \
-        throw(malloc_ptr((void **)&ptr,size)); \
+        throw(malloc_ptr((void **)&ptr,sizeof(*ptr)*size)); \
     } \
     else \
     { \
-        gpu_throw(cudaMalloc(&ptr,size)); \
+        gpu_throw(cudaSetDevice(loc)); \
+        gpu_throw(cudaMalloc(&ptr,sizeof(*ptr)*size)); \
     }}
 
 
 #define gfree(ptr,loc) { \
     if (loc == HOST_ONLY) \
     { \
-        throw(free_ptr(&ptr)); \
+        throw(free_ptr((void **)&ptr)); \
     } \
     else \
     { \
+        gpu_throw(cudaSetDevice(loc)); \
         gpu_throw(cudaFree(ptr)); \
     }}
 
@@ -212,22 +222,24 @@ enum return_codes
 #define gmemset(ptr,val,size,loc) { \
     if (loc == HOST_ONLY) \
     { \
-        memset(ptr,val,size); \
+        memset(ptr,val,sizeof(*ptr)*size); \
     } \
     else \
     { \
-        gpu_throw(cudaMemset(ptr,val,size)); \
+        gpu_throw(cudaSetDevice(loc)); \
+        gpu_throw(cudaMemset(ptr,val,sizeof(*ptr)*size)); \
     }}
 
 
 #define gmemcpy(dst,src,size,loc,dir) { \
     if (loc == HOST_ONLY) \
     { \
-        memcpy(dst,src,size); \
+        memcpy(dst,src,sizeof(*ptr)*size); \
     } \
     else \
     { \
-        gpu_throw(cudaMemcpy(dst,src,size,dir)); \
+        gpu_throw(cudaSetDevice(loc)); \
+        gpu_throw(cudaMemcpy(dst,src,sizeof(*ptr)*size,dir)); \
     }}
 
 
@@ -239,6 +251,7 @@ enum return_codes
     } \
     else \
     { \
+        gpu_throw(cudaSetDevice(loc)); \
         int min_grid_size; \
         int dim_block; \
         gpu_throw(cudaOccupancyMaxPotentialBlockSize(&min_grid_size, \

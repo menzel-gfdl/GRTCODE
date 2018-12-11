@@ -89,7 +89,6 @@ int create_spectral_bins(SpectralBins_t *bins,
     bins->num_wpoints = n;
     bins->width = bin_width;
 
-
     /*Determine the number of spectral points per bin.  Each bin will contain
       at least one spectral point.  Each spectral point may only exist in
       one bin.  Interpolation is only required if there are more than 3
@@ -111,15 +110,13 @@ int create_spectral_bins(SpectralBins_t *bins,
     {
         (bins->n)++;
     }
-    throw(malloc_ptr((void **)(&(bins->l)),
-                     sizeof(*(bins->l))*bins->n));
-    throw(malloc_ptr((void **)(&(bins->r)),
-                     sizeof(*(bins->r))*bins->n));
     bins->isize = NIP*bins->n;
-    throw(malloc_ptr((void **)(&(bins->w)),
-                     sizeof(*(bins->w))*bins->isize));
-    throw(malloc_ptr((void **)(&(bins->tau)),
-                     sizeof(*(bins->tau))*bins->isize*bins->num_layers));
+    uint64_t *l;
+    gmalloc(l,bins->n,HOST_ONLY);
+    uint64_t *r;
+    gmalloc(r,bins->n,HOST_ONLY);
+    fp_t *w;
+    gmalloc(w,bins->isize,HOST_ONLY);
 
     /*Interpolation wavenumbers defined as follows:
       - First spectral point in the bin
@@ -129,14 +126,22 @@ int create_spectral_bins(SpectralBins_t *bins,
     uint64_t i;
     for (i=0;i<bins->n;++i)
     {
-        bins->l[i] = i*bins->ppb;
+        l[i] = i*bins->ppb;
         int s = i < (bins->n - 1) ? bins->ppb : bins->last_ppb;
-        bins->r[i] = bins->l[i] + s - 1;
+        r[i] = l[i] + s - 1;
         uint64_t o = i*NIP;
-        bins->w[o] = w0 + bins->ppb*i*wres;
-        bins->w[o+(NIP-1)] = bins->w[o] + (s-1)*wres;
-        bins->w[o+1] = 0.5*(bins->w[o] + bins->w[o+(NIP-1)]);
+        w[o] = w0 + bins->ppb*i*wres;
+        w[o+(NIP-1)] = w[o] + (s-1)*wres;
+        w[o+1] = 0.5f*(w[o] + w[o+(NIP-1)]);
     }
+
+    gmalloc(bins->l,bins->n,gpu_id);
+    gmemcpy(bins->l,l,bins->n,gpu_id,FROM_HOST);
+    gmalloc(bins->r,bins->n,gpu_id);
+    gmemcpy(bins->r,r,bins->n,gpu_id,FROM_HOST);
+    gmalloc(bins->w,bins->isize,gpu_id);
+    gmemcpy(bins->w,w,bins->isize,gpu_id,FROM_HOST);
+    gmalloc(bins->tau,bins->isize*bins->num_layers,gpu_id);
     return SUCCESS;
 }
 
