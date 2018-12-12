@@ -21,7 +21,8 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
                                     char const * const h2o_ctm_dir,
                                     uint64_t const num_wpoints,
                                     double const w0,
-                                    double const res)
+                                    double const res,
+                                    int const gpu_id)
 {
     not_null(cc);
     not_null(h2o_ctm_dir);
@@ -33,8 +34,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
     int i;
     for (i=0;i<NUM_COEFS;++i)
     {
-        throw(malloc_ptr((void **)(&(filepath[i])),
-                         sizeof(**filepath)*s));
+        gmalloc(filepath[i],s,HOST_ONLY);
         switch (i)
         {
             case MTCKD25_F296:
@@ -71,9 +71,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
     }
 
     /*Allocate memory for each of the coefficient pointer.*/
-    cc->coefs = NULL;
-    throw(malloc_ptr((void **)(&(cc->coefs)),
-                     sizeof(*(cc->coefs))*NUM_COEFS));
+    gmalloc(cc->coefs,NUM_COEFS,HOST_ONLY);
     for (i=0;i<NUM_COEFS;++i)
     {
         /*Read in the data.*/
@@ -99,10 +97,9 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
         }
 
         /*Convert the data from strings to floating point.*/
-        fp_t *fbuf = NULL;
+        fp_t *fbuf;
         int data_size = num_lines*num_cols;
-        throw(malloc_ptr((void **)(&fbuf),
-                         sizeof(*fbuf)*data_size));
+        gmalloc(fbuf,data_size,HOST_ONLY);
         int j;
         for (j=0;j<data_size;++j)
         {
@@ -111,19 +108,15 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
                             &d));
             throw(to_fp_t(d,
                           &(fbuf[j])));
-            free(buf[j]);
+            gfree(buf[j],HOST_ONLY);
         }
-        free(buf);
+        gfree(buf,HOST_ONLY);
 
         /*Allocate space for the coefficient values at each wavenumber.*/
-        fp_t *c = NULL;
-        int num_bytes = sizeof(*c)*num_wpoints;
-        throw(malloc_ptr((void **)&c,
-                         num_bytes));
-        memset(c,
-               0,
-               num_bytes);
-        
+        fp_t *c;
+        gmalloc(c,num_wpoints,HOST_ONLY);
+        gmemset(c,0,num_wpoints,HOST_ONLY);
+
         /*Interpolate to wavenumber grid.*/
         fp_t *x = &(fbuf[0]);
         fp_t *y = &(fbuf[num_lines]);
@@ -135,13 +128,23 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
                                        (fp_t)(w0 + j*res),
                                        &(c[j])));
         }
-        free(fbuf);
-        cc->coefs[i] = c;
+        gfree(fbuf,HOST_ONLY);
+        if (gpu_id == HOST_ONLY)
+        {
+            cc->coefs[i] = c;
+        }
+        else
+        {
+            gmalloc(cc->coefs[i],num_wpoints,gpu_id);
+            gmemcpy(cc->coefs[i],c,num_wpoints,gpu_id,FROM_HOST);
+            gfree(c,HOST_ONLY);
+        }
     }
     cc->num_wpoints = num_wpoints;
+    cc->gpu_id = gpu_id;
     for (i=0;i<NUM_COEFS;++i)
     {
-        free(filepath[i]);
+        gfree(filepath[i],HOST_ONLY);
     }
     return SUCCESS;
 }
@@ -153,50 +156,9 @@ int free_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc)
     int i;
     for (i=0;i<NUM_COEFS;++i)
     {
-        free(cc->coefs[i]);
+        gfree(cc->coefs[i],cc->gpu_id);
     }
-    free(cc->coefs);
-    cc->coefs = NULL;
-    return SUCCESS;
-}
-
-
-int put_water_vapor_coefs_on_device(WaterVaporContinuumCoefs_t const * const in,
-                                    WaterVaporContinuumCoefs_t * const out)
-{
-    not_null(in);
-    not_null(out);
-    throw(malloc_ptr((void **)(&(out->coefs)),
-                     sizeof(*(out->coefs))*NUM_COEFS));
-    int i;
-    for (i=0;i<NUM_COEFS;++i)
-    {
-#ifdef __NVCC__
-        int num_bytes = sizeof(*(in->coefs[i]))*(in->num_wpoints);
-        HANDLE_ERROR(cudaMalloc(&(out->coefs[i]),
-                                num_bytes));
-        HANDLE_ERROR(cudaMemcpy(out->coefs[i],
-                                in->coefs[i],
-                                num_bytes,
-                                cudaMemcpyHostToDevice));
-#endif
-    }
-    return SUCCESS;
-}
-
-
-int remove_water_vapor_coefs_from_device(WaterVaporContinuumCoefs_t * const in)
-{
-    not_null(in);
-    int i;
-    for (i=0;i<NUM_COEFS;++i)
-    {
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaFree(in->coefs[i]));
-#endif
-    }
-    free(in->coefs);
-    in->coefs = NULL;
+    gfree(cc->coefs,HOST_ONLY);
     return SUCCESS;
 }
 

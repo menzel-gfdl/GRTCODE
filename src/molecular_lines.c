@@ -59,6 +59,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
 {
     /*Determine whether this context will be associated with a specific
       GPU or the host CPU.*/
+    GrtContext_t c;
     int num_devices = 0;
     gpu_throw(get_num_gpus(&num_devices));
     if (gpu_id != NULL)
@@ -106,7 +107,6 @@ EXTERN int grt_context_init(GrtContext_t **context,
     }
 
     /*Set the size of the atmospheric column.*/
-    GrtContext_t c;
     in_range(num_levels,MIN_NUM_LEVELS,MAX_NUM_LEVELS);
     c.num_levels = num_levels;
     c.num_layers = num_levels - 1;
@@ -146,7 +146,8 @@ EXTERN int grt_context_init(GrtContext_t **context,
                                c.w0,
                                c.num_wpoints,
                                c.wres,
-                               bin_width));
+                               bin_width,
+                               c.gpu_id));
     log_mesg("Spectral bin properties:\n\tnumber of bins: %zu\n\t"
                  "bin width: %e\n\tspectral grid points per bin: %d\n\t"
                  "interpolation: %d\n\tspectral gid points in last bin:"
@@ -284,25 +285,11 @@ EXTERN int grt_context_free(GrtContext_t **context /**< Library context.*/
     }
     if (c->use_h2o_ctm && is_molecule_active(c->molecule_bit_field,H2O))
     {
-        if (c->gpu_id == HOST_ONLY)
-        {
-            throw(free_water_vapor_continuum_coefs(&(c->h2o_cc)));
-        }
-        else
-        {
-            throw(remove_water_vapor_coefs_from_device(&(c->h2o_cc)));
-        }
+        throw(free_water_vapor_continuum_coefs(&(c->h2o_cc)));
     }
     if (c->use_o3_ctm && is_molecule_active(c->molecule_bit_field,O3))
     {
-        if (c->gpu_id == HOST_ONLY)
-        {
-            throw(free_ozone_continuum_coefs(&(c->o3_cc)));
-        }
-        else
-        {
-            throw(remove_ozone_coefs_from_device(&(c->o3_cc)));
-        }
+        throw(free_ozone_continuum_coefs(&(c->o3_cc)));
     }
     free(c);
     *context = NULL;
@@ -368,38 +355,28 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
 
     if (molecule_id == H2O && context->use_h2o_ctm)
     {
+        /*Read in the water vapor continuum coefficients.*/
         log_mesg("Using the %s continuum.",
                  context->mols[index].name);
-
-        /*Read in the water vapor continuum coefficients.*/
         throw(get_water_vapor_continuum_coefs(&(context->h2o_cc),
                                               context->h2o_ctm_dir,
                                               context->num_wpoints,
                                               context->w0,
-                                              context->wres));
-        if (context->gpu_id != HOST_ONLY)
-        {
-            throw(put_water_vapor_coefs_on_device(&(context->h2o_cc),
-                                                  &(context->h2o_cc)));
-        }
+                                              context->wres,
+                                              context->gpu_id));
     }
 
     if (molecule_id == O3 && context->use_o3_ctm)
     {
+        /*Read in the ozone continuum coefficients.*/
         log_mesg("Using the %s continuum.",
                  context->mols[index].name);
-
-        /*Read in the ozone continuum coefficients.*/
         throw(get_ozone_continuum_coefs(&(context->o3_cc),
                                         context->o3_ctm_dir,
                                         context->num_wpoints,
                                         context->w0,
-                                        context->wres));
-        if (context->gpu_id != HOST_ONLY)
-        {
-            throw(put_ozone_coefs_on_device(&(context->o3_cc),
-                                            &(context->o3_cc)));
-        }
+                                        context->wres,
+                                        context->gpu_id));
     }
     return SUCCESS;
 }
@@ -421,32 +398,18 @@ EXTERN int grt_set_molecule_ppmv(GrtContext_t *context,
     int index;
     throw(molecule_hash(molecule_id,
                         &index));
-    int offset = index*context->num_levels;
-    size_t num_bytes = sizeof(*ppmv)*context->num_levels;
-    fp_t *a = NULL;
-    throw(malloc_ptr((void **)(&a),
-                     num_bytes));
+    fp_t a[context->num_levels];
     int i;
     for (i=0;i<context->num_levels;++i)
     {
         a[i] = ppmv[i]*1.e-6;
     }
-    if (context->gpu_id != HOST_ONLY)
-    {
-#ifdef __NVCC__
-        HANDLE_ERROR(cudaMemcpy(&(context->x[offset]),
-                                a,
-                                num_bytes,
-                                cudaMemcpyHostToDevice));
-#endif
-    }
-    else
-    {
-        memcpy(&(context->x[offset]),
-               a,
-               num_bytes);
-    }
-    free(a);
+    int offset = index*context->num_levels;
+    gmemcpy(&(context->x[offset]),
+            a,
+            context->num_levels,
+            context->gpu_id,
+            FROM_HOST);
     return SUCCESS;
 }
 
@@ -463,9 +426,7 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
     not_null(temperature);
     not_null(optical_depth);
     fp_t const mbtoatm = 0.000986923f;
-    fp_t *p = NULL;
-    throw(malloc_ptr((void **)(&p),
-                     sizeof(*p)*context->num_levels));
+    fp_t p[context->num_levels];
     int i;
     for (i=0;i<context->num_levels;++i)
     {
@@ -477,19 +438,20 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
                      " atmospheric layers on the host CPU.",
                  context->num_molecules,
                  context->num_levels-1);
-        throw(launch_h(context,
-                       p,
-                       temperature,
-                       optical_depth));
     }
     else
     {
-/*
         log_mesg("Calculating optical depths for %d molecules in %d"
                      " atmospheric layers on GPU %d.",
                  context->num_molecules,
                  context->num_levels-1,
                  context->gpu_id);
+    }
+    throw(launch_h(context,
+                   p,
+                   temperature,
+                   optical_depth));
+/*
 #ifdef __NVCC__
         size_t num_elements = context->num_levels;
         HANDLE_ERROR(cudaMemcpy(context->P,
@@ -533,8 +495,6 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
                                 cudaMemcpyDeviceToHost));
 #endif
 */
-    }
-    free(p);
     return SUCCESS;
 }
 

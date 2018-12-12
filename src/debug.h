@@ -177,12 +177,18 @@ enum return_codes
               "cuda: %s", \
               cudaGetErrorString(e_)); \
     }}
-#define FROM_HOST 
-#define FROM_DEVICE 
-#else
-#define gpu_throw(val) {}
 #define FROM_HOST cudaMemcpyHostToDevice
 #define FROM_DEVICE cudaMemcpyDeviceToHost
+#define HOST __host__
+#define DEVICE __device__
+#define GLOBAL __global__ void
+#else
+#define gpu_throw(val) {}
+#define FROM_HOST
+#define FROM_DEVICE
+#define HOST
+#define DEVICE
+#define GLOBAL int
 #endif
 
 
@@ -193,17 +199,19 @@ enum return_codes
 
 
 #define HOST_ONLY -1
-
+#define cat(a,b) a##b
 
 #define gmalloc(ptr,size,loc) { \
     if (loc == HOST_ONLY) \
     { \
-        throw(malloc_ptr((void **)&ptr,sizeof(*ptr)*size)); \
+        throw(malloc_ptr((void **)&ptr, \
+                         sizeof(*ptr)*size)); \
     } \
     else \
     { \
         gpu_throw(cudaSetDevice(loc)); \
-        gpu_throw(cudaMalloc(&ptr,sizeof(*ptr)*size)); \
+        gpu_throw(cudaMalloc(&ptr, \
+                             sizeof(*ptr)*size)); \
     }}
 
 
@@ -222,44 +230,65 @@ enum return_codes
 #define gmemset(ptr,val,size,loc) { \
     if (loc == HOST_ONLY) \
     { \
-        memset(ptr,val,sizeof(*ptr)*size); \
+        memset(ptr, \
+               val, \
+               sizeof(*ptr)*size); \
     } \
     else \
     { \
         gpu_throw(cudaSetDevice(loc)); \
-        gpu_throw(cudaMemset(ptr,val,sizeof(*ptr)*size)); \
+        gpu_throw(cudaMemset(ptr, \
+                             val, \
+                             sizeof(*ptr)*size)); \
     }}
 
 
 #define gmemcpy(dst,src,size,loc,dir) { \
     if (loc == HOST_ONLY) \
     { \
-        memcpy(dst,src,sizeof(*ptr)*size); \
+        memcpy(dst, \
+               src, \
+               sizeof(*dst)*size); \
     } \
     else \
     { \
         gpu_throw(cudaSetDevice(loc)); \
-        gpu_throw(cudaMemcpy(dst,src,sizeof(*ptr)*size,dir)); \
+        gpu_throw(cudaMemcpy(dst, \
+                             src, \
+                             sizeof(*dst)*size, \
+                             dir)); \
     }}
 
 
 #define glaunch(func,threads,loc,...) { \
     if (loc == HOST_ONLY) \
     { \
-        omp_set_num_threads((int)threads); \
+        int t_ = omp_get_max_threads(); \
+        if (threads < t_) \
+        { \
+            omp_set_num_threads(threads); \
+        } \
         throw(func(__VA_ARGS__)); \
+        if (threads < t_) \
+        { \
+            omp_set_num_threads(t_); \
+        } \
     } \
+    }
+/*
     else \
     { \
         gpu_throw(cudaSetDevice(loc)); \
         int min_grid_size; \
         int dim_block; \
         gpu_throw(cudaOccupancyMaxPotentialBlockSize(&min_grid_size, \
-                                                     &dim_block,func,0, \
+                                                     &dim_block, \
+                                                     cat(func,_d), \
+                                                     0, \
                                                      (int)threads)); \
         int dim_grid = (((int)threads) + dim_block - 1)/dim_block; \
-        gpu_throw(func<<<dim_grid,dim_block,0,0>>>(__VA_ARGS__)); \
+        gpu_throw(cat(func,_d)<<<dim_grid,dim_block,0,0>>>(__VA_ARGS__)); \
     }}
-
+*/
 
 #endif

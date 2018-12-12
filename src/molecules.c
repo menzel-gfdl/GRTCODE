@@ -313,16 +313,6 @@ int free_molecule(Molecule_t * const mol /**< Molecule.*/
 }
 
 
-
-
-
-
-
-
-
-
-
-
 int molecule_hash(int const mol_id,
                   int * const hash)
 {

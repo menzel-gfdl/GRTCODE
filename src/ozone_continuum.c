@@ -20,7 +20,8 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
                               char const * const o3_ctm_dir,
                               uint64_t const num_wpoints,
                               double const w0,
-                              double const res)
+                              double const res,
+                              int const gpu_id)
 {
     not_null(cc);
     not_null(o3_ctm_dir);
@@ -28,8 +29,7 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     /*Set file name.*/
     char *filepath;
     size_t s = strlen(o3_ctm_dir) + 64;
-    throw(malloc_ptr((void **)(&filepath),
-                     sizeof(*filepath)*s));
+    gmalloc(filepath,s,HOST_ONLY);
     snprintf(filepath,
              s,
              "%s/ozone_continuum.csv",
@@ -58,10 +58,9 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     }
 
     /*Convert the data from strings to floating point.*/
-    fp_t *fbuf = NULL;
+    fp_t *fbuf;
     int data_size = num_lines*num_cols;
-    throw(malloc_ptr((void **)(&fbuf),
-                     sizeof(*fbuf)*data_size));
+    gmalloc(fbuf,data_size,HOST_ONLY);
     int j;
     for (j=0;j<data_size;++j)
     {
@@ -70,18 +69,14 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
                         &d));
         throw(to_fp_t(d,
                       &(fbuf[j])));
-        free(buf[j]);
+        gfree(buf[j],HOST_ONLY);
     }
-    free(buf);
+    gfree(buf,HOST_ONLY);
 
     /*Allocate space for the coefficient values at each wavenumber.*/
-    fp_t *c = NULL;
-    int num_bytes = sizeof(*c)*num_wpoints;
-    throw(malloc_ptr((void **)&c,
-                     num_bytes));
-    memset(c,
-           0,
-           num_bytes);
+    fp_t *c;
+    gmalloc(c,num_wpoints,HOST_ONLY);
+    gmemset(c,0,num_wpoints,HOST_ONLY);
 
     /*Interpolate to wavenumber grid.*/
     fp_t *x = &(fbuf[0]);
@@ -94,10 +89,20 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
                                    (fp_t)(w0 + j*res),
                                    &(c[j])));
     }
-    free(fbuf);
-    cc->cross_section = c;
+    gfree(fbuf,HOST_ONLY);
+    if (gpu_id == HOST_ONLY)
+    {
+        cc->cross_section = c;
+    }
+    else
+    {
+        gmalloc(cc->cross_section,num_wpoints,gpu_id);
+        gmemcpy(cc->cross_section,c,num_wpoints,gpu_id,FROM_HOST);
+        gfree(c,HOST_ONLY);
+    }
     cc->num_wpoints = num_wpoints;
-    free(filepath);
+    cc->gpu_id = gpu_id;
+    gfree(filepath,HOST_ONLY);
     return SUCCESS;
 }
 
@@ -105,36 +110,7 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
 int free_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc)
 {
     not_null(cc);
-    free(cc->cross_section);
-    cc->cross_section = NULL;
-    return SUCCESS;
-}
-
-
-int put_ozone_coefs_on_device(OzoneContinuumCoefs_t const * const in,
-                              OzoneContinuumCoefs_t * const out)
-{
-    not_null(in);
-    not_null(out);
-#ifdef __NVCC__
-    int num_bytes = sizeof(*(in->cross_section))*(in->num_wpoints);
-    HANDLE_ERROR(cudaMalloc(&(out->cross_section),
-                            num_bytes));
-    HANDLE_ERROR(cudaMemcpy(out->cross_section,
-                            in->cross_section,
-                            num_bytes,
-                            cudaMemcpyHostToDevice));
-#endif
-    return SUCCESS;
-}
-
-
-int remove_ozone_coefs_from_device(OzoneContinuumCoefs_t * const in)
-{
-    not_null(in);
-#ifdef __NVCC__
-    HANDLE_ERROR(cudaFree(in->cross_section));
-#endif
+    gfree(cc->cross_section,cc->gpu_id);
     return SUCCESS;
 }
 

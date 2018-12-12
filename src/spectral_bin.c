@@ -11,61 +11,51 @@
 /** @brief Loop through the bins, interpolate optical depth values, and add
            them to the input optical depth array.
     @return SUCCESS or an error code.*/
-static int quad_bin_interp(fp_t const * const wb, /**< Wavenumbers [1/cm] in each bin (n,ppb).*/
-                           fp_t const * const taub, /**< Optical depths in each bin (n,ppb).*/
-                           uint64_t const * const left, /**< Index of the left-most spectral
-                                                             grid point in each bin (n).*/
-                           uint64_t const * const right, /**< Index of the right-most spectral
-                                                              grid point in each bin (n).*/
-                           int const do_interp, /**< Flag telling if interpolation is
-                                                     required.*/
-                           uint64_t const num_bins, /**< The number of bins.*/
-                           fp_t const w0, /**< Lower bound [1/cm] of the spectral grid.*/
-                           fp_t const wres, /**< Resolution [1/cm] of the spectral grid.*/
-                           fp_t * const tau /**< Optical depths.*/
-                          )
+HOST DEVICE static int bin_quad_interp(fp_t const * const x, /**< Wavenumbers [1/cm] in each bin (n,ppb).*/
+                                       fp_t const * const y, /**< Optical depths in each bin (n,ppb).*/
+                                       uint64_t const left, /**< Index of the left-most spectral
+                                                                 grid point in each bin (n).*/
+                                       uint64_t const right, /**< Index of the right-most spectral
+                                                                  grid point in each bin (n).*/
+                                       fp_t const w0, /**< Lower bound [1/cm] of the spectral grid.*/
+                                       fp_t const wres, /**< Resolution [1/cm] of the spectral grid.*/
+                                       fp_t * const tau /**< Optical depths.*/
+                                      )
 {
-    if (do_interp)
+    not_null(x);
+    not_null(y);
+    not_null(tau);
+    uint64_t j;
+    for (j=left;j<=right;++j)
     {
-        uint64_t i;
-#pragma omp parallel for default(none) private(i)
-        for (i=0;i<num_bins;++i)
+        fp_t w = w0 + j*wres;
+        fp_t t = (w-x[1])*(w-x[2])*y[0]/((x[0]-x[1])*(x[0]-x[2])) +
+                 (w-x[0])*(w-x[2])*y[1]/((x[1]-x[0])*(x[1]-x[2])) +
+                 (w-x[0])*(w-x[1])*y[2]/((x[2]-x[0])*(x[2]-x[1]));
+        if (t < 0.f)
         {
-            fp_t x[3];
-            x[0] = wb[i*NIP];
-            x[1] = wb[i*NIP+1];
-            x[2] = wb[i*NIP+2];
-            fp_t y[3];
-            y[0] = taub[i*NIP];
-            y[1] = taub[i*NIP+1];
-            y[2] = taub[i*NIP+2];
-            uint64_t j;
-            for (j=left[i];j<=right[i];++j)
-            {
-                fp_t w = w0 + j*wres;
-                fp_t t = (w-x[1])*(w-x[2])*y[0]/((x[0]-x[1])*(x[0]-x[2])) +
-                         (w-x[0])*(w-x[2])*y[1]/((x[1]-x[0])*(x[1]-x[2])) +
-                         (w-x[0])*(w-x[1])*y[2]/((x[2]-x[0])*(x[2]-x[1]));
-                if (t < 0.f)
-                {
-                    t = 0.f;
-                }
-                tau[j] += t;
-            }
+            t = 0.f;
         }
+        tau[j] += t;
     }
-    else
+    return SUCCESS;
+}
+
+
+/** @brief Copy optical depths from the coarse mesh to the fine mesh in a
+           bin.
+    @return SUCCESS or an error code.*/
+HOST DEVICE static int bin_no_interp(uint64_t const left,
+                                     uint64_t const right,
+                                     fp_t const * const taub,
+                                     fp_t * const tau)
+{
+    not_null(taub);
+    not_null(tau);
+    uint64_t j;
+    for (j=left;j<=right;++j)
     {
-        uint64_t i;
-#pragma omp parallel for default(none) private(i)
-        for (i=0;i<num_bins;++i)
-        {
-            uint64_t j;
-            for (j=left[i];j<=right[i];++j)
-            {
-                tau[j] += taub[i*NIP+j-left[i]];
-            }
-        }
+        tau[j] += taub[j-left];
     }
     return SUCCESS;
 }
@@ -77,7 +67,8 @@ int create_spectral_bins(SpectralBins_t *bins,
                          double const w0,
                          uint64_t const n,
                          double const wres,
-                         double const bin_width)
+                         double const bin_width,
+                         int const gpu_id)
 {
     not_null(bins);
 
@@ -111,12 +102,9 @@ int create_spectral_bins(SpectralBins_t *bins,
         (bins->n)++;
     }
     bins->isize = NIP*bins->n;
-    uint64_t *l;
-    gmalloc(l,bins->n,HOST_ONLY);
-    uint64_t *r;
-    gmalloc(r,bins->n,HOST_ONLY);
-    fp_t *w;
-    gmalloc(w,bins->isize,HOST_ONLY);
+    uint64_t l[bins->n];
+    uint64_t r[bins->n];
+    fp_t w[bins->isize];
 
     /*Interpolation wavenumbers defined as follows:
       - First spectral point in the bin
@@ -142,6 +130,7 @@ int create_spectral_bins(SpectralBins_t *bins,
     gmalloc(bins->w,bins->isize,gpu_id);
     gmemcpy(bins->w,w,bins->isize,gpu_id,FROM_HOST);
     gmalloc(bins->tau,bins->isize*bins->num_layers,gpu_id);
+    bins->gpu_id = gpu_id;
     return SUCCESS;
 }
 
@@ -150,61 +139,93 @@ int create_spectral_bins(SpectralBins_t *bins,
 int destroy_spectral_bins(SpectralBins_t *bins)
 {
     not_null(bins);
-    not_null(bins->w);
-    free(bins->w);
-    not_null(bins->tau);
-    free(bins->tau);
-    not_null(bins->l);
-    free(bins->l);
-    not_null(bins->r);
-    free(bins->r);
+    gfree(bins->w,bins->gpu_id);
+    gfree(bins->tau,bins->gpu_id);
+    gfree(bins->l,bins->gpu_id);
+    gfree(bins->r,bins->gpu_id);
     return SUCCESS;
 }
 
 
 /*Do a quadratic interpolation of line wing values in each bin for each layer
   to the spectral grid.*/
-int interpolate(SpectralBins_t const * const bins,
-                fp_t * const tau)
+interpolate(SpectralBins_t const * const bins,
+            fp_t * const tau)
 {
     not_null(bins);
-    uint64_t const *l = bins->l;
-    uint64_t const *r = bins->r;
-    fp_t const *w = bins->w;
+    not_null(tau);
     int i;
-    for (i=0;i<bins->num_layers;++i)
+    uint64_t j;
+
+    /*Handle all but the last bin.*/
+    if (bins->do_interp)
     {
-        fp_t const *taub = &(bins->tau[i*bins->isize]);
-        fp_t *t = &(tau[i*bins->num_wpoints]);
+#pragma omp parallel for collapse(2) default(none) private(i,j)
+        for (i=0;i<bins->num_layers;++i)
+        {
+            for (j=0;j<bins->n-1;++j)
+            {
+                fp_t *t = &(tau[i*bins->num_wpoints]);
+                fp_t const *x = &(bins->w[j*NIP]);
+                fp_t const *y = &(bins->tau[i*bins->isize + j*NIP]);
+                bin_quad_interp(x,
+                                y,
+                                bins->l[j],
+                                bins->r[j],
+                                bins->w0,
+                                bins->wres,
+                                t);
+            }
+        }
+    }
+    else
+    {
+#pragma omp parallel for collapse(2) default(none) private(i,j)
+        for (i=0;i<bins->num_layers;++i)
+        {
+            for (j=0;j<bins->n-1;++j)
+            {
+                fp_t *t = &(tau[i*bins->num_wpoints]);
+                fp_t const *y = &(bins->tau[i*bins->isize + j*NIP]);
+                bin_no_interp(bins->l[j],
+                              bins->r[j],
+                              y,
+                              t);
+            }
+        }
+    }
 
-        /*Do the interpolation on all but the last bin.*/
-        throw(quad_bin_interp(w,
-                              taub,
-                              l,
-                              r,
-                              bins->do_interp,
-                              bins->n-1,
-                              bins->w0,
-                              bins->wres,
-                              t));
-
-        /*Move pointers so that they reference the last bin.*/
-        uint64_t o = bins->n-1;
-        uint64_t const *llast = l + o;
-        uint64_t const *rlast = r + o;
-        fp_t const *wlast = w + o*NIP;
-        taub = taub + o*NIP;
-
-        /*Do the interpolation on the last bin.*/
-        throw(quad_bin_interp(wlast,
-                              taub,
-                              llast,
-                              rlast,
-                              bins->do_last_interp,
-                              1,
-                              bins->w0,
-                              bins->wres,
-                              t));
+    /*Handle the last bin.*/
+    j = bins->n - 1;
+    if (bins->do_last_interp)
+    {
+#pragma omp parallel for default(none) shared(j) private(i)
+        for (i=0;i<bins->num_layers;++i)
+        {
+            fp_t *t = &(tau[i*bins->num_wpoints]);
+            fp_t const *x = &(bins->w[j*NIP]);
+            fp_t const *y = &(bins->tau[i*bins->isize + j*NIP]);
+            bin_quad_interp(x,
+                            y,
+                            bins->l[j],
+                            bins->r[j],
+                            bins->w0,
+                            bins->wres,
+                            t);
+        }
+    }
+    else
+    {
+#pragma omp parallel for default(none) shared(j) private(i)
+        for (i=0;i<bins->num_layers;++i)
+        {
+            fp_t *t = &(tau[i*bins->num_wpoints]);
+            fp_t const *y = &(bins->tau[i*bins->isize + j*NIP]);
+            bin_no_interp(bins->l[j],
+                          bins->r[j],
+                          y,
+                          t);
+        }
     }
     return SUCCESS;
 }

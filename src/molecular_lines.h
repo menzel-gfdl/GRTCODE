@@ -191,7 +191,7 @@ typedef struct GrtContext
     OzoneContinuumCoefs_t o3_cc; /**< Structure containing ozone continuum
                                       coefficients.*/
     fp_t *p; /**< Pressure [atm] (levels).*/
-    fp_t *t; /**< Temperatture [K] (levels).*/
+    fp_t *t; /**< Temperature [K] (levels).*/
     fp_t *tau; /**< Optical depths (layer,wavenumber).*/
 
 

@@ -387,9 +387,9 @@ int parse_hitran_file(LineParams_t * const line_params,
     fp_t const tref = 296.f;
     fp_t const c2 = -1.4387686f;
     fp_t *snn = line_params->snn;
-    int *iso = line_params->iso;
-    fp_t *en = line_params->en;
-    fp_t *vnn = line_params->vnn;
+    int const *iso = line_params->iso;
+    fp_t const *en = line_params->en;
+    fp_t const *vnn = line_params->vnn;
     uint64_t i;
 #pragma omp parallel for default(none) private(i) shared(snn,iso,en,vnn,n)
     for (i=0;i<n;++i)

@@ -19,6 +19,7 @@ typedef struct WaterVaporContinuumCoefs
 {
     fp_t **coefs;
     uint64_t num_wpoints;
+    int gpu_id;
 } WaterVaporContinuumCoefs_t;
 
 
@@ -26,17 +27,11 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
                                     char const * const h2o_ctm_dir,
                                     uint64_t const num_wpoints,
                                     double const w0,
-                                    double const res);
+                                    double const res,
+                                    int const gpu_id);
 
 
 int free_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc);
-
-
-int put_water_vapor_coefs_on_device(WaterVaporContinuumCoefs_t const * const in,
-                                    WaterVaporContinuumCoefs_t * const out);
-
-
-int remove_water_vapor_coefs_from_device(WaterVaporContinuumCoefs_t * const in);
 
 
 #ifdef __NVCC__

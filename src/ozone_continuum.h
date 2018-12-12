@@ -9,6 +9,7 @@ typedef struct OzoneContinuumCoefs
 {
     fp_t *cross_section; /*Ozone continuum cross-section [cm^2].*/
     uint64_t num_wpoints;
+    int gpu_id;
 } OzoneContinuumCoefs_t;
 
 
@@ -17,17 +18,11 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
                               char const * const o3_ctm_dir,
                               uint64_t const num_wpoints,
                               double const w0,
-                              double const res);
+                              double const res,
+                              int const gpu_id);
 
 
 int free_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc);
-
-
-int put_ozone_coefs_on_device(OzoneContinuumCoefs_t const * const in,
-                              OzoneContinuumCoefs_t * const out);
-
-
-int remove_ozone_coefs_from_device(OzoneContinuumCoefs_t * const in);
 
 
 #ifdef __NVCC__

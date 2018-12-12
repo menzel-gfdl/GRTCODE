@@ -3,6 +3,7 @@
 #define SPECTRAL_BIN_H_
 
 #include <stdint.h>
+#include "debug.h"
 #include "floating_point_type.h"
 
 
@@ -34,6 +35,7 @@ typedef struct SpectralBins
     fp_t *tau; /**< Optical depths in each bin (layer,n,NIP).*/
     uint64_t *l; /**< Index of left-most spectral point in each bin (n).*/
     uint64_t *r; /**< Index of right-most spectral point in each bin (n).*/
+    int gpu_id; /**< Id of gpu where memory is allocated (or HOST_ONLY).*/
 } SpectralBins_t;
 
 
@@ -47,8 +49,9 @@ int create_spectral_bins(SpectralBins_t *bins, /**< Spectral bins.*/
                          uint64_t const n, /**< Number of spectral grid points.*/
                          double const wres, /**< Resolution [1/cm] of spectral
                                                  grid.*/
-                         double const bin_width /**< Desired width [1/cm] of
-                                                     each spectral bin.*/
+                         double const bin_width, /**< Desired width [1/cm] of
+                                                      each spectral bin.*/
+                         int const gpu_id /**< GPU id.*/
                         );
 
 
