@@ -9,11 +9,12 @@
 #endif
 #include "debug.h"
 #include "floating_point_type.h"
-#include "host_launch.h"
+#include "launch.h"
 #include "molecular_lines.h"
 #include "molecules.h"
 #include "ozone_continuum.h"
 #include "spectral_bin.h"
+#include "tips2017.h"
 #include "utils.h"
 #include "verbosity.h"
 #include "water_vapor_continuum.h"
@@ -61,7 +62,8 @@ EXTERN int grt_context_init(GrtContext_t **context,
       GPU or the host CPU.*/
     GrtContext_t c;
     int num_devices = 0;
-    gpu_throw(get_num_gpus(&num_devices));
+    throw(get_num_gpus(&num_devices,
+                       1));
     if (gpu_id != NULL)
     {
         c.gpu_id = *gpu_id;
@@ -241,6 +243,12 @@ EXTERN int grt_context_init(GrtContext_t **context,
         gmalloc(c.tau,c.num_layers*c.num_wpoints,c.gpu_id);
     }
 
+    /*Initialize TIPS.*/
+    if (c.gpu_id != HOST_ONLY)
+    {
+        throw(inittips_d());
+    }
+
     /*Copy data into the input context.*/
     not_null(context);
     throw(malloc_ptr((void **)context,
@@ -346,7 +354,9 @@ EXTERN int grt_add_molecule(GrtContext_t *context, /**< Library context.*/
                    molecule_id,
                    context->hitran_path,
                    w0,
-                   wn));
+                   wn,
+                   context->num_layers,
+                   context->gpu_id));
     log_mesg("Using %s (%zu lines in range %e - %e [1/cm]).",
              context->mols[index].name,
              context->mols[index].line_params.num_lines,
@@ -447,54 +457,10 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
                  context->num_levels-1,
                  context->gpu_id);
     }
-    throw(launch_h(context,
-                   p,
-                   temperature,
-                   optical_depth));
-/*
-#ifdef __NVCC__
-        size_t num_elements = context->num_levels;
-        HANDLE_ERROR(cudaMemcpy(context->P,
-                                p,
-                                sizeof(*p)*num_elements,
-                                cudaMemcpyHostToDevice));
-        HANDLE_ERROR(cudaMemcpy(context->T,
-                                temperature,
-                                sizeof(*temperature)*num_elements,
-                                cudaMemcpyHostToDevice));
-        throw(launch(context->num_levels,
-                     context->P,
-                     context->T,
-                     context->x,
-                     context->Pavg,
-                     context->Tavg,
-                     context->N,
-                     context->Ns,
-                     context->Psavg,
-                     context->gamma,
-                     context->Pshift,
-                     context->s,
-                     context->lines,
-                     context->molecule_bit_field,
-                     context->line_params,
-                     context->w0,
-                     context->wres,
-                     context->num_wpoints,
-                     context->wcutoff,
-                     context->use_h2o_ctm,
-                     context->h2o_cc,
-                     context->use_o3_ctm,
-                     context->o3_cc,
-                     context->tau,
-                     context->fine_factor,
-                     context->bins));
-        num_elements = context->num_layers*context->num_wpoints;
-        HANDLE_ERROR(cudaMemcpy(optical_depth,
-                                context->tau,
-                                sizeof(*optical_depth)*num_elements,
-                                cudaMemcpyDeviceToHost));
-#endif
-*/
+    throw(launch(context,
+                 p,
+                 temperature,
+                 optical_depth));
     return SUCCESS;
 }
 

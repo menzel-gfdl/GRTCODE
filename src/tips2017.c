@@ -125946,118 +125946,115 @@ fp_t const * const QofT_CH3_d = QofT_CH3;
 fp_t const * const tmx_CS2_d = tmx_CS2;
 fp_t const * const QofT_CS2_d = QofT_CS2;
 #endif
-#ifdef __NVCC__
-__host__
 int inittips_d(void)
 {
-    HANDLE_ERROR(cudaMemcpyToSymbol(Tdat_d,Tdat,sizeof(*Tdat)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_H2O_d,tmx_H2O,sizeof(*tmx_H2O)*9));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_H2O_d,QofT_H2O,sizeof(*QofT_H2O)*40590));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CO2_d,tmx_CO2,sizeof(*tmx_CO2)*13));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CO2_d,QofT_CO2,sizeof(*QofT_CO2)*58630));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_O3_d,tmx_O3,sizeof(*tmx_O3)*18));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_O3_d,QofT_O3,sizeof(*QofT_O3)*81180));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_N2O_d,tmx_N2O,sizeof(*tmx_N2O)*5));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_N2O_d,QofT_N2O,sizeof(*QofT_N2O)*22550));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CO_d,tmx_CO,sizeof(*tmx_CO)*9));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CO_d,QofT_CO,sizeof(*QofT_CO)*40590));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CH4_d,tmx_CH4,sizeof(*tmx_CH4)*4));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CH4_d,QofT_CH4,sizeof(*QofT_CH4)*18040));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_O2_d,tmx_O2,sizeof(*tmx_O2)*6));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_O2_d,QofT_O2,sizeof(*QofT_O2)*27060));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_NO_d,tmx_NO,sizeof(*tmx_NO)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_NO_d,QofT_NO,sizeof(*QofT_NO)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_SO2_d,tmx_SO2,sizeof(*tmx_SO2)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_SO2_d,QofT_SO2,sizeof(*QofT_SO2)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_NO2_d,tmx_NO2,sizeof(*tmx_NO2)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_NO2_d,QofT_NO2,sizeof(*QofT_NO2)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_NH3_d,tmx_NH3,sizeof(*tmx_NH3)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_NH3_d,QofT_NH3,sizeof(*QofT_NH3)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HNO3_d,tmx_HNO3,sizeof(*tmx_HNO3)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HNO3_d,QofT_HNO3,sizeof(*QofT_HNO3)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_OH_d,tmx_OH,sizeof(*tmx_OH)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_OH_d,QofT_OH,sizeof(*QofT_OH)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HF_d,tmx_HF,sizeof(*tmx_HF)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HF_d,QofT_HF,sizeof(*QofT_HF)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HCl_d,tmx_HCl,sizeof(*tmx_HCl)*4));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HCl_d,QofT_HCl,sizeof(*QofT_HCl)*18040));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HBr_d,tmx_HBr,sizeof(*tmx_HBr)*4));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HBr_d,QofT_HBr,sizeof(*QofT_HBr)*18040));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HI_d,tmx_HI,sizeof(*tmx_HI)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HI_d,QofT_HI,sizeof(*QofT_HI)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_ClO_d,tmx_ClO,sizeof(*tmx_ClO)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_ClO_d,QofT_ClO,sizeof(*QofT_ClO)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_OCS_d,tmx_OCS,sizeof(*tmx_OCS)*5));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_OCS_d,QofT_OCS,sizeof(*QofT_OCS)*22550));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_H2CO_d,tmx_H2CO,sizeof(*tmx_H2CO)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_H2CO_d,QofT_H2CO,sizeof(*QofT_H2CO)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HOCl_d,tmx_HOCl,sizeof(*tmx_HOCl)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HOCl_d,QofT_HOCl,sizeof(*QofT_HOCl)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_N2_d,tmx_N2,sizeof(*tmx_N2)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_N2_d,QofT_N2,sizeof(*QofT_N2)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HCN_d,tmx_HCN,sizeof(*tmx_HCN)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HCN_d,QofT_HCN,sizeof(*QofT_HCN)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CH3Cl_d,tmx_CH3Cl,sizeof(*tmx_CH3Cl)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CH3Cl_d,QofT_CH3Cl,sizeof(*QofT_CH3Cl)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_H2O2_d,tmx_H2O2,sizeof(*tmx_H2O2)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_H2O2_d,QofT_H2O2,sizeof(*QofT_H2O2)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_C2H2_d,tmx_C2H2,sizeof(*tmx_C2H2)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_C2H2_d,QofT_C2H2,sizeof(*QofT_C2H2)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_C2H6_d,tmx_C2H6,sizeof(*tmx_C2H6)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_C2H6_d,QofT_C2H6,sizeof(*QofT_C2H6)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_PH3_d,tmx_PH3,sizeof(*tmx_PH3)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_PH3_d,QofT_PH3,sizeof(*QofT_PH3)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_COF2_d,tmx_COF2,sizeof(*tmx_COF2)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_COF2_d,QofT_COF2,sizeof(*QofT_COF2)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_SF6_d,tmx_SF6,sizeof(*tmx_SF6)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_SF6_d,QofT_SF6,sizeof(*QofT_SF6)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_H2S_d,tmx_H2S,sizeof(*tmx_H2S)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_H2S_d,QofT_H2S,sizeof(*QofT_H2S)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HCOOH_d,tmx_HCOOH,sizeof(*tmx_HCOOH)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HCOOH_d,QofT_HCOOH,sizeof(*QofT_HCOOH)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HO2_d,tmx_HO2,sizeof(*tmx_HO2)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HO2_d,QofT_HO2,sizeof(*QofT_HO2)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_ClONO2_d,tmx_ClONO2,sizeof(*tmx_ClONO2)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_ClONO2_d,QofT_ClONO2,sizeof(*QofT_ClONO2)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_NOp_d,tmx_NOp,sizeof(*tmx_NOp)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_NOp_d,QofT_NOp,sizeof(*QofT_NOp)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HOBr_d,tmx_HOBr,sizeof(*tmx_HOBr)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HOBr_d,QofT_HOBr,sizeof(*QofT_HOBr)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_C2H4_d,tmx_C2H4,sizeof(*tmx_C2H4)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_C2H4_d,QofT_C2H4,sizeof(*QofT_C2H4)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CH3OH_d,tmx_CH3OH,sizeof(*tmx_CH3OH)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CH3OH_d,QofT_CH3OH,sizeof(*QofT_CH3OH)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CH3Br_d,tmx_CH3Br,sizeof(*tmx_CH3Br)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CH3Br_d,QofT_CH3Br,sizeof(*QofT_CH3Br)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CH3CN_d,tmx_CH3CN,sizeof(*tmx_CH3CN)*4));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CH3CN_d,QofT_CH3CN,sizeof(*QofT_CH3CN)*18040));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CF4_d,tmx_CF4,sizeof(*tmx_CF4)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CF4_d,QofT_CF4,sizeof(*QofT_CF4)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_C4H2_d,tmx_C4H2,sizeof(*tmx_C4H2)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_C4H2_d,QofT_C4H2,sizeof(*QofT_C4H2)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_HC3N_d,tmx_HC3N,sizeof(*tmx_HC3N)*6));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_HC3N_d,QofT_HC3N,sizeof(*QofT_HC3N)*27060));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_H2_d,tmx_H2,sizeof(*tmx_H2)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_H2_d,QofT_H2,sizeof(*QofT_H2)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CS_d,tmx_CS,sizeof(*tmx_CS)*4));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CS_d,QofT_CS,sizeof(*QofT_CS)*18040));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_SO3_d,tmx_SO3,sizeof(*tmx_SO3)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_SO3_d,QofT_SO3,sizeof(*QofT_SO3)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_C2N2_d,tmx_C2N2,sizeof(*tmx_C2N2)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_C2N2_d,QofT_C2N2,sizeof(*QofT_C2N2)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_COCl2_d,tmx_COCl2,sizeof(*tmx_COCl2)*2));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_COCl2_d,QofT_COCl2,sizeof(*QofT_COCl2)*9020));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_SO_d,tmx_SO,sizeof(*tmx_SO)*3));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_SO_d,QofT_SO,sizeof(*QofT_SO)*13530));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_C3H4_d,tmx_C3H4,sizeof(*tmx_C3H4)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_C3H4_d,QofT_C3H4,sizeof(*QofT_C3H4)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CH3_d,tmx_CH3,sizeof(*tmx_CH3)*1));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CH3_d,QofT_CH3,sizeof(*QofT_CH3)*4510));
-    HANDLE_ERROR(cudaMemcpyToSymbol(tmx_CS2_d,tmx_CS2,sizeof(*tmx_CS2)*4));
-    HANDLE_ERROR(cudaMemcpyToSymbol(QofT_CS2_d,QofT_CS2,sizeof(*QofT_CS2)*18040));
+    gpu_throw(cudaMemcpyToSymbol(Tdat_d,Tdat,sizeof(*Tdat)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_H2O_d,tmx_H2O,sizeof(*tmx_H2O)*9));
+    gpu_throw(cudaMemcpyToSymbol(QofT_H2O_d,QofT_H2O,sizeof(*QofT_H2O)*40590));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CO2_d,tmx_CO2,sizeof(*tmx_CO2)*13));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CO2_d,QofT_CO2,sizeof(*QofT_CO2)*58630));
+    gpu_throw(cudaMemcpyToSymbol(tmx_O3_d,tmx_O3,sizeof(*tmx_O3)*18));
+    gpu_throw(cudaMemcpyToSymbol(QofT_O3_d,QofT_O3,sizeof(*QofT_O3)*81180));
+    gpu_throw(cudaMemcpyToSymbol(tmx_N2O_d,tmx_N2O,sizeof(*tmx_N2O)*5));
+    gpu_throw(cudaMemcpyToSymbol(QofT_N2O_d,QofT_N2O,sizeof(*QofT_N2O)*22550));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CO_d,tmx_CO,sizeof(*tmx_CO)*9));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CO_d,QofT_CO,sizeof(*QofT_CO)*40590));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CH4_d,tmx_CH4,sizeof(*tmx_CH4)*4));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CH4_d,QofT_CH4,sizeof(*QofT_CH4)*18040));
+    gpu_throw(cudaMemcpyToSymbol(tmx_O2_d,tmx_O2,sizeof(*tmx_O2)*6));
+    gpu_throw(cudaMemcpyToSymbol(QofT_O2_d,QofT_O2,sizeof(*QofT_O2)*27060));
+    gpu_throw(cudaMemcpyToSymbol(tmx_NO_d,tmx_NO,sizeof(*tmx_NO)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_NO_d,QofT_NO,sizeof(*QofT_NO)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_SO2_d,tmx_SO2,sizeof(*tmx_SO2)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_SO2_d,QofT_SO2,sizeof(*QofT_SO2)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_NO2_d,tmx_NO2,sizeof(*tmx_NO2)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_NO2_d,QofT_NO2,sizeof(*QofT_NO2)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_NH3_d,tmx_NH3,sizeof(*tmx_NH3)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_NH3_d,QofT_NH3,sizeof(*QofT_NH3)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HNO3_d,tmx_HNO3,sizeof(*tmx_HNO3)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HNO3_d,QofT_HNO3,sizeof(*QofT_HNO3)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_OH_d,tmx_OH,sizeof(*tmx_OH)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_OH_d,QofT_OH,sizeof(*QofT_OH)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HF_d,tmx_HF,sizeof(*tmx_HF)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HF_d,QofT_HF,sizeof(*QofT_HF)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HCl_d,tmx_HCl,sizeof(*tmx_HCl)*4));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HCl_d,QofT_HCl,sizeof(*QofT_HCl)*18040));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HBr_d,tmx_HBr,sizeof(*tmx_HBr)*4));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HBr_d,QofT_HBr,sizeof(*QofT_HBr)*18040));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HI_d,tmx_HI,sizeof(*tmx_HI)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HI_d,QofT_HI,sizeof(*QofT_HI)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_ClO_d,tmx_ClO,sizeof(*tmx_ClO)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_ClO_d,QofT_ClO,sizeof(*QofT_ClO)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_OCS_d,tmx_OCS,sizeof(*tmx_OCS)*5));
+    gpu_throw(cudaMemcpyToSymbol(QofT_OCS_d,QofT_OCS,sizeof(*QofT_OCS)*22550));
+    gpu_throw(cudaMemcpyToSymbol(tmx_H2CO_d,tmx_H2CO,sizeof(*tmx_H2CO)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_H2CO_d,QofT_H2CO,sizeof(*QofT_H2CO)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HOCl_d,tmx_HOCl,sizeof(*tmx_HOCl)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HOCl_d,QofT_HOCl,sizeof(*QofT_HOCl)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_N2_d,tmx_N2,sizeof(*tmx_N2)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_N2_d,QofT_N2,sizeof(*QofT_N2)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HCN_d,tmx_HCN,sizeof(*tmx_HCN)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HCN_d,QofT_HCN,sizeof(*QofT_HCN)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CH3Cl_d,tmx_CH3Cl,sizeof(*tmx_CH3Cl)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CH3Cl_d,QofT_CH3Cl,sizeof(*QofT_CH3Cl)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_H2O2_d,tmx_H2O2,sizeof(*tmx_H2O2)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_H2O2_d,QofT_H2O2,sizeof(*QofT_H2O2)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_C2H2_d,tmx_C2H2,sizeof(*tmx_C2H2)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_C2H2_d,QofT_C2H2,sizeof(*QofT_C2H2)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_C2H6_d,tmx_C2H6,sizeof(*tmx_C2H6)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_C2H6_d,QofT_C2H6,sizeof(*QofT_C2H6)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_PH3_d,tmx_PH3,sizeof(*tmx_PH3)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_PH3_d,QofT_PH3,sizeof(*QofT_PH3)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_COF2_d,tmx_COF2,sizeof(*tmx_COF2)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_COF2_d,QofT_COF2,sizeof(*QofT_COF2)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_SF6_d,tmx_SF6,sizeof(*tmx_SF6)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_SF6_d,QofT_SF6,sizeof(*QofT_SF6)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_H2S_d,tmx_H2S,sizeof(*tmx_H2S)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_H2S_d,QofT_H2S,sizeof(*QofT_H2S)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HCOOH_d,tmx_HCOOH,sizeof(*tmx_HCOOH)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HCOOH_d,QofT_HCOOH,sizeof(*QofT_HCOOH)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HO2_d,tmx_HO2,sizeof(*tmx_HO2)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HO2_d,QofT_HO2,sizeof(*QofT_HO2)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_ClONO2_d,tmx_ClONO2,sizeof(*tmx_ClONO2)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_ClONO2_d,QofT_ClONO2,sizeof(*QofT_ClONO2)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_NOp_d,tmx_NOp,sizeof(*tmx_NOp)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_NOp_d,QofT_NOp,sizeof(*QofT_NOp)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HOBr_d,tmx_HOBr,sizeof(*tmx_HOBr)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HOBr_d,QofT_HOBr,sizeof(*QofT_HOBr)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_C2H4_d,tmx_C2H4,sizeof(*tmx_C2H4)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_C2H4_d,QofT_C2H4,sizeof(*QofT_C2H4)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CH3OH_d,tmx_CH3OH,sizeof(*tmx_CH3OH)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CH3OH_d,QofT_CH3OH,sizeof(*QofT_CH3OH)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CH3Br_d,tmx_CH3Br,sizeof(*tmx_CH3Br)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CH3Br_d,QofT_CH3Br,sizeof(*QofT_CH3Br)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CH3CN_d,tmx_CH3CN,sizeof(*tmx_CH3CN)*4));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CH3CN_d,QofT_CH3CN,sizeof(*QofT_CH3CN)*18040));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CF4_d,tmx_CF4,sizeof(*tmx_CF4)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CF4_d,QofT_CF4,sizeof(*QofT_CF4)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_C4H2_d,tmx_C4H2,sizeof(*tmx_C4H2)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_C4H2_d,QofT_C4H2,sizeof(*QofT_C4H2)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_HC3N_d,tmx_HC3N,sizeof(*tmx_HC3N)*6));
+    gpu_throw(cudaMemcpyToSymbol(QofT_HC3N_d,QofT_HC3N,sizeof(*QofT_HC3N)*27060));
+    gpu_throw(cudaMemcpyToSymbol(tmx_H2_d,tmx_H2,sizeof(*tmx_H2)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_H2_d,QofT_H2,sizeof(*QofT_H2)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CS_d,tmx_CS,sizeof(*tmx_CS)*4));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CS_d,QofT_CS,sizeof(*QofT_CS)*18040));
+    gpu_throw(cudaMemcpyToSymbol(tmx_SO3_d,tmx_SO3,sizeof(*tmx_SO3)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_SO3_d,QofT_SO3,sizeof(*QofT_SO3)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_C2N2_d,tmx_C2N2,sizeof(*tmx_C2N2)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_C2N2_d,QofT_C2N2,sizeof(*QofT_C2N2)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_COCl2_d,tmx_COCl2,sizeof(*tmx_COCl2)*2));
+    gpu_throw(cudaMemcpyToSymbol(QofT_COCl2_d,QofT_COCl2,sizeof(*QofT_COCl2)*9020));
+    gpu_throw(cudaMemcpyToSymbol(tmx_SO_d,tmx_SO,sizeof(*tmx_SO)*3));
+    gpu_throw(cudaMemcpyToSymbol(QofT_SO_d,QofT_SO,sizeof(*QofT_SO)*13530));
+    gpu_throw(cudaMemcpyToSymbol(tmx_C3H4_d,tmx_C3H4,sizeof(*tmx_C3H4)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_C3H4_d,QofT_C3H4,sizeof(*QofT_C3H4)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CH3_d,tmx_CH3,sizeof(*tmx_CH3)*1));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CH3_d,QofT_CH3,sizeof(*QofT_CH3)*4510));
+    gpu_throw(cudaMemcpyToSymbol(tmx_CS2_d,tmx_CS2,sizeof(*tmx_CS2)*4));
+    gpu_throw(cudaMemcpyToSymbol(QofT_CS2_d,QofT_CS2,sizeof(*QofT_CS2)*18040));
     return SUCCESS;
 }
-#endif
 #ifdef __NVCC__
 __host__ __device__
 #endif
@@ -126076,7 +126073,7 @@ int QT_H2O(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126110,7 +126107,7 @@ int QT_CO2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126144,7 +126141,7 @@ int QT_O3(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126178,7 +126175,7 @@ int QT_N2O(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126212,7 +126209,7 @@ int QT_CO(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126246,7 +126243,7 @@ int QT_CH4(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126280,7 +126277,7 @@ int QT_O2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126314,7 +126311,7 @@ int QT_NO(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126348,7 +126345,7 @@ int QT_SO2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126382,7 +126379,7 @@ int QT_NO2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126416,7 +126413,7 @@ int QT_NH3(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126450,7 +126447,7 @@ int QT_HNO3(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126484,7 +126481,7 @@ int QT_OH(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126518,7 +126515,7 @@ int QT_HF(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126552,7 +126549,7 @@ int QT_HCl(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126586,7 +126583,7 @@ int QT_HBr(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126620,7 +126617,7 @@ int QT_HI(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126654,7 +126651,7 @@ int QT_ClO(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126688,7 +126685,7 @@ int QT_OCS(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126722,7 +126719,7 @@ int QT_H2CO(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126756,7 +126753,7 @@ int QT_HOCl(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126790,7 +126787,7 @@ int QT_N2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126824,7 +126821,7 @@ int QT_HCN(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126858,7 +126855,7 @@ int QT_CH3Cl(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126892,7 +126889,7 @@ int QT_H2O2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126926,7 +126923,7 @@ int QT_C2H2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126960,7 +126957,7 @@ int QT_C2H6(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -126994,7 +126991,7 @@ int QT_PH3(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127028,7 +127025,7 @@ int QT_COF2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127062,7 +127059,7 @@ int QT_SF6(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127096,7 +127093,7 @@ int QT_H2S(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127130,7 +127127,7 @@ int QT_HCOOH(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127164,7 +127161,7 @@ int QT_HO2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127198,7 +127195,7 @@ int QT_ClONO2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127232,7 +127229,7 @@ int QT_NOp(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127266,7 +127263,7 @@ int QT_HOBr(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127300,7 +127297,7 @@ int QT_C2H4(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127334,7 +127331,7 @@ int QT_CH3OH(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127368,7 +127365,7 @@ int QT_CH3Br(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127402,7 +127399,7 @@ int QT_CH3CN(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127436,7 +127433,7 @@ int QT_CF4(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127470,7 +127467,7 @@ int QT_C4H2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127504,7 +127501,7 @@ int QT_HC3N(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127538,7 +127535,7 @@ int QT_H2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127572,7 +127569,7 @@ int QT_CS(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127606,7 +127603,7 @@ int QT_SO3(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127640,7 +127637,7 @@ int QT_C2N2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127674,7 +127671,7 @@ int QT_COCl2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127708,7 +127705,7 @@ int QT_SO(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127742,7 +127739,7 @@ int QT_C3H4(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127776,7 +127773,7 @@ int QT_CH3(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -127810,7 +127807,7 @@ int QT_CS2(fp_t const T,
     if (T < 1. || T > tmi)
     {
         *Qt = -1.;
-        kernel_err("temperature %e out of range.",T);
+        return SENTINEL_ERR;
     }
     for (i=0;i<ndat;++i)
     {
@@ -128000,7 +127997,7 @@ fp_t Q(int const mol_id,
             QT_CS2(T,i,&Qt);
             break;
         default:
-            kernel_err("Molecule id %d not found.",mol_id);
+            return -1.f;
     }
     return Qt;
 }

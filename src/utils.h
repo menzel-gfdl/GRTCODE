@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "debug.h"
 #include "floating_point_type.h"
 
 
@@ -19,7 +20,7 @@ int copy_str(char * const dest,
 
 
 #define open_file(f,n,a) \
-    {f=fopen(n,a); if (f == NULL) {fatal(IO_ERR,"failed to open file %s.",n);}}
+    {f=fopen(n,a); if (f == NULL) {raise(IO_ERR,"failed to open file %s.",n);}}
 
 
 int to_int(char const * const s,
@@ -58,6 +59,10 @@ int linear_interpolation(fp_t const * const x,
                          int const xy_size,
                          fp_t const val,
                          fp_t * const out);
+
+
+int get_num_gpus(int * num_devices,
+                 int const verbose);
 
 
 #endif

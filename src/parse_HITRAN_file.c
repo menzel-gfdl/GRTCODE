@@ -82,26 +82,20 @@ static unsigned int const HITRAN2012_fmt[NCOLS][2] =
 
 
 static int alloc_line_params(LineParams_t * const line_params,
-                             uint64_t const num_lines)
+                             uint64_t const num_lines,
+                             int const gpu_id)
 {
     not_null(line_params);
     line_params->num_lines = num_lines;
-    throw(malloc_ptr((void **)(&(line_params->iso)),
-                     sizeof(*(line_params->iso))*num_lines));
-    throw(malloc_ptr((void **)(&(line_params->vnn)),
-                     sizeof(*(line_params->vnn))*num_lines));
-    throw(malloc_ptr((void **)(&(line_params->snn)),
-                     sizeof(*(line_params->snn))*num_lines));
-    throw(malloc_ptr((void **)(&(line_params->yair)),
-                     sizeof(*(line_params->yair))*num_lines));
-    throw(malloc_ptr((void **)(&(line_params->yself)),
-                     sizeof(*(line_params->yself))*num_lines));
-    throw(malloc_ptr((void **)(&(line_params->en)),
-                     sizeof(*(line_params->en))*num_lines));
-    throw(malloc_ptr((void **)(&(line_params->n)),
-                     sizeof(*(line_params->n))*num_lines));
-    throw(malloc_ptr((void **)(&(line_params->d)),
-                     sizeof(*(line_params->n))*num_lines));
+    line_params->gpu_id = gpu_id;
+    gmalloc(line_params->iso,num_lines,gpu_id);
+    gmalloc(line_params->vnn,num_lines,gpu_id);
+    gmalloc(line_params->snn,num_lines,gpu_id);
+    gmalloc(line_params->yair,num_lines,gpu_id);
+    gmalloc(line_params->yself,num_lines,gpu_id);
+    gmalloc(line_params->en,num_lines,gpu_id);
+    gmalloc(line_params->n,num_lines,gpu_id);
+    gmalloc(line_params->d,num_lines,gpu_id);
     return SUCCESS;
 }
 
@@ -109,14 +103,14 @@ static int alloc_line_params(LineParams_t * const line_params,
 int free_line_params(LineParams_t * const line_params)
 {
     not_null(line_params);
-    throw(free_ptr((void **)&(line_params->iso)));
-    throw(free_ptr((void **)&(line_params->vnn)));
-    throw(free_ptr((void **)&(line_params->snn)));
-    throw(free_ptr((void **)&(line_params->yair)));
-    throw(free_ptr((void **)&(line_params->yself)));
-    throw(free_ptr((void **)&(line_params->en)));
-    throw(free_ptr((void **)&(line_params->n)));
-    throw(free_ptr((void **)&(line_params->d)));
+    gfree(line_params->iso,line_params->gpu_id);
+    gfree(line_params->vnn,line_params->gpu_id);
+    gfree(line_params->snn,line_params->gpu_id);
+    gfree(line_params->yair,line_params->gpu_id);
+    gfree(line_params->yself,line_params->gpu_id);
+    gfree(line_params->en,line_params->gpu_id);
+    gfree(line_params->n,line_params->gpu_id);
+    gfree(line_params->d,line_params->gpu_id);
     return SUCCESS;
 }
 
@@ -125,40 +119,18 @@ static int realloc_line_params(LineParams_t * const line_params)
 {
     not_null(line_params);
     LineParams_t t;
-    t.iso = line_params->iso;
-    t.vnn = line_params->vnn;
-    t.snn = line_params->snn;
-    t.yair = line_params->yair;
-    t.yself = line_params->yself;
-    t.en = line_params->en;
-    t.n = line_params->n;
-    t.d = line_params->d;
+    gmemcpy(&t,line_params,1,HOST_ONLY,0);
     throw(alloc_line_params(line_params,
-                            line_params->num_lines));
-    memcpy(line_params->iso,
-           t.iso,
-           sizeof(*(t.iso))*line_params->num_lines);
-    memcpy(line_params->vnn,
-           t.vnn,
-           sizeof(*(t.vnn))*line_params->num_lines);
-    memcpy(line_params->snn,
-           t.snn,
-           sizeof(*(t.snn))*line_params->num_lines);
-    memcpy(line_params->yair,
-           t.yair,
-           sizeof(*(t.yair))*line_params->num_lines);
-    memcpy(line_params->yself,
-           t.yself,
-           sizeof(*(t.yself))*line_params->num_lines);
-    memcpy(line_params->en,
-           t.en,
-           sizeof(*(t.en))*line_params->num_lines);
-    memcpy(line_params->n,
-           t.n,
-           sizeof(*(t.n))*line_params->num_lines);
-    memcpy(line_params->d,
-           t.d,
-           sizeof(*(t.d))*line_params->num_lines);
+                            t.num_lines,
+                            t.gpu_id));
+    gmemcpy(line_params->iso,t.iso,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->vnn,t.vnn,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->snn,t.snn,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->yair,t.yair,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->yself,t.yself,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->en,t.en,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->n,t.n,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->d,t.d,t.num_lines,t.gpu_id,0);
     throw(free_line_params(&t));
     return SUCCESS;
 }
@@ -215,7 +187,8 @@ int parse_hitran_file(LineParams_t * const line_params,
                       char const * const filename,
                       int const mol_id,
                       double const w0,
-                      double const wn)
+                      double const wn,
+                      int const gpu_id)
 {
     not_null(line_params);
     not_null(filename);
@@ -230,12 +203,9 @@ int parse_hitran_file(LineParams_t * const line_params,
 
     /*Count the number of lines in the file.*/
     size_t const max_line = 163;
-    char* buf;
-    throw(malloc_ptr((void **) &buf,
-                     sizeof(*buf)*max_line));
-    memset(buf,
-           0,
-           sizeof(*buf)*max_line);
+    char *buf;
+    gmalloc(buf,max_line,HOST_ONLY);
+    gmemset(buf,0,max_line,HOST_ONLY);
     ssize_t ll = 0;
     size_t l = 0;
     uint64_t n = 0;
@@ -246,8 +216,10 @@ int parse_hitran_file(LineParams_t * const line_params,
     rewind(fp);
 
     /*Malloc space.*/
-    throw(alloc_line_params(line_params,
-                            n));
+    LineParams_t lp;
+    throw(alloc_line_params(&lp,
+                            n,
+                            HOST_ONLY));
 
     /*Parse out the line parameters.*/
     n = 0;
@@ -322,28 +294,28 @@ int parse_hitran_file(LineParams_t * const line_params,
                         }
                         break;
                     case iso_pidx:
-                        line_params->iso[n] = val.i;
+                        lp.iso[n] = val.i;
                         break;
                     case Vnn_pidx:
-                        line_params->vnn[n] = (fp_t)(val.d);
+                        lp.vnn[n] = (fp_t)(val.d);
                         break;
                     case Snn_ref_pidx:
-                        line_params->snn[n] = (fp_t)(val.d);
+                        lp.snn[n] = (fp_t)(val.d);
                         break;
                     case Yair_pidx:
-                        line_params->yair[n] = val.f;
+                        lp.yair[n] = val.f;
                         break;
                     case Yself_pidx:
-                        line_params->yself[n] = val.f;
+                        lp.yself[n] = val.f;
                         break;
                     case En_pidx:
-                        line_params->en[n] = val.f;
+                        lp.en[n] = val.f;
                         break;
                     case n_pidx:
-                        line_params->n[n] = val.f;
+                        lp.n[n] = val.f;
                         break;
                     case d_pidx:
-                        line_params->d[n] = val.f;
+                        lp.d[n] = val.f;
                         break;
                     default:
                         raise(VALUE_ERR,
@@ -358,15 +330,14 @@ int parse_hitran_file(LineParams_t * const line_params,
         }
         if (!go_to_next_line)
         {
-            if ((w0 < 0 && wn < 0) || (line_params->vnn[n] >= w0 &&
-                line_params->vnn[n] <= wn))
+            if ((w0 < 0 && wn < 0) || (lp.vnn[n] >= w0 && lp.vnn[n] <= wn))
             {
                 /*Include the line for the calculation.*/
                 ++n;
             }
         }
     }
-    free(buf);
+    gfree(buf,HOST_ONLY);
 
     /*Close the file.*/
     if (fclose(fp))
@@ -377,25 +348,52 @@ int parse_hitran_file(LineParams_t * const line_params,
     }
 
     /*Reallocate if necessary.*/
-    if (line_params->num_lines != n)
+    if (lp.num_lines != n)
     {
-        line_params->num_lines = n;
-        throw(realloc_line_params(line_params));
+        lp.num_lines = n;
+        throw(realloc_line_params(&lp));
     }
 
     /*Adjust the raw read-in line strengths.*/
     fp_t const tref = 296.f;
     fp_t const c2 = -1.4387686f;
-    fp_t *snn = line_params->snn;
-    int const *iso = line_params->iso;
-    fp_t const *en = line_params->en;
-    fp_t const *vnn = line_params->vnn;
+    fp_t *snn = lp.snn;
+    int const *iso = lp.iso;
+    fp_t const *en = lp.en;
+    fp_t const *vnn = lp.vnn;
     uint64_t i;
 #pragma omp parallel for default(none) private(i) shared(snn,iso,en,vnn,n)
     for (i=0;i<n;++i)
     {
         snn[i] *= Q(mol_id,tref,iso[i])/(EXP(c2*en[i]/tref)*
                   (1.f - EXP(c2*vnn[i]/tref)));
+    }
+
+    if (gpu_id == HOST_ONLY)
+    {
+        line_params->iso = lp.iso;
+        line_params->vnn = lp.vnn;
+        line_params->snn = lp.snn;
+        line_params->yair = lp.yair;
+        line_params->yself = lp.yself;
+        line_params->en = lp.en;
+        line_params->n = lp.n;
+        line_params->d = lp.d;
+    }
+    else
+    {
+        throw(alloc_line_params(line_params,
+                                lp.num_lines,
+                                gpu_id));
+        gmemcpy(line_params->iso,lp.iso,lp.num_lines,gpu_id,FROM_HOST);
+        gmemcpy(line_params->vnn,lp.vnn,lp.num_lines,gpu_id,FROM_HOST);
+        gmemcpy(line_params->snn,lp.snn,lp.num_lines,gpu_id,FROM_HOST);
+        gmemcpy(line_params->yair,lp.yair,lp.num_lines,gpu_id,FROM_HOST);
+        gmemcpy(line_params->yself,lp.yself,lp.num_lines,gpu_id,FROM_HOST);
+        gmemcpy(line_params->en,lp.en,lp.num_lines,gpu_id,FROM_HOST);
+        gmemcpy(line_params->n,lp.n,lp.num_lines,gpu_id,FROM_HOST);
+        gmemcpy(line_params->d,lp.d,lp.num_lines,gpu_id,FROM_HOST);
+        throw(free_line_params(&lp));
     }
     return SUCCESS;
 }

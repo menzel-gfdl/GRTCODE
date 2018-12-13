@@ -34,33 +34,4 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
 int free_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc);
 
 
-#ifdef __NVCC__
-__global__
-void calc_water_vapor_ctm_optical_depth(uint64_t const num_wpoints,
-                                        int const num_layers,
-                                        fp_t * const tau,
-                                        fp_t const * const CS,
-                                        fp_t const * const T,
-                                        fp_t const * const Ps,
-                                        fp_t const * const N,
-                                        fp_t const * const T0,
-                                        fp_t const * const CF,
-                                        fp_t const * const P,
-                                        fp_t const * const T0F);
-#endif
-
-
-void calc_water_vapor_ctm_optical_depth_h(uint64_t const num_wpoints,
-                                          int const num_layers,
-                                          fp_t * const tau,
-                                          fp_t const * const CS,
-                                          fp_t const * const T,
-                                          fp_t const * const Ps,
-                                          fp_t const * const N,
-                                          fp_t const * const T0,
-                                          fp_t const * const CF,
-                                          fp_t const * const P,
-                                          fp_t const * const T0F);
-
-
 #endif

@@ -1,8 +1,8 @@
-CXX = g++
+CC = gcc
 NVCC = nvcc
 CFLAGS = -g -Wall -Wextra -fopenmp -Wno-variadic-macros \
          -Wno-long-long -O2
-NVCCFLAGS = -ccbin ${CXX} --compiler-options "${CFLAGS}" -g -O3
+NVCCFLAGS = -ccbin ${CC} --compiler-options "${CFLAGS}" -g -O3
 NVCCLDFLAGS = --compiler-options '-shared -fPIC'
 CPPFLAGS =
 FC = gfortran
@@ -12,31 +12,21 @@ LIB_NAME = molecular_lines
 OBJ = ${LIB_NAME}_fhl.o \
       ${LIB_NAME}_f.o \
       ${LIB_NAME}.o \
-      device_launch.o \
-      host_launch.o \
+      launch.o \
+      kernels.cu.o \
+      kernels.o \
+      kernel_utils.o \
       ozone_continuum.o \
       water_vapor_continuum.o \
-      coarse_to_fine.o \
-      eval_profile.o \
-      eval_snn_correction.o \
-      eval_pshift.o \
-      eval_gamma.o \
-      pre_eval_snn.o \
-      integrate_layer.o \
-      line_shape_utils.o \
-      gas_properties.o \
       RFM_voigt.o \
-      ida_voigt.o \
-      doppler.o \
-      lorentz.o \
       tips2017.o \
       parse_HITRAN_file.o \
       parse_csv.o \
       molecules.o \
       utils.o \
-      verbosity.o \
-      query_gpu.o \
-      cuda_helpers.o
+      verbosity.o
+
+
 STATIC_LIB = lib${LIB_NAME}.a
 SHARED_LIB = lib${LIB_NAME}.so
 LIB_HEADERS = src/${LIB_NAME}.h src/floating_point_type.h
@@ -63,7 +53,7 @@ ${SHARED_LIB}: ${OBJ}
 %.o: src/%.c
 	${NVCC} -x cu -dc ${NVCCFLAGS} ${NVCCLDFLAGS} ${CPPFLAGS} -o $@ -c $<
 
-%.o: src/%.cu
+%.cu.o: src/%.cu
 	${NVCC} -x cu -dc ${NVCCFLAGS} ${NVCCLDFLAGS} ${CPPFLAGS} -o $@ -c $<
 
 ${LIB_NAME}_f.o: src/${LIB_NAME}_f.F90

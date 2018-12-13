@@ -329,3 +329,30 @@ int linear_interpolation(fp_t const * const x,
     }
     return SUCCESS;
 }
+
+
+int get_num_gpus(int * num_devices,
+                 int const verbose)
+{
+#ifdef __NVCC__
+    not_null(num_devices);
+    gpu_throw(cudaGetDeviceCount(num_devices));
+    if (verbose)
+    {
+        log_mesg("Found %d GPU devices:",
+                 num_devices);
+        int i;
+        for (i=0;i<num_devices;++i)
+        {
+            cudaDeviceProp prop;
+            gpu_throw(cudaGetDeviceProperties(&prop,i));
+            log_mesg("\tDevice #%d: %s",
+                     i,
+                     prop.name);
+        }
+    }
+#else
+    *num_devices = 0;
+#endif
+    return SUCCESS;
+}

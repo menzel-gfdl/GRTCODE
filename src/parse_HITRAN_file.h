@@ -16,6 +16,7 @@ typedef struct LineParams
     fp_t *n;
     fp_t *d;
     uint64_t num_lines;
+    int gpu_id;
 } LineParams_t;
 
 
@@ -26,7 +27,8 @@ int parse_hitran_file(LineParams_t * const line_params,
                       char const * const filename,
                       int const mol_id,
                       double const w0,
-                      double const wn);
+                      double const wn,
+                      int const gpu_id);
 
 
 #endif

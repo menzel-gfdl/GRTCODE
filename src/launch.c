@@ -1,8 +1,11 @@
 #include <string.h>
-#include "calc_optical_depth.h"
 #include "debug.h"
 #include "floating_point_type.h"
-#include "host_launch.h"
+#ifdef __NVCC__
+#include "kernels.cuh"
+#endif
+#include "kernels.h"
+#include "launch.h"
 #include "molecular_lines.h"
 #include "molecules.h"
 #include "ozone_continuum.h"
@@ -10,11 +13,11 @@
 #include "water_vapor_continuum.h"
 
 
-int launch_h(GrtContext_t * const context,
-             fp_t const * const p,
-             fp_t const * const t,
-             fp_t * const tau)
-
+int launch(GrtContext_t * const context,
+           fp_t *p,
+           fp_t *t,
+           fp_t * const tau
+          )
 {
     not_null(context);
     not_null(p);
@@ -102,6 +105,20 @@ int launch_h(GrtContext_t * const context,
                 context->pavg,
                 context->linecenter);
 
+        /*Calculate total partition functions.*/
+        log_info("Calculating total partition functions across %d layers"
+                     " for molecule %s.",
+                 context->num_layers,
+                 mol->name);
+        glaunch(calc_partition_functions,
+                mol->num_isotopologues,
+                context->gpu_id,
+                context->num_layers,
+                mol->id,
+                mol->num_isotopologues,
+                context->tavg,
+                mol->q);
+
         /*Calculate temperature-corrected line strengths.*/
         log_info("Calculating temperature-corrected line strengths"
                      " across %d layers for molecule %s.",
@@ -112,13 +129,13 @@ int launch_h(GrtContext_t * const context,
                 context->gpu_id,
                 mol->line_params.num_lines,
                 context->num_layers,
-                mol->id,
                 mol->num_isotopologues,
                 mol->line_params.iso,
                 mol->line_params.snn,
                 mol->line_params.vnn,
                 mol->line_params.en,
                 context->tavg,
+                mol->q,
                 context->snn);
 
         /*Calcluate temperature and pressure corrected lorentz half-widths.*/
@@ -163,6 +180,15 @@ int launch_h(GrtContext_t * const context,
         switch (context->optical_depth_method)
         {
             case wavenumber_sweep:
+                glaunch(sort_lines,
+                        context->num_layers,
+                        context->gpu_id,
+                        mol->line_params.num_lines,
+                        context->num_layers,
+                        context->linecenter,
+                        context->snn,
+                        context->gamma,
+                        context->alpha);
                 glaunch(calc_optical_depth_bin_sweep,
                         context->bins.n,
                         context->gpu_id,
@@ -173,7 +199,7 @@ int launch_h(GrtContext_t * const context,
                         context->gamma,
                         context->alpha,
                         context->ns,
-                        &(context->bins),
+                        context->bins,
                         context->tau);
                 break;
             case line_sweep:
@@ -187,7 +213,7 @@ int launch_h(GrtContext_t * const context,
                         context->gamma,
                         context->alpha,
                         context->ns,
-                        &(context->bins),
+                        context->bins,
                         context->tau);
                 break;
             case line_sample:
@@ -201,7 +227,7 @@ int launch_h(GrtContext_t * const context,
                         context->gamma,
                         context->alpha,
                         context->ns,
-                        &(context->bins),
+                        context->bins,
                         context->tau);
                 break;
         }
@@ -251,9 +277,14 @@ int launch_h(GrtContext_t * const context,
                      " %d layers.",
                  context->num_layers);
         glaunch(interpolate,
-                context->bins.n,
+                context->bins.n-1,
                 context->gpu_id,
-                &(context->bins),
+                context->bins,
+                context->tau);
+        glaunch(interpolate_last_bin,
+                context->num_layers,
+                context->gpu_id,
+                context->bins,
                 context->tau);
     }
     return SUCCESS;

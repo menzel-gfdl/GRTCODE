@@ -4,9 +4,7 @@
 #include "floating_point_type.h"
 
 
-#ifdef __NVCC__
 int inittips_d(void);
-#endif
 
 
 #ifdef __NVCC__

@@ -25,21 +25,4 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
 int free_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc);
 
 
-#ifdef __NVCC__
-__global__
-void calc_ozone_ctm_optical_depth(uint64_t const num_wpoints,
-                                  int const num_layers,
-                                  fp_t const * const cross_section,
-                                  fp_t const * const N,
-                                  fp_t * const tau);
-#endif
-
-
-void calc_ozone_ctm_optical_depth_h(uint64_t const nws,
-                                    int const num_layers,
-                                    fp_t const * const cross_section,
-                                    fp_t const * const N,
-                                    fp_t * const tau);
-
-
 #endif

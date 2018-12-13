@@ -61,12 +61,4 @@ int destroy_spectral_bins(SpectralBins_t *bins /**< Spectral bins.*/
                          );
 
 
-/** @brief Loop through the bins, interpolate optical depth values, and add
-           them to the input optical depth array.
-    @return SUCCESS or an error code.*/
-int interpolate(SpectralBins_t const * const bins, /**< Spectral bins.*/
-                fp_t * const tau /**< Optical depths.*/
-               );
-
-
 #endif

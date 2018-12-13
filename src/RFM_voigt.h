@@ -5,11 +5,8 @@
 #include "line_shape.h"
 
 
-#ifdef __NVCC__
-__host__ __device__
-#endif
-int rfm_voigt_line_shape(LineShapeInputs_t const vals,
-                         fp_t * const K);
+HOST DEVICE int rfm_voigt_line_shape(LineShapeInputs_t const vals,
+                                     fp_t * const K);
 
 
 #endif

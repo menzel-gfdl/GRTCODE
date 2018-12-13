@@ -5,6 +5,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include "utils.h"
 #include "verbosity.h"
 
@@ -168,27 +171,41 @@ enum return_codes
 #endif
 
 
+#define HOST_ONLY -1
+#define cat(a,b) a##b
+
+
 #ifdef __NVCC__
 #define gpu_throw(val) {\
-    int e_ = val; \
+    cudaError_t e_ = val; \
     if (e_ != cudaSuccess) \
     { \
         raise(GPU_ERR, \
               "cuda: %s", \
               cudaGetErrorString(e_)); \
     }}
+#define _glaunch(func,threads,loc,...) { \
+    gpu_throw(cudaSetDevice(loc)); \
+    int min_grid_size; \
+    int dim_block; \
+    gpu_throw(cudaOccupancyMaxPotentialBlockSize(&min_grid_size, \
+                                                 &dim_block, \
+                                                 cat(func,_d), \
+                                                 0, \
+                                                 (int)threads)); \
+    int dim_grid = (((int)threads) + dim_block - 1)/dim_block; \
+    cat(func,_d)<<<dim_grid,dim_block,0,0>>>(__VA_ARGS__);}
 #define FROM_HOST cudaMemcpyHostToDevice
 #define FROM_DEVICE cudaMemcpyDeviceToHost
 #define HOST __host__
 #define DEVICE __device__
-#define GLOBAL __global__ void
 #else
 #define gpu_throw(val) {}
+#define _glaunch(func,threads,loc,...) {}
 #define FROM_HOST
 #define FROM_DEVICE
 #define HOST
 #define DEVICE
-#define GLOBAL int
 #endif
 
 
@@ -197,9 +214,6 @@ enum return_codes
 #define omp_get_max_threads() 1
 #endif
 
-
-#define HOST_ONLY -1
-#define cat(a,b) a##b
 
 #define gmalloc(ptr,size,loc) { \
     if (loc == HOST_ONLY) \
@@ -264,31 +278,20 @@ enum return_codes
     if (loc == HOST_ONLY) \
     { \
         int t_ = omp_get_max_threads(); \
-        if (threads < t_) \
+        if ((uint64_t)threads < (uint64_t)t_) \
         { \
             omp_set_num_threads(threads); \
         } \
         throw(func(__VA_ARGS__)); \
-        if (threads < t_) \
+        if ((uint64_t)threads < (uint64_t)t_) \
         { \
             omp_set_num_threads(t_); \
         } \
     } \
-    }
-/*
     else \
     { \
-        gpu_throw(cudaSetDevice(loc)); \
-        int min_grid_size; \
-        int dim_block; \
-        gpu_throw(cudaOccupancyMaxPotentialBlockSize(&min_grid_size, \
-                                                     &dim_block, \
-                                                     cat(func,_d), \
-                                                     0, \
-                                                     (int)threads)); \
-        int dim_grid = (((int)threads) + dim_block - 1)/dim_block; \
-        gpu_throw(cat(func,_d)<<<dim_grid,dim_block,0,0>>>(__VA_ARGS__)); \
+        _glaunch(func,threads,loc,__VA_ARGS__); \
     }}
-*/
+
 
 #endif

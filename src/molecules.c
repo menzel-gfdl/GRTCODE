@@ -14,8 +14,10 @@ int molecule(Molecule_t * const mol, /**< Molecule object.*/
                                                   file.*/
              double const min_line_center, /**< Lower bound [1/cm] for
                                                 spectral line centers.*/
-             double const max_line_center /**< Upper bound [1/cm] for
-                                               spectral line centers.*/
+             double const max_line_center, /**< Upper bound [1/cm] for
+                                                spectral line centers.*/
+             int const num_layers, /**< Number of atmospheric layers.*/
+             int const gpu_id /**< GPU id.*/
             )
 {
     not_null(mol);
@@ -293,11 +295,14 @@ int molecule(Molecule_t * const mol, /**< Molecule object.*/
                   mol->id);
     }
     mol->mass /= 6.023E23;
+    mol->gpu_id = gpu_id;
     throw(parse_hitran_file(&(mol->line_params),
                             hitran_path,
                             mol->id,
                             min_line_center,
-                            max_line_center));
+                            max_line_center,
+                            gpu_id));
+    gmalloc(mol->q,mol->num_isotopologues*num_layers,gpu_id);
     return SUCCESS;
 }
 
@@ -309,6 +314,7 @@ int free_molecule(Molecule_t * const mol /**< Molecule.*/
 {
     not_null(mol);
     throw(free_line_params(&(mol->line_params)));
+    gfree(mol->q,mol->gpu_id);
     return SUCCESS;
 }
 

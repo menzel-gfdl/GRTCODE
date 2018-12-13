@@ -33,11 +33,8 @@
   Returns:
       Voigt line shape value (cm).
 */
-#ifdef __NVCC__
-__host__ __device__
-#endif
-int rfm_voigt_line_shape(LineShapeInputs_t const vals,
-                         fp_t * const K)
+HOST DEVICE int rfm_voigt_line_shape(LineShapeInputs_t const vals,
+                                     fp_t * const K)
 {
     fp_t const DWNO = vals.w;
     fp_t const WNOADJ = vals.line_center;
