@@ -6,6 +6,16 @@ AM_PROG_AR
 AC_PROG_LIBTOOL
 
 
+AC_ARG_ENABLE([cuda],
+[--enable-cuda Create cuda kernels],
+[case "${enableval}" in
+  yes) cuda=true ;;
+  no)  cuda=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-cuda]) ;;
+esac],[cuda=false])
+AM_CONDITIONAL([ENABLE_CUDA], [test x$cuda = xtrue])
+
+
 AC_ARG_ENABLE([fortran_bindings],
 [--enable-fortran-bindings Create Fortran bindings],
 [case "${enableval}" in
