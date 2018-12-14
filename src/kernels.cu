@@ -10,6 +10,25 @@
 #include "tips2017.h"
 
 
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+__device__ static double atomicAdd(double *address,
+                                   double val)
+{
+    unsigned long long int *address_as_ull = (unsigned long long int *)address;
+    unsigned long long int old = *address_as_ull;
+    unsigned long long int assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull,
+                        assumed,
+                        __double_as_longlong(val + __longlong_as_double(assumed)));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+}
+#endif
+
+
 /** @brief Calculate integrated number densities.*/
 __global__ void calc_number_densities_d(int const num_layers, /*Number of atmospheric layers.*/
                                         fp_t const * const p, /*Pressure [atm] (levels).*/
@@ -321,22 +340,43 @@ __global__ void calc_optical_depth_bin_sweep_d(uint64_t const num_lines, /*Numbe
                 right += left;
 
                 LineShapeInputs_t in;
-                in.w = bins.w0 + bins.l[j]*bins.wres;
-                in.num_wpoints = bins.r[j] - bins.l[j] + 1;
                 in.wres = bins.wres;
-                fp_t t[in.num_wpoints];
+                uint64_t const blocksize = 16;
+                fp_t t[blocksize];
+                uint64_t const num_blocks = (bins.r[j]-bins.l[j]+1)/blocksize;
+                uint64_t const remainder = (bins.r[j]-bins.l[j]+1)%blocksize;
                 uint64_t k;
                 for (k=left;k<=right;++k)
                 {
                     in.line_center = v[k];
                     in.lorentz_hwhm = g[k];
                     in.doppler_hwhm = a[k];
-                    rfm_voigt_line_shape(in,
-                                         t);
-                    uint64_t l;
-                    for (l=bins.l[j];l<=bins.r[j];++l)
+                    in.num_wpoints = blocksize;
+                    uint64_t b;
+                    for (b=0;b<num_blocks;++b)
                     {
-                        tau[i*bins.num_wpoints+l] += s[k]*n[i]*t[l-bins.l[j]];
+                        in.w = bins.w0 + (bins.l[j] + b*blocksize)*bins.wres;
+                        rfm_voigt_line_shape(in,
+                                             t);
+                        uint64_t l;
+                        for (l=0;l<blocksize;l++)
+                        {
+                            atomicAdd(&(tau[i*bins.num_wpoints+bins.l[j]+b*blocksize+l]),
+                                      s[k]*n[i]*t[l]);
+                        }
+                    }
+                    if (remainder > 0)
+                    {
+                        in.w = bins.w0 + (bins.l[j] + num_blocks*blocksize)*bins.wres;
+                        in.num_wpoints = remainder;
+                        rfm_voigt_line_shape(in,
+                                             t);
+                        uint64_t l;
+                        for (l=0;l<remainder;l++)
+                        {
+                            atomicAdd(&(tau[i*bins.num_wpoints+bins.l[j]+num_blocks*blocksize+l]),
+                                      s[k]*n[i]*t[l]);
+                        }
                     }
                 }
             }
@@ -479,16 +519,36 @@ __global__ void calc_optical_depth_line_sweep_d(uint64_t const num_lines, /*Numb
             uint64_t k;
             for (k=left;k<=right;++k)
             {
-                in.w = bins.w0 + bins.l[k]*bins.wres;
-                in.num_wpoints = bins.r[k] - bins.l[k] + 1;
-                fp_t t[in.num_wpoints];
-                rfm_voigt_line_shape(in,
-                                     t);
-                uint64_t l;
-                for (l=bins.l[k];l<=bins.r[k];++l)
+                uint64_t const blocksize = 16;
+                fp_t t[blocksize];
+                uint64_t const num_blocks = (right-left+1)/blocksize;
+                uint64_t const remainder = (right-left+1)%blocksize;
+                in.num_wpoints = blocksize;
+                uint64_t b;
+                for (b=0;b<num_blocks;++b)
                 {
-                    atomicAdd(&(tau[i*bins.num_wpoints+l]),
-                              snn[o]*n[i]*t[l-bins.l[k]]);
+                    in.w = bins.w0 + (bins.l[k] + b*blocksize)*bins.wres;
+                    rfm_voigt_line_shape(in,
+                                         t);
+                    uint64_t l;
+                    for (l=0;l<blocksize;l++)
+                    {
+                        atomicAdd(&(tau[i*bins.num_wpoints+bins.l[k]+b*blocksize+l]),
+                                  snn[o]*n[i]*t[l]);
+                    }
+                }
+                if (remainder > 0)
+                {
+                    in.w = bins.w0 + (bins.l[k] + num_blocks*blocksize)*bins.wres;
+                    in.num_wpoints = remainder;
+                    rfm_voigt_line_shape(in,
+                                         t);
+                    uint64_t l;
+                    for (l=0;l<remainder;l++)
+                    {
+                        atomicAdd(&(tau[i*bins.num_wpoints+bins.l[k]+num_blocks*blocksize+l]),
+                                  snn[o]*n[i]*t[l]);
+                    }
                 }
             }
 
@@ -582,16 +642,36 @@ __global__ void calc_optical_depth_line_sample_d(uint64_t const num_lines, /*Num
                              fcenterid-fsteps;
                 uint64_t e = fcenterid+fsteps >= bins.num_wpoints ?
                              bins.num_wpoints-1 : fcenterid+fsteps;
-                in.w = s*bins.wres + bins.w0;
-                in.num_wpoints = e - s + 1;
-                fp_t t[in.num_wpoints];
-                rfm_voigt_line_shape(in,
-                                     t);
-                uint64_t f;
-                for (f=s;f<=e;++f)
+                uint64_t const blocksize = 16;
+                fp_t t[blocksize];
+                uint64_t const num_blocks = (e-s+1)/blocksize;
+                uint64_t const remainder = (e-s+1)%blocksize;
+                in.num_wpoints = blocksize;
+                uint64_t k;
+                for (k=0;k<num_blocks;++k)
                 {
-                    atomicAdd(&(tau[i*bins.num_wpoints+f]),
-                              snn[loffset]*n[i]*t[f-s]);
+                    in.w = (s + k*blocksize)*bins.wres + bins.w0;
+                    rfm_voigt_line_shape(in,
+                                         t);
+                    uint64_t l;
+                    for (l=0;l<blocksize;l++)
+                    {
+                        atomicAdd(&(tau[i*bins.num_wpoints+s+k*blocksize+l]),
+                                  snn[loffset]*n[i]*t[l]);
+                    }
+                }
+                if (remainder > 0)
+                {
+                    in.w = (s + num_blocks*blocksize)*bins.wres + bins.w0;
+                    in.num_wpoints = remainder;
+                    rfm_voigt_line_shape(in,
+                                         t);
+                    uint64_t l;
+                    for (l=0;l<remainder;l++)
+                    {
+                        atomicAdd(&(tau[i*bins.num_wpoints+s+num_blocks*blocksize+l]),
+                                  snn[loffset]*n[i]*t[l]);
+                    }
                 }
             }
         }
@@ -704,10 +784,10 @@ __global__ void interpolate_last_bin_d(SpectralBins_t const bins,
                                       )
 {
     uint64_t const i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i < num_layers)
+    if (i < bins.num_layers)
     {
         uint64_t const j = bins.n - 1;
-        if (bins->do_last_interp)
+        if (bins.do_last_interp)
         {
             fp_t *t = &(tau[i*bins.num_wpoints]);
             fp_t const *x = &(bins.w[j*NIP]);
