@@ -290,7 +290,7 @@ int launch(GrtContext_t * const context,
 
     if (context->gpu_id != HOST_ONLY)
     {
-        gmemcpy(context->tau,tau,context->num_layers*context->num_wpoints,context->gpu_id,FROM_DEVICE);
+        gmemcpy(tau,context->tau,context->num_layers*context->num_wpoints,context->gpu_id,FROM_DEVICE);
     }
     return SUCCESS;
 }

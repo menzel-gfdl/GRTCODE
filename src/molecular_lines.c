@@ -554,6 +554,11 @@ EXTERN int grt_errstr(int const code,
                      buf_size,
                      "GRT: error while performing I/O.");
             break;
+        case GPU_ERR:
+            snprintf(buf,
+                     buf_size,
+                     "GRT: error while running on GPU.");
+            break;
         default:
             snprintf(buf,
                      buf_size,
