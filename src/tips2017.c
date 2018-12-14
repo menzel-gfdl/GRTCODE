@@ -1,6 +1,3 @@
-#ifdef __NVCC__
-#include "cuda_helpers.cuh"
-#endif
 #include "debug.h"
 #include "floating_point_type.h"
 #include "molecules.h"

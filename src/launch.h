@@ -6,8 +6,8 @@
 
 
 int launch(GrtContext_t * const context,
-           fp_t const * const p,
-           fp_t const * const t,
+           fp_t *p,
+           fp_t *t,
            fp_t * const tau);
 
 

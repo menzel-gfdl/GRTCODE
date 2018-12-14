@@ -78,10 +78,15 @@ enum return_codes
 
 
 /*Macros that return error codes.*/
+#ifdef __CUDA_ARCH__
+#define raise(err,mesg,...) { \
+    return err;}
+#else
 #define raise(err,mesg,...) { \
     log_err(mesg, \
             __VA_ARGS__); \
     return err;}
+#endif
 
 
 #define throw(val) { \

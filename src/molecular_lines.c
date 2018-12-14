@@ -427,8 +427,8 @@ EXTERN int grt_set_molecule_ppmv(GrtContext_t *context,
 /*Calcluate the total optical depth in each layer at each spectral grid
   point.*/
 EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
-                                       fp_t const * const pressure,
-                                       fp_t const * const temperature,
+                                       fp_t *pressure,
+                                       fp_t *temperature,
                                        fp_t *optical_depth)
 {
     not_null(context);

@@ -312,14 +312,14 @@ EXTERN int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
     @return 0 if completed successfully, or else an error code.
 */
 EXTERN int grt_calculate_optical_depth(GrtContext_t *context, /**< Library context.*/
-                                       fp_t const * const pressure, /**< Array of atmospheric pressures [mb].
-                                                                         The size of this array must be
-                                                                         equal to the number of atmospheric
-                                                                         levels.*/
-                                       fp_t const * const temperature, /**< Array of atmospheric temperatures [K].
-                                                                            The size of this array must be
-                                                                            equal to the number of atmospheric
-                                                                            levels.*/
+                                       fp_t *pressure, /**< Array of atmospheric pressures [mb].
+                                                            The size of this array must be
+                                                            equal to the number of atmospheric
+                                                            levels.*/
+                                       fp_t *temperature, /**< Array of atmospheric temperatures [K].
+                                                               The size of this array must be
+                                                               equal to the number of atmospheric
+                                                               levels.*/
                                        fp_t *optical_depth /**< Array of atmospheric optical depths.
                                                                 The size of this array must be equal
                                                                 to the number of atmospheric layers

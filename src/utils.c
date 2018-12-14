@@ -340,9 +340,9 @@ int get_num_gpus(int * num_devices,
     if (verbose)
     {
         log_mesg("Found %d GPU devices:",
-                 num_devices);
+                 *num_devices);
         int i;
-        for (i=0;i<num_devices;++i)
+        for (i=0;i<(*num_devices);++i)
         {
             cudaDeviceProp prop;
             gpu_throw(cudaGetDeviceProperties(&prop,i));

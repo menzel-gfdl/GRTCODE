@@ -119,18 +119,18 @@ static int realloc_line_params(LineParams_t * const line_params)
 {
     not_null(line_params);
     LineParams_t t;
-    gmemcpy(&t,line_params,1,HOST_ONLY,0);
+    gmemcpy(&t,line_params,1,HOST_ONLY,FROM_HOST);
     throw(alloc_line_params(line_params,
                             t.num_lines,
                             t.gpu_id));
-    gmemcpy(line_params->iso,t.iso,t.num_lines,t.gpu_id,0);
-    gmemcpy(line_params->vnn,t.vnn,t.num_lines,t.gpu_id,0);
-    gmemcpy(line_params->snn,t.snn,t.num_lines,t.gpu_id,0);
-    gmemcpy(line_params->yair,t.yair,t.num_lines,t.gpu_id,0);
-    gmemcpy(line_params->yself,t.yself,t.num_lines,t.gpu_id,0);
-    gmemcpy(line_params->en,t.en,t.num_lines,t.gpu_id,0);
-    gmemcpy(line_params->n,t.n,t.num_lines,t.gpu_id,0);
-    gmemcpy(line_params->d,t.d,t.num_lines,t.gpu_id,0);
+    gmemcpy(line_params->iso,t.iso,t.num_lines,t.gpu_id,FROM_HOST);
+    gmemcpy(line_params->vnn,t.vnn,t.num_lines,t.gpu_id,FROM_HOST);
+    gmemcpy(line_params->snn,t.snn,t.num_lines,t.gpu_id,FROM_HOST);
+    gmemcpy(line_params->yair,t.yair,t.num_lines,t.gpu_id,FROM_HOST);
+    gmemcpy(line_params->yself,t.yself,t.num_lines,t.gpu_id,FROM_HOST);
+    gmemcpy(line_params->en,t.en,t.num_lines,t.gpu_id,FROM_HOST);
+    gmemcpy(line_params->n,t.n,t.num_lines,t.gpu_id,FROM_HOST);
+    gmemcpy(line_params->d,t.d,t.num_lines,t.gpu_id,FROM_HOST);
     throw(free_line_params(&t));
     return SUCCESS;
 }
@@ -371,6 +371,8 @@ int parse_hitran_file(LineParams_t * const line_params,
 
     if (gpu_id == HOST_ONLY)
     {
+        line_params->num_lines = lp.num_lines;
+        line_params->gpu_id = lp.gpu_id;
         line_params->iso = lp.iso;
         line_params->vnn = lp.vnn;
         line_params->snn = lp.snn;
