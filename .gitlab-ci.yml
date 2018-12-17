@@ -8,8 +8,9 @@ build:lscgpu50-d:
     - autoreconf --install
     - ./configure --prefix /home/Raymond.Menzel/local/molecular_lines --enable-fortran-bindings --enable-cuda CC=nvcc
     - make
-  cache:
+  artifacts:
     untracked: true
+    expire_in: 5 mins
 
 
 deploy:lscgpu50-d:
