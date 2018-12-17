@@ -1,3 +1,26 @@
+build:lscgpu50-d:
+  stage: build
+  tags:
+    - gpudevbox
+  script:
+    - source /opt/lmod/lmod/init/bash
+    - module load cuda/9.1
+    - autoreconf --install
+    - ./configure --prefix /home/Raymond.Menzel/local/molecular_lines --enable-fortran-bindings --enable-cuda CC=nvcc
+    - make
+
+
+deploy:lscgpu50-d:
+  stage: deploy
+  tags:
+    - gpudevbox
+  script:
+    - make install
+  dependencies:
+    - build:lscgpu50-d
+
+
+
 build:lscsky50-d:
   stage: build
   tags:
