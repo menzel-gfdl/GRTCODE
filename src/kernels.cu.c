@@ -521,8 +521,8 @@ __global__ void calc_optical_depth_line_sweep_d(uint64_t const num_lines, /*Numb
             {
                 uint64_t const blocksize = 16;
                 fp_t t[blocksize];
-                uint64_t const num_blocks = (right-left+1)/blocksize;
-                uint64_t const remainder = (right-left+1)%blocksize;
+                uint64_t const num_blocks = (bins.r[k]-bins.l[k]+1)/blocksize;
+                uint64_t const remainder = (bins.r[k]-bins.l[k]+1)%blocksize;
                 in.num_wpoints = blocksize;
                 uint64_t b;
                 for (b=0;b<num_blocks;++b)

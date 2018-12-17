@@ -436,7 +436,7 @@ EXTERN int grt_calculate_optical_depth(GrtContext_t *context,
     not_null(temperature);
     not_null(optical_depth);
     fp_t const mbtoatm = 0.000986923f;
-    fp_t p[context->num_levels];
+    fp_t p[MAX_NUM_LEVELS];
     int i;
     for (i=0;i<context->num_levels;++i)
     {

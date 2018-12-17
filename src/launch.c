@@ -204,7 +204,7 @@ int launch(GrtContext_t * const context,
                 break;
             case line_sweep:
                 glaunch(calc_optical_depth_line_sweep,
-                        context->bins.n,
+                        mol->line_params.num_lines,
                         context->gpu_id,
                         mol->line_params.num_lines,
                         context->num_layers,
