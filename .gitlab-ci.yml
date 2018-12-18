@@ -5,8 +5,13 @@ build:lscgpu50-d:
   script:
     - source /opt/lmod/lmod/init/bash
     - module load cuda/9.1
+    - module load gcc/7.3.0
     - autoreconf --install
-    - ./configure --prefix /home/Raymond.Menzel/local/molecular_lines --enable-fortran-bindings --enable-cuda CC=nvcc
+    - ./configure --prefix /home/Raymond.Menzel/local/molecular_lines
+                  --enable-fortran-bindings --enable-cuda CC=nvcc
+                  CFLAGS="-g -O2 -fopenmp" NVCCFLAGS="-ccbin gcc"
+                  FC=gfortran FFLAGS="-g -O2 -fopenmp" LDFLAGS="-fopenmp"
+                  PYTHON=/home/Raymond.Menzel/packages/Python-3.5.5/bin/python3
     - make
   artifacts:
     untracked: true
@@ -27,25 +32,25 @@ build:lscsky50-d:
   stage: build
   tags:
     - skylake
-  only:
-    - molecular_lines_beta
   script:
-    - make clean
+    - source /opt/lmod/lmod/init/bash
+    - module load gcc/7.2.0
+    - autoreconf --install
+    - ./configure --prefix /home/Raymond.Menzel/local/molecular_lines
+                  --enable-fortran-bindings CC=gcc CFLAGS="-g -O2 -fopenmp"
+                  FC=gfortran FFLAGS="-g -O2 -fopenmp" LDFLAGS="-fopenmp"
+                  PYTHON=/home/Raymond.Menzel/local/bin/python3
     - make
   artifacts:
-    paths:
-      - ./*.so
-      - ./*.a
-      - ./*.mod
-      - ./*.o
+    untracked: true
+    expire_in: 5 mins
 
-test:lscsky50-d:
-  stage: test
+
+deploy:lscsky50-d:
+  stage: deploy
   tags:
     - skylake
-  only:
-    - molecular_lines_beta
   script:
-    - make test
+    - make install
   dependencies:
     - build:lscsky50-d

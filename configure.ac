@@ -14,6 +14,7 @@ AC_ARG_ENABLE([cuda],
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-cuda]) ;;
 esac],[cuda=false])
 AM_CONDITIONAL([ENABLE_CUDA], [test x$cuda = xtrue])
+AC_ARG_VAR([NVCCFLAGS],[flags to pass to the nvcc compiler.])
 
 
 AC_ARG_ENABLE([fortran_bindings],
