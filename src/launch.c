@@ -39,7 +39,8 @@ int launch(GrtContext_t * const context,
 
     /*Zero out buffers used to accumulate results.*/
     gmemset(context->tau,0,context->num_layers*context->num_wpoints,context->gpu_id);
-    gmemset(context->bins.tau,0,context->bins.isize,context->bins.gpu_id);
+    gmemset(context->bins.tau,0,context->bins.isize*context->bins.num_layers,
+            context->bins.gpu_id);
 
     /*Calculate the total number density of air molecules integrated across
       each layer.*/
