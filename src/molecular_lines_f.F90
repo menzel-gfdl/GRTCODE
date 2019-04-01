@@ -131,6 +131,8 @@ module molecular_lines_f
     public :: grt_errstr_f
     public :: grt_set_verbosity_f
     public :: grt_get_verbosity_f
+    public :: grt_add_cfc_f
+    public :: grt_set_cfc_ppmv_f
 
 
     integer(kind=c_int),parameter,public :: H2O = 1
@@ -143,6 +145,8 @@ module molecular_lines_f
     integer(kind=c_int),parameter,public :: wavenumber_sweep = 0
     integer(kind=c_int),parameter,public :: line_sweep = 1
     integer(kind=c_int),parameter,public :: line_sample = 2
+    integer(kind=c_int), parameter, public :: F11 = 0
+    integer(kind=c_int), parameter, public :: F12 = 1
 
 
 #ifdef SINGLE_PRECISION
@@ -328,6 +332,40 @@ module molecular_lines_f
             implicit none
             integer(kind=c_int) :: level
         end function grt_get_verbosity_f
+    end interface
+
+
+    !> @ingroup lowlevelfortranapi
+    !! @brief Directly bound to the @ref grt_add_cfc function defined
+    !!        in the @ref capi
+    interface
+        function grt_add_cfc(context, cfc_id, filepath) &
+            result(return_code) &
+            bind(c)
+            use iso_c_binding
+            implicit none
+            type(c_ptr), value, intent(in) :: context
+            integer(kind=c_int), value, intent(in) :: cfc_id
+            character(kind=c_char, len=1), dimension(*), intent(in) :: filepath
+            integer(kind=c_int) :: return_code
+        end function grt_add_cfc
+    end interface
+
+
+    !> @ingroup lowlevelfortranapi
+    !! @brief Directly bound to the @ref grt_set_cfc_ppmv function defined
+    !!        in the @ref capi
+    interface
+        function grt_set_cfc_ppmv(context, cfc_id, ppmv) &
+            result(return_code) &
+            bind(c)
+            use iso_c_binding
+            implicit none
+            type(c_ptr), value, intent(in) :: context
+            integer(kind=c_int), value, intent(in) :: cfc_id
+            real(kind=FP), dimension(*), intent(in) :: ppmv
+            integer(kind=c_int) :: return_code
+        end function grt_set_cfc_ppmv
     end interface
 
 
@@ -565,6 +603,39 @@ module molecular_lines_f
                 stop 1
             endif
         end subroutine grt_errstr_f
+
+
+        !> @ingroup lowlevelfortranapi
+        !! @brief Add a CFC to a context.
+        !! @return 0 if completed successfully, or else an error code.
+        function grt_add_cfc_f(context, cfc_id, filepath) &
+            result(return_code)
+            type(GrtContext_t), intent(inout) :: context !< Library context.
+            integer(kind=c_int), intent(in) :: cfc_id !< CFC id.
+            character(len=*), intent(in) :: filepath !< Path to the CFC cross section csv file.
+            integer(kind=c_int) :: return_code
+
+            character(len=1024) :: buf
+
+            buf = trim(filepath)//c_null_char
+            return_code = grt_add_cfc(context%p, cfc_id, buf)
+        end function grt_add_cfc_f
+
+
+        !> @ingroup lowlevelfortranapi
+        !! @brief Update a CFC's ppmv.
+        !! @return 0 if completed successfully, or else an error code.
+        function grt_set_cfc_ppmv_f(context, cfc_id, ppmv) &
+            result(return_code)
+            type(GrtContext_t), intent(inout) :: context !< Library context.
+            integer(kind=c_int), intent(in) :: cfc_id !< CFC id.
+            real(kind=FP), dimension(:), intent(in) :: ppmv !< CFC abundance [ppmv]. The size of
+                                                            !! this array must be equal to the
+                                                            !! number of atmospheric levels.
+            integer(kind=c_int) :: return_code
+
+            return_code = grt_set_cfc_ppmv(context%p, cfc_id, ppmv)
+        end function grt_set_cfc_ppmv_f
 
 
 end module molecular_lines_f

@@ -17,6 +17,8 @@ O2 = 7
 wavenumber_sweep = 0
 line_sweep = 1
 line_sample = 2
+F11 = 0
+F12 = 1
 
 
 def get_ctype(val,t,pointer=False):
@@ -119,6 +121,22 @@ class MolecularLines(object):
         catch(self.ml.grt_set_molecule_ppmv(self.context,
                                             c_int(molecule_id),
                                             ppmv))
+
+    def add_cfc(self, cfc_id filepath):
+        """
+        Wrapper for grt_add_cfc.
+        """
+        cfc_id = get_ctype(cfc_id, "int", pointer=False)
+        filepath = get_ctype(filepath, "string")
+        catch(self.ml.grt_add_cfc(self.context, cfc_id, filepath))
+
+    def set_cfc_ppmv(self, cfc_id, ppmv):
+        """
+        Wrapper for grt_set_cfc_ppmv.
+        """
+        self.ml.grt_set_cfc_ppmv.argtypes = [c_void_p, c_int, ndpointer(fp_t, flags="C_CONTIGUOUS")]
+        catch(self.ml.grt_set_cfc_ppmv(self.context, c_int(cfc_id), ppmv))
+
 
     def optical_depths(self, pressure, temperature, optical_depth):
         """

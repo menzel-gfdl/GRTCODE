@@ -145,6 +145,7 @@ module molecular_lines_fhl
     public :: grt_set_verbosity_f
     public :: grt_get_verbosity_f
 
+
 #ifdef SINGLE_PRECISION
 #define FP c_float
 #else
@@ -181,6 +182,8 @@ module molecular_lines_fhl
                                                !! then the ozone continuum is not
                                                !! included in the optical depth
                                                !! calculation.
+    character(len=1024) :: f11_file = "none" !< F11 cross section csv file.
+    character(len=1024) :: f12_file = "none" !< F12 cross section csv file.
     namelist /molecular_lines_nml/ num_levels, &
                                    w0, &
                                    wn, &
@@ -194,7 +197,7 @@ module molecular_lines_fhl
                                    do_ch4, &
                                    do_o2, &
                                    h2o_ctm_dir, &
-                                   o3_ctm_dir
+                                   o3_ctm_dir, f11_file, f12_file
 
 
     contains
@@ -435,6 +438,16 @@ module molecular_lines_fhl
                                                  O2)
                 call check_rc(return_code)
             endif
+
+            !Add CFCs to the library context.
+            if (trim(f11_file) .ne. "none") then
+                return_code = grt_add_cfc_f(context, F11, f11_file)
+                call check_rc(return_code)
+            endif
+            if (trim(f12_file) .ne. "none") then
+                return_code = grt_add_cfc_f(context, F12, f12_file)
+                call check_rc(return_code)
+            endif
         end subroutine grt_context_init_fhl
 
 
@@ -463,7 +476,8 @@ module molecular_lines_fhl
                                                    xn2o, &
                                                    xco, &
                                                    xch4, &
-                                                   xo2)
+                                                   xo2, &
+                                                   xf11, xf12)
 
             !Inputs/outputs
             real(kind=FP),dimension(:),intent(in) :: pressure !< Array of atmospheric pressures [mb].
@@ -511,6 +525,14 @@ module molecular_lines_fhl
                                                                   !! The size of this array must be
                                                                   !! equal to the number of atmospheric
                                                                   !! levels.
+            real(kind=FP), dimension(:), intent(in), optional :: xf11 !< Array of CFC F11 abundances [ppmv].
+                                                                      !! The size of this array must be
+                                                                      !! equal to the number of atmospheric
+                                                                      !! levels.
+            real(kind=FP), dimension(:), intent(in), optional :: xf12 !< Array of CFC F12 abundances [ppmv].
+                                                                      !! The size of this array must be
+                                                                      !! equal to the number of atmospheric
+                                                                      !! levels.
 
             !Local variables
             integer(kind=c_int) :: return_code
@@ -591,6 +613,22 @@ module molecular_lines_fhl
                 return_code = grt_set_molecule_ppmv_f(context, &
                                                       O2, &
                                                       xo2)
+                call check_rc(return_code)
+            endif
+            if (present(xf11)) then
+                if (size(xf11) .ne. num_levels) then
+                    call error("input xf11 array must be of size num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_cfc_ppmv_f(context, F11, xf11)
+                call check_rc(return_code)
+            endif
+            if (present(xf12)) then
+                if (size(xf12) .ne. num_levels) then
+                    call error("input xf12 array must be of size num_levels.")
+                    stop 1
+                endif
+                return_code = grt_set_cfc_ppmv_f(context, F12, xf12)
                 call check_rc(return_code)
             endif
             if (size(pressure) .ne. num_levels .or. size(temperature) .ne. &
