@@ -83,7 +83,6 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
     }
     xsc->num_wpoints = num_wpoints;
     xsc->gpu_id = gpu_id;
-    gfree(filepath, HOST_ONLY);
     return SUCCESS;
 }
 

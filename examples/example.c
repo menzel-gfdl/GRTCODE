@@ -14,20 +14,20 @@
 #define check_rc(rc) { \
     if (rc != 0) { \
         char buf[256]; \
-        grt_errstr(rc,buf,256); \
-        fprintf(stderr,"%s\n",buf); \
-        fprintf(stderr,"%s: %d Error\n",__FILE__,__LINE__); \
+        grt_errstr(rc, buf, 256); \
+        fprintf(stderr, "%s\n", buf); \
+        fprintf(stderr, "%s: %d Error\n", __FILE__, __LINE__); \
         return rc; \
     } \
 }
 
 
-#define omp_check_rc(rc,e) { \
+#define omp_check_rc(rc, e) { \
     if (rc != 0) { \
         char buf[256]; \
-        grt_errstr(rc,buf,256); \
-        fprintf(stderr,"%s\n",buf); \
-        fprintf(stderr,"%s: %d Error\n",__FILE__,__LINE__); \
+        grt_errstr(rc, buf, 256); \
+        fprintf(stderr, "%s\n", buf); \
+        fprintf(stderr, "%s: %d Error\n", __FILE__, __LINE__); \
         e |= rc; \
     } \
 }
@@ -43,7 +43,7 @@
 #endif
 
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
     /*Command line argument controls how many GPUs will be used.*/
     int num_contexts = 1;
@@ -51,7 +51,7 @@ int main(int argc,char **argv)
     int const host_id = -1;
     if (argc == 2)
     {
-        if (strcmp("--host",argv[1]) == 0)
+        if (strcmp("--host", argv[1]) == 0)
         {
             host_only = 1;
         }
@@ -62,7 +62,7 @@ int main(int argc,char **argv)
     }
     else if (argc > 2)
     {
-        fprintf(stderr,"Usage: %s [--host|num_gpus]\n",argv[0]);
+        fprintf(stderr, "Usage: %s [--host|num_gpus]\n", argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -71,19 +71,22 @@ int main(int argc,char **argv)
     double w0 = 1.; /*Lower bound [1/cm] for the spectral grid.*/
     double wn = 3000.; /*Upper bound [1/cm] for the spectral grid.*/
     double wres = 0.1; /*Resoultion [1/cm] for the spectral grid.*/
-    char *h2o_ctm_dir = "water_vapor_continuum"; /*Path of the directory
+    char *hitran_path = "../HITRAN_files/hitran2012.par"; /*Path to HITRAN database file.*/
+    char *h2o_ctm_dir = "../water_vapor_continuum"; /*Path of the directory
                                                    that contains the
                                                    water vapor continuum
                                                    input files.*/
-    char *o3_ctm_dir = "ozone_continuum"; /*Path of the directory
+    char *o3_ctm_dir = "../ozone_continuum"; /*Path of the directory
                                             that contains the
                                             ozone continuum input file.*/
+    char *f11_file = "../cfc_cross_sections/F11.xsc.296.0.760.0.csv"; /*Path to F11 CFC cross section csv file.*/
+    char *f12_file = "../cfc_cross_sections/F12.xsc.296.3.760.0.csv"; /*Path to F11 CFC cross section csv file.*/
     int i;
 
     /*Increase the verbosity of the library output.*/
     grt_set_verbosity(3);
 
-    for (i=0;i<num_contexts;++i)
+    for (i=0; i<num_contexts; ++i)
     {
         /*Determine the GPU id for the context.*/
         int const *g;
@@ -102,17 +105,8 @@ int main(int argc,char **argv)
 
         /*Initalize library context pointers.*/
         GrtContext_t *c;
-        check_rc(grt_context_init(&c,
-                                  num_levels,
-                                  w0,
-                                  wn,
-                                  wres,
-                                  "HITRAN_files/hitran2012.par",
-                                  h2o_ctm_dir,
-                                  o3_ctm_dir,
-                                  NULL,
-                                  g,
-                                  NULL));
+        check_rc(grt_context_init(&c, num_levels, w0, wn, wres, hitran_path, h2o_ctm_dir,
+                                  o3_ctm_dir, NULL, g, NULL, NULL));
         context[i] = c;
 
         /*Only water vapor lines with line centers in the range 1 - 1000 [1/cm]
@@ -121,16 +115,15 @@ int main(int argc,char **argv)
         double max_line_center_wavenumber = 1000.;
 
         /*Add water vapor to the library context.*/
-        check_rc(grt_add_molecule(c,
-                                  H2O,
-                                  &min_line_center_wavenumber,
+        check_rc(grt_add_molecule(c, H2O, &min_line_center_wavenumber,
                                   &max_line_center_wavenumber));
 
         /*Add ozone to the library context.*/
-        check_rc(grt_add_molecule(c,
-                                  O3,
-                                  NULL,
-                                  NULL));
+        check_rc(grt_add_molecule(c, O3, NULL, NULL));
+
+        /*Add CFCs.*/
+        check_rc(grt_add_cfc(c, F11, f11_file));
+        check_rc(grt_add_cfc(c, F12, f12_file));
     }
 
     uint64_t num_wpoints; /*Size of the spectral grid.  Here both context
@@ -151,18 +144,15 @@ int main(int argc,char **argv)
     FP_t *optical_depth = (FP_t *)malloc(sizeof(*optical_depth)*
                                          num_wpoints*num_layers*num_columns);
     int rc[num_contexts];
-    memset(rc,
-           0,
-           sizeof(rc)*num_contexts);
+    memset(rc, 0, sizeof(rc)*num_contexts);
 
     /*Loop over some columns.*/
-#pragma omp parallel for num_threads(num_contexts) \
-                         default(none) \
+#pragma omp parallel for num_threads(num_contexts) default(none) \
                          shared(context,num_levels,num_columns,num_wpoints, \
                                 pressure,temperature,ppmv,stderr, \
                                 optical_depth,rc) \
                          private(i) /*is watching you, seeing your every move.*/
-    for (i=0;i<num_columns;++i)
+    for (i=0; i<num_columns; ++i)
     {
         int g = omp_get_thread_num();
         GrtContext_t *c = context[g];
@@ -170,7 +160,7 @@ int main(int argc,char **argv)
 
         /*Make up some data for the column.*/
         int j;
-        for (j=0;j<num_levels;++j)
+        for (j=0; j<num_levels; ++j)
         {
             int o = i*num_levels + j;
             pressure[o] = 0.1 + 150.*j;
@@ -179,31 +169,34 @@ int main(int argc,char **argv)
         }
 
         /*Set the water vapor abundance for the library context.*/
-        omp_check_rc(grt_set_molecule_ppmv(c,
-                                           H2O,
-                                           &(ppmv[offset])),
-                     rc[g]);
+        omp_check_rc(grt_set_molecule_ppmv(c, H2O, &(ppmv[offset])), rc[g]);
 
-        /*Make up some more data for the column.*/
-        for (j=0;j<num_levels;++j)
+        /*Set the ozone abundance for the library context.*/
+        for (j=0; j<num_levels; ++j)
         {
             ppmv[i*num_levels+j] = 325. - 3.3*j;
         }
+        omp_check_rc(grt_set_molecule_ppmv(c, O3, &(ppmv[offset])), rc[g]);
 
-        /*Set the water vapor abundance for the library context.*/
-        omp_check_rc(grt_set_molecule_ppmv(c,
-                                           O3,
-                                           &(ppmv[offset])),
-                     rc[g]);
+        /*Set the CFC abundances for the library context.*/
+        for (j=0; j<num_levels; ++j)
+        {
+            ppmv[i*num_levels+j] = 1025. - 6.7*j;
+        }
+        omp_check_rc(grt_set_cfc_ppmv(c, F11, &(ppmv[offset])), rc[g]);
+        for (j=0; j<num_levels; ++j)
+        {
+            ppmv[i*num_levels+j] = 2005. - 4.1*j;
+        }
+        omp_check_rc(grt_set_cfc_ppmv(c, F12, &(ppmv[offset])), rc[g]);
 
         /*Calculate the optical depths.*/
-        omp_check_rc(grt_calculate_optical_depth(c,
-                                                 &(pressure[offset]),
+        omp_check_rc(grt_calculate_optical_depth(c, &(pressure[offset]),
                                                  &(temperature[offset]),
                                                  &(optical_depth[offset*num_wpoints])),
                      rc[g]);
     }
-    for (i=0;i<num_contexts;++i)
+    for (i=0; i<num_contexts; ++i)
     {
         check_rc(rc[i]);
     }
@@ -215,7 +208,7 @@ int main(int argc,char **argv)
     free(optical_depth);
 
     /*Free memory allocated by the library context.*/
-    for (i=0;i<num_contexts;++i)
+    for (i=0; i<num_contexts; ++i)
     {
         check_rc(grt_context_free(&(context[i])));
     }
