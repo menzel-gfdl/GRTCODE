@@ -231,4 +231,15 @@ int interpolate_last_bin(SpectralBins_t const bins,
                         );
 
 
+/** @brief Calculate the optical depth contribution of a CFC.
+    @return SUCCESS or an error code.*/
+int calc_cfc_optical_depth(uint64_t const num_wpoints, /**< Spectral grid size.*/
+                           int const num_layers, /**< Number of atmospheric layers.*/
+                           fp_t const * const n, /**< Integrated number density [cm^-2] (layers).*/
+                           fp_t const * const x, /**< CFC abundance [ppmv] (levels).*/
+                           fp_t const * const cross_section, /**< CFC cross section [cm^2] (wavenumber).*/
+                           fp_t * const tau /**< Optical depth (layer, wavenumber).*/
+                          );
+
+
 #endif

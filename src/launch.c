@@ -1,4 +1,5 @@
 #include <string.h>
+#include "cfcs.h"
 #include "debug.h"
 #include "floating_point_type.h"
 #ifdef __NVCC__
@@ -269,6 +270,21 @@ int launch(GrtContext_t * const context,
                     context->ns,
                     context->tau);
         }
+    }
+
+    for (m=0; m<context->num_cfcs; ++m)
+    {
+        CfcCrossSection_t *cfc = &(context->cfcs[m]);
+        int index = cfc->id;
+        fp_t const *xp = &(context->x_cfc[index*context->num_levels]);
+
+        /*Calculate CFC optical depths.*/
+        log_info("Calculating optical depth contribution due to CFC %s"
+                     " across %d layers.",
+                 cfc->name, context->num_layers);
+        glaunch(calc_cfc_optical_depth, context->bins.num_wpoints, context->gpu_id,
+                context->bins.num_wpoints, context->num_layers, context->n, xp,
+                cfc->cross_section, context->tau);
     }
 
     if (context->optical_depth_method != line_sample)

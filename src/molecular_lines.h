@@ -3,6 +3,7 @@
 #define MOLECULAR_LINES_H_
 
 #include <stdint.h>
+#include "cfcs.h"
 #include "floating_point_type.h"
 #include "molecules.h"
 #include "ozone_continuum.h"
@@ -167,6 +168,10 @@ typedef struct GrtContext
     uint64_t molecule_bit_field; /**< Bit field used to determine which
                                       molecules are currently in use.*/
     Molecule_t mols[NUM_MOLS]; /**< Array of molecule structures.*/
+    int num_cfcs; /**< Number of cfcs.*/
+    uint32_t cfc_bit_field; /**< Bit field used to determine which cfcs are
+                                 currently in use.*/
+    CfcCrossSection_t cfcs[NUM_CFCS]; /**< CFC cross section data structures.*/
     uint64_t num_wpoints; /**< Number of spectral grid points.*/
     int use_h2o_ctm; /**< Flag indicating if using the water vapor
                           continuum is used.*/
@@ -174,6 +179,7 @@ typedef struct GrtContext
     SpectralBins_t bins; /**< Spectral bins.*/
 
     fp_t *x; /**< Abundance (molecules,levels).*/
+    fp_t *x_cfc; /**< CFC abundance (CFC, levels).*/
     fp_t *n; /**< Total number of molecules [1/cm^2] (layers).*/
     fp_t *pavg; /**< Pressure [atm] (layers).*/
     fp_t *tavg; /**< Temperature [K] (layers).*/
@@ -303,6 +309,26 @@ EXTERN int grt_set_molecule_ppmv(GrtContext_t *context, /**< Library context.*/
                                                               equal to the number of atmospheric
                                                               levels.*/
                                 );
+
+
+/** @brief Add a CFC to a context
+    @return SUCCESS or an error code.*/
+EXTERN int grt_add_cfc(GrtContext_t *context, /**< Library context.*/
+                       int const cfc_id, /**< CFC id.*/
+                       char const * const filepath /**< Path to csv file containing
+                                                        cross section values.*/
+                      );
+
+
+/** @brief Update a CFC's ppmv.
+    @return SUCCESS or an error code.*/
+EXTERN int grt_set_cfc_ppmv(GrtContext_t *context, /**< Library context.*/
+                            int const cfc_id, /**< CFC id.*/
+                            fp_t const * const ppmv /**< Array of CFC abundances [ppmv].
+                                                         The size of this array must be
+                                                         equal to the number of atmospheric
+                                                         levels.*/
+                           );
 
 
 /**

@@ -15,9 +15,9 @@ if CREATE_FORTRAN_BINDINGS
 FLIB = libmolecular_linesf.la
 endif
 lib_LTLIBRARIES = libmolecular_lines.la $(FLIB)
-libmolecular_lines_la_SOURCES = molecular_lines.c launch.c kernels.c kernel_utils.c spectral_bin.c ozone_continuum.c water_vapor_continuum.c RFM_voigt.c tips2017.c parse_HITRAN_file.c parse_csv.c molecules.c utils.c verbosity.c $(CUOBJ)
+libmolecular_lines_la_SOURCES = molecular_lines.c launch.c kernels.c kernel_utils.c spectral_bin.c ozone_continuum.c water_vapor_continuum.c RFM_voigt.c tips2017.c parse_HITRAN_file.c parse_csv.c molecules.c utils.c verbosity.c cfcs.c $(CUOBJ)
 libmolecular_lines_ladir = $(includedir)
-libmolecular_lines_la_HEADERS = molecular_lines.h floating_point_type.h molecules.h parse_HITRAN_file.h ozone_continuum.h spectral_bin.h water_vapor_continuum.h
+libmolecular_lines_la_HEADERS = molecular_lines.h floating_point_type.h molecules.h parse_HITRAN_file.h ozone_continuum.h spectral_bin.h water_vapor_continuum.h cfcs.h
 libmolecular_lines_la_CPPFLAGS = $(PREC_FLAG)
 if ENABLE_CUDA
 libmolecular_lines_la_CFLAGS = -dc -x cu $(NVCCFLAGS) --compiler-options="$(CFLAGS)"

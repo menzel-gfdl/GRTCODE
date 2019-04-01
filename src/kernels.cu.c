@@ -812,3 +812,23 @@ __global__ void interpolate_last_bin_d(SpectralBins_t const bins,
     }
     return;
 }
+
+
+/** @brief Calculate the optical depth contribution of a CFC.
+    @return SUCCESS or an error code.*/
+__global__ void calc_cfc_optical_depth_d(uint64_t const num_wpoints, int const num_layers,
+                                         fp_t const * const n, fp_t const * const x,
+                                         fp_t const * const cross_section, fp_t * const tau)
+{
+    uint64_t const j = blockIdx.x*blockDim.x + threadIdx.x;
+    if (j < num_wpoints)
+    {
+        fp_t const half = 0.5;
+        int i;
+        for (i=0; i<num_layers; ++i)
+        {
+            tau[i*num_wpoints+j] += half*n[i]*(x[i]+x[i+1])*cross_section[j];
+        }
+    }
+    return;
+}

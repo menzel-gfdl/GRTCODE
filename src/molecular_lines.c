@@ -7,6 +7,7 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+#include "cfcs.h"
 #include "debug.h"
 #include "floating_point_type.h"
 #include "launch.h"
@@ -195,9 +196,11 @@ EXTERN int grt_context_init(GrtContext_t **context,
         c.optical_depth_method = wavenumber_sweep;
     }
 
-    /*Prepare to add molecules.*/
+    /*Prepare to add molecules/cfcs.*/
     c.num_molecules = 0;
     c.molecule_bit_field = 0;
+    c.num_cfcs = 0;
+    c.cfc_bit_field = 0;
 
     /*Pepare water vapor continuum.*/
     c.use_h2o_ctm = 0;
@@ -227,6 +230,7 @@ EXTERN int grt_context_init(GrtContext_t **context,
 
     /*Reserve memory.*/
     gmalloc(c.x,c.num_levels*NUM_MOLS,c.gpu_id);
+    gmalloc(c.x_cfc, c.num_levels*NUM_CFCS, c.gpu_id);
     gmalloc(c.n,c.num_layers,c.gpu_id);
     gmalloc(c.pavg,c.num_layers,c.gpu_id);
     gmalloc(c.tavg,c.num_layers,c.gpu_id);
@@ -274,8 +278,13 @@ EXTERN int grt_context_free(GrtContext_t **context /**< Library context.*/
     {
         throw(free_molecule(&(c->mols[i])));
     }
+    for (i=0; i<c->num_cfcs; ++i)
+    {
+        throw(free_cfc_cross_sections(&(c->cfcs[i])));
+    }
     throw(destroy_spectral_bins(&(c->bins)));
     gfree(c->x,c->gpu_id);
+    gfree(c->x_cfc, c->gpu_id);
     gfree(c->n,c->gpu_id);
     gfree(c->pavg,c->gpu_id);
     gfree(c->tavg,c->gpu_id);
@@ -420,6 +429,53 @@ EXTERN int grt_set_molecule_ppmv(GrtContext_t *context,
             context->num_levels,
             context->gpu_id,
             FROM_HOST);
+    return SUCCESS;
+}
+
+
+/** @brief Add a CFC to a context
+    @return SUCCESS or an error code.*/
+EXTERN int grt_add_cfc(GrtContext_t *context, int const cfc_id,
+                       char const * const filepath)
+{
+    not_null(context);
+    if (is_cfc_active(context->cfc_bit_field, cfc_id))
+    {
+        raise(VALUE_ERR, "cfc %d has already been added.", cfc_id);
+    }
+    int index = context->num_cfcs;
+    (context->num_cfcs)++;
+    in_range(context->num_cfcs, 1, NUM_CFCS);
+    throw(activate_cfc(&(context->cfc_bit_field), cfc_id));
+
+    /*Read in the CFC cross section values.*/
+    log_mesg("Using CFC %s.", context->cfcs[index].name);
+    throw(get_cfc_cross_sections(&(context->cfcs[index]), cfc_id, filepath,
+                                 context->num_wpoints, context->w0, context->wres,
+                                 context->gpu_id));
+    return SUCCESS;
+}
+
+
+/*Update a CFC's ppmv.*/
+EXTERN int grt_set_cfc_ppmv(GrtContext_t *context, int const cfc_id,
+                            fp_t const * const ppmv)
+{
+    not_null(context);
+    not_null(ppmv);
+    if (!is_cfc_active(context->cfc_bit_field, cfc_id))
+    {
+        log_warn("CFC %d is not being used.", cfc_id);
+        return SUCCESS;
+    }
+    fp_t a[context->num_levels];
+    int i;
+    for (i=0; i<context->num_levels; ++i)
+    {
+        a[i] = ppmv[i]*1.e-6;
+    }
+    int offset = cfc_id*context->num_levels;
+    gmemcpy(&(context->x_cfc[offset]), a, context->num_levels, context->gpu_id, FROM_HOST);
     return SUCCESS;
 }
 

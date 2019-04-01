@@ -770,3 +770,24 @@ int interpolate_last_bin(SpectralBins_t const bins,
     }
     return SUCCESS;
 }
+
+
+/** @brief Calculate the optical depth contribution of a CFC.
+    @return SUCCESS or an error code.*/
+int calc_cfc_optical_depth(uint64_t const num_wpoints, int const num_layers,
+                           fp_t const * const n, fp_t const * const x,
+                           fp_t const * const cross_section, fp_t * const tau)
+{
+    fp_t const half = 0.5;
+    int i;
+    uint64_t j;
+#pragma omp parallel for collapse(2) default(none) private(i,j)
+    for (i=0; i<num_layers; ++i)
+    {
+        for (j=0; j<num_wpoints; ++j)
+        {
+            tau[i*num_wpoints+j] += half*n[i]*(x[i]+x[i+1])*cross_section[j];
+        }
+    }
+    return SUCCESS;
+}
