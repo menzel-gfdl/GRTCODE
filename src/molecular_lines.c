@@ -449,10 +449,10 @@ EXTERN int grt_add_cfc(GrtContext_t *context, int const cfc_id,
     throw(activate_cfc(&(context->cfc_bit_field), cfc_id));
 
     /*Read in the CFC cross section values.*/
-    log_mesg("Using CFC %s.", context->cfcs[index].name);
     throw(get_cfc_cross_sections(&(context->cfcs[index]), cfc_id, filepath,
                                  context->num_wpoints, context->w0, context->wres,
                                  context->gpu_id));
+    log_mesg("Using CFC %s.", context->cfcs[index].name);
     return SUCCESS;
 }
 
