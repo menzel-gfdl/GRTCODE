@@ -122,7 +122,7 @@ class MolecularLines(object):
                                             c_int(molecule_id),
                                             ppmv))
 
-    def add_cfc(self, cfc_id filepath):
+    def add_cfc(self, cfc_id, filepath):
         """
         Wrapper for grt_add_cfc.
         """
