@@ -21,5 +21,6 @@ AC_ARG_ENABLE([single_precision],
 esac],[single_precision=false])
 AM_CONDITIONAL([USE_SINGLE_PRECISION], [test x$single_precision = xtrue])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile molecular_lines/Makefile molecular_lines/src/Makefile])
+AC_CONFIG_FILES([Makefile molecular_lines/Makefile molecular_lines/src/Makefile
+                 rs_utils/Makefile rs_utils/src/Makefile])
 AC_OUTPUT

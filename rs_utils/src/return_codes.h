@@ -1,0 +1,23 @@
+#ifndef RETURN_CODES_H_
+#define RETURN_CODES_H_
+
+
+enum return_codes
+{
+    RS_SUCCESS,
+    RS_INVALID_ERR,
+    RS_DIVBYZERO_ERR,
+    RS_OVERFLOW_ERR,
+    RS_UNDERFLOW_ERR,
+    RS_SENTINEL_ERR,
+    RS_NULL_ERR,
+    RS_NON_NULL_ERR,
+    RS_RANGE_ERR,
+    RS_VALUE_ERR,
+    RS_COMPILER_ERR,
+    RS_IO_ERR,
+    RS_GPU_ERR
+};
+
+
+#endif
