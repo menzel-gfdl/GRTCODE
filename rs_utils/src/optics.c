@@ -1,8 +1,8 @@
 #include <stdint.h>
-#include "config.h"
 #include "debug.h"
 #include "floating_point_type.h"
 #include "optics.h"
+#include "rs_config.h"
 #include "spectral_grid.h"
 
 

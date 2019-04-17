@@ -1,6 +1,6 @@
 #include <stdint.h>
-#include "config.h"
 #include "debug.h"
+#include "rs_config.h"
 #include "spectral_grid.h"
 
 

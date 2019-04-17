@@ -1,5 +1,5 @@
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#ifndef RS_CONFIG_H_
+#define RS_CONFIG_H_
 
 #include <float.h>
 

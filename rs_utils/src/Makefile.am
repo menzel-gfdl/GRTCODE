@@ -4,4 +4,4 @@ endif
 
 lib_LTLIBRARIES = librs_utils.la
 librs_utils_la_SOURCES = argparse.c curtis_godson.c optics.c parse_csv.c spectral_grid.c utils.c verbosity.c
-libmolecular_lines_la_CPPFLAGS = $(PREC_FLAG)
+librs_utils_la_CPPFLAGS = $(PREC_FLAG)
