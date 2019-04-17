@@ -24,5 +24,6 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
                  molecular_lines/Makefile molecular_lines/src/Makefile
                  rs_utils/Makefile rs_utils/src/Makefile
-                 shortwave/Makefile shortwave/src/Makefile])
+                 shortwave/Makefile shortwave/src/Makefile
+                 longwave/Makefile longwave/src/Makefile])
 AC_OUTPUT
