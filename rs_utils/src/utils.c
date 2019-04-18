@@ -156,32 +156,6 @@ int to_fp_t(double const d, fp_t * const f)
 }
 
 
-/*Determine the number of CUDA-enabled GPUs on the system.*/
-int get_num_gpus(int * num_devices, int const verbose)
-{
-#ifdef __NVCC__
-    not_null(num_devices);
-    gpu_catch(cudaGetDeviceCount(num_devices));
-    if (verbose)
-    {
-        char *mesg = "Found %d GPU devices:";
-        log_mesg(mesg, *num_devices);
-        int i;
-        for (i=0; i<(*num_devices); ++i)
-        {
-            cudaDeviceProp prop;
-            gpu_catch(cudaGetDeviceProperties(&prop, i));
-            mesg = "\tDevice #%d: %s";
-            log_mesg(mesg, i, prop.name);
-        }
-    }
-#else
-    *num_devices = 0;
-#endif
-    return RS_SUCCESS;
-}
-
-
 /*Find the array indices that bracket the input value.*/
 int get_sorted_bounds(fp_t const val, fp_t const * const array, int const array_size,
                       int * const left, int * const right)

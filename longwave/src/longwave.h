@@ -3,6 +3,7 @@
 
 
 #include <stdint.h>
+#include "device.h"
 #include "extern.h"
 #include "floating_point_type.h"
 #include "optics.h"
@@ -13,10 +14,8 @@
 typedef struct Longwave
 {
     int num_levels; /**< Number of atmospheric levels.*/
-    double w0; /**< Lower bound of the spectral grid [1/cm].*/
-    double dw; /**< Spectral grid resolution [1/cm].*/
-    uint64_t n; /**< Number of spectral grid points.*/
-    int gpu_id; /**< Device id.*/
+    SpectralGrid_t grid; /**< Spectral grid.*/
+    Device_t device; /**< Device.*/
     fp_t *layer_temperature; /**< Temperature [K] (layer).*/
     fp_t *level_temperature; /**< Temperature [K] (level).*/
     fp_t *emissivity; /**< Emissivity of the surface (wavenumber).*/
@@ -29,7 +28,8 @@ typedef struct Longwave
     @return RS_SUCCESS or an error code.*/
 EXTERN int create_longwave(Longwave_t * const lw, /**< Longwave object.*/
                            int const num_levels, /**< Number of atmospheric levels.*/
-                           SpectralGrid_t const * const grid /**< Spectral grid.*/
+                           SpectralGrid_t const * const grid, /**< Spectral grid.*/
+                           Device_t const * const device /**< Device.*/
                           );
 
 

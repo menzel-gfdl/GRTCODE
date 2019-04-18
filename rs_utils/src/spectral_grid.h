@@ -11,8 +11,6 @@ typedef struct SpectralGrid
     double wn; /**< Upper bound [1/cm].*/
     double dw; /**< Grid spacing [1/cm.*/
     uint64_t n; /**< Number of grid points.*/
-    double *w; /**< Spectral grid values [1/cm] (n).*/
-    int gpu_id; /**< Device id.*/
 } SpectralGrid_t;
 
 
@@ -21,15 +19,8 @@ typedef struct SpectralGrid
 int create_spectral_grid(SpectralGrid_t * const grid, /**< Spectral grid object.*/
                          double const w0, /**< Lower bound [1/cm].*/
                          double const wn, /**< Upper bound [1/cm].*/
-                         double const dw, /**< Grid spacing [1/cm.*/
-                         int const * const gpu_id /**< Device id.*/
+                         double const dw /**< Grid spacing [1/cm.*/
                         );
-
-
-/** @brief Free memory stored in a spectral grid object.
-    @return RS_SUCCESS or an error code.*/
-int destroy_spectral_grid(SpectralGrid_t * const grid /**< Spectral grid object.*/
-                         );
 
 
 /** @brief Determine if two spectral grids are the same.

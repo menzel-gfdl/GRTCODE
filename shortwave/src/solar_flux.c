@@ -45,6 +45,7 @@ EXTERN int create_solar_flux(SolarFlux_t * const solar_flux, SpectralGrid_t cons
     gfree(buf, HOST_ONLY);
 
     /*Allocate space for the solar fluxes.*/
+    solar_flux->grid = *grid;
     fp_t *c = NULL;
     gmalloc(c, grid->n, HOST_ONLY);
     gmemset(c, 0, grid->n, HOST_ONLY);

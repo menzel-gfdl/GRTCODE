@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "atmosphere.h"
 #include "argparse.h"
+#include "device.h"
 #include "floating_point_type.h"
 #include "longwave.h"
 /*
@@ -115,12 +116,16 @@ int main(int argc, char **argv)
         rs_set_verbosity(RS_WARN);
     }
 
+    /*Set device.*/
+    Device_t device;
+    catch(create_device(&device, NULL));
+
     /*Create a spectral grid.*/
     double const w0 = 1.;
     double const wn = 50000.;
     double const dw = 0.1;
     SpectralGrid_t grid;
-    catch(create_spectral_grid(&grid, w0, wn, dw, NULL));
+    catch(create_spectral_grid(&grid, w0, wn, dw));
 
     /*Determine which molecules to use.*/
     int molecules[32];
@@ -161,15 +166,15 @@ int main(int argc, char **argv)
 
     /*Initialize an optics object.*/
     Optics_t optics;
-    catch(create_optics(&optics, atm.num_layers, &grid));
+    catch(create_optics(&optics, atm.num_layers, &grid, &device));
 
     /*Initialize a longwave object.*/
     Longwave_t longwave;
-    catch(create_longwave(&longwave, atm.num_levels, &grid));
+    catch(create_longwave(&longwave, atm.num_levels, &grid, &device));
 
     /*Initialize a shortwave object.*/
     Shortwave_t shortwave;
-    catch(create_shortwave(&shortwave, atm.num_levels, &grid));
+    catch(create_shortwave(&shortwave, atm.num_levels, &grid, &device));
 
     /*Initialize the output file.*/
     if (!get_argument(parser, "-o", buffer))
@@ -235,7 +240,6 @@ int main(int argc, char **argv)
     catch(destroy_longwave(&longwave));
     catch(destroy_solar_flux(&solar_flux));
     catch(destroy_optics(&optics));
-    catch(destroy_spectral_grid(&grid));
     destroy_parser(&parser);
     return EXIT_SUCCESS;
 }

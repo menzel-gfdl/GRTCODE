@@ -15,258 +15,154 @@
 #include "water_vapor_continuum.h"
 
 
-int launch(GrtContext_t * const context,
-           fp_t *p,
-           fp_t *t,
-           fp_t * const tau
+/** @brief Driver for optical depth calculation.
+    @return RS_SUCCESS or an error code.*/
+int launch(MolecularLines_t * const ml, /**< Molecular lines object.*/
+           fp_t *p, /**< Pressure [atm] (level).*/
+           fp_t *t, /**< Temperature [K] (level).*/
+           fp_t * const tau /**< Optical depth (level, wavenumber).*/
           )
 {
-    not_null(context);
+    not_null(ml);
     not_null(p);
     not_null(t);
     not_null(tau);
 
     /*Set pointers to input data.*/
-    if (context->gpu_id == HOST_ONLY)
+    if (ml->device == HOST_ONLY)
     {
-        context->p = p;
-        context->t = t;
-        context->tau = tau;
+        ml->p = p;
+        ml->t = t;
+        ml->tau = tau;
     }
     else
     {
-        gmemcpy(context->p,p,context->num_levels,context->gpu_id,FROM_HOST);
-        gmemcpy(context->t,t,context->num_levels,context->gpu_id,FROM_HOST);
+        gmemcpy(ml->p, p, ml->num_levels, ml->device, FROM_HOST);
+        gmemcpy(ml->t, t, ml->num_levels, ml->device, FROM_HOST);
     }
 
     /*Zero out buffers used to accumulate results.*/
-    gmemset(context->tau,0,context->num_layers*context->num_wpoints,context->gpu_id);
-    gmemset(context->bins.tau,0,context->bins.isize*context->bins.num_layers,
-            context->bins.gpu_id);
+    gmemset(ml->tau, 0 ,ml->num_layers*ml->grid.n, ml->device);
+    gmemset(ml->bins.tau, 0, ml->bins.isize*ml->bins.num_layers,
+            ml->bins.gpu_id);
 
     /*Calculate the total number density of air molecules integrated across
       each layer.*/
-    glaunch(calc_number_densities,
-            context->num_layers,
-            context->gpu_id,
-            context->num_layers,
-            context->p,
-            context->n);
+    glaunch(calc_number_densities, ml->num_layers, ml->device, ml->num_layers,
+            ml->p, ml->n);
 
     /*Calculate integrated average layer quantities.*/
-    glaunch(calc_pressures_and_temperatures,
-            context->num_layers,
-            context->gpu_id,
-            context->num_layers,
-            context->p,
-            context->t,
-            context->pavg,
-            context->tavg);
+    glaunch(calc_pressures_and_temperatures, ml->num_layers, ml->device, ml->num_layers,
+            ml->p, ml->t, ml->pavg, ml->tavg);
 
     /*Loop over the molecules and calculate the optical depths.*/
     int m;
-    for (m=0;m<context->num_molecules;++m)
+    for (m=0; m<ml->num_molecules; ++m)
     {
-        Molecule_t *mol = &(context->mols[m]);
+        Molecule_t *mol = &(ml->mols[m]);
         int index;
         catch(molecule_hash(mol->id, &index));
         char *mesg = "Calculating spectra for %s.";
         log_info(mesg, mol->name);
 
         /*Calculate the integrated average layer partial pressure.*/
-        fp_t const *xp = &(context->x[index*context->num_levels]);
-        glaunch(calc_partial_pressures_and_number_densities,
-                context->num_layers,
-                context->gpu_id,
-                context->num_layers,
-                context->p,
-                xp,
-                context->n,
-                context->psavg,
-                context->ns);
+        fp_t const *xp = &(ml->x[index*ml->num_levels]);
+        glaunch(calc_partial_pressures_and_number_densities, ml->num_layers, ml->device,
+                ml->num_layers, ml->p, xp, ml->n, ml->psavg, ml->ns);
 
         /*Calculate pressure shifted line center positions.*/
-        glaunch(calc_line_centers,
-                mol->line_params.num_lines,
-                context->gpu_id,
-                mol->line_params.num_lines,
-                context->num_layers,
-                mol->line_params.vnn,
-                mol->line_params.d,
-                context->pavg,
-                context->linecenter);
+        glaunch(calc_line_centers, mol->line_params.num_lines, ml->device,
+                mol->line_params.num_lines, ml->num_layers, mol->line_params.vnn,
+                mol->line_params.d, ml->pavg, ml->linecenter);
 
         /*Calculate total partition functions.*/
-        glaunch(calc_partition_functions,
-                mol->num_isotopologues,
-                context->gpu_id,
-                context->num_layers,
-                mol->id,
-                mol->num_isotopologues,
-                context->tavg,
-                mol->q);
+        glaunch(calc_partition_functions, mol->num_isotopologues, ml->device,
+                ml->num_layers, mol->id, mol->num_isotopologues, ml->tavg, mol->q);
 
         /*Calculate temperature-corrected line strengths.*/
-        glaunch(calc_line_strengths,
-                mol->line_params.num_lines,
-                context->gpu_id,
-                mol->line_params.num_lines,
-                context->num_layers,
-                mol->num_isotopologues,
-                mol->line_params.iso,
-                mol->line_params.snn,
-                mol->line_params.vnn,
-                mol->line_params.en,
-                context->tavg,
-                mol->q,
-                context->snn);
+        glaunch(calc_line_strengths, mol->line_params.num_lines, ml->device,
+                mol->line_params.num_lines, ml->num_layers, mol->num_isotopologues,
+                mol->line_params.iso, mol->line_params.snn, mol->line_params.vnn,
+                mol->line_params.en, ml->tavg, mol->q, ml->snn);
 
         /*Calcluate temperature and pressure corrected lorentz half-widths.*/
-        glaunch(calc_lorentz_hw,
-                mol->line_params.num_lines,
-                context->gpu_id,
-                mol->line_params.num_lines,
-                context->num_layers,
-                mol->line_params.n,
-                mol->line_params.yair,
-                mol->line_params.yself,
-                context->tavg,
-                context->pavg,
-                context->psavg,
-                context->gamma);
+        glaunch(calc_lorentz_hw, mol->line_params.num_lines, ml->device,
+                mol->line_params.num_lines, ml->num_layers, mol->line_params.n,
+                mol->line_params.yair, mol->line_params.yself, ml->tavg, ml->pavg,
+                ml->psavg, ml->gamma);
 
         /*Calculate doppler half-widths.*/
-        glaunch(calc_doppler_hw,
-                mol->line_params.num_lines,
-                context->gpu_id,
-                mol->line_params.num_lines,
-                context->num_layers,
-                mol->mass,
-                context->linecenter,
-                context->tavg,
-                context->alpha);
+        glaunch(calc_doppler_hw, mol->line_params.num_lines, ml->device,
+                mol->line_params.num_lines, ml->num_layers, mol->mass,
+                ml->linecenter, ml->tavg, ml->alpha);
 
         /*Calculate the molecule's optical depths and add them to existing
           values.*/
-        switch (context->optical_depth_method)
+        switch (ml->optical_depth_method)
         {
             case wavenumber_sweep:
-                glaunch(sort_lines,
-                        context->num_layers,
-                        context->gpu_id,
-                        mol->line_params.num_lines,
-                        context->num_layers,
-                        context->linecenter,
-                        context->snn,
-                        context->gamma,
-                        context->alpha);
-                glaunch(calc_optical_depth_bin_sweep,
-                        context->bins.n,
-                        context->gpu_id,
-                        mol->line_params.num_lines,
-                        context->num_layers,
-                        context->linecenter,
-                        context->snn,
-                        context->gamma,
-                        context->alpha,
-                        context->ns,
-                        context->bins,
-                        context->tau);
+                glaunch(sort_lines, ml->num_layers, ml->device, mol->line_params.num_lines,
+                        ml->num_layers, ml->linecenter, ml->snn, ml->gamma, ml->alpha);
+                glaunch(calc_optical_depth_bin_sweep, ml->bins.n, ml->device,
+                        mol->line_params.num_lines, ml->num_layers, ml->linecenter,
+                        ml->snn, ml->gamma, ml->alpha, ml->ns, ml->bins, ml->tau);
                 break;
             case line_sweep:
-                glaunch(calc_optical_depth_line_sweep,
-                        mol->line_params.num_lines,
-                        context->gpu_id,
-                        mol->line_params.num_lines,
-                        context->num_layers,
-                        context->linecenter,
-                        context->snn,
-                        context->gamma,
-                        context->alpha,
-                        context->ns,
-                        context->bins,
-                        context->tau);
+                glaunch(calc_optical_depth_line_sweep, mol->line_params.num_lines,
+                        ml->device, mol->line_params.num_lines, ml->num_layers,
+                        ml->linecenter, ml->snn, ml->gamma, ml->alpha, ml->ns,
+                        ml->bins, ml->tau);
                 break;
             case line_sample:
-                glaunch(calc_optical_depth_line_sample,
-                        mol->line_params.num_lines,
-                        context->gpu_id,
-                        mol->line_params.num_lines,
-                        context->num_layers,
-                        context->linecenter,
-                        context->snn,
-                        context->gamma,
-                        context->alpha,
-                        context->ns,
-                        context->bins,
-                        context->tau);
+                glaunch(calc_optical_depth_line_sample, mol->line_params.num_lines,
+                        ml->device, mol->line_params.num_lines, ml->num_layers,
+                        ml->linecenter, ml->snn, ml->gamma, ml->alpha, ml->ns,
+                        ml->bins, ml->tau);
                 break;
         }
 
-        if (context->use_h2o_ctm && mol->id == H2O)
+        if (ml->use_h2o_ctm && mol->id == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
-            glaunch(calc_water_vapor_ctm_optical_depth,
-                    context->bins.num_wpoints,
-                    context->gpu_id,
-                    context->bins.num_wpoints,
-                    context->num_layers,
-                    context->tau,
-                    context->h2o_cc.coefs[MTCKD25_S296],
-                    context->tavg,
-                    context->psavg,
-                    context->ns,
-                    context->h2o_cc.coefs[CKDS],
-                    context->h2o_cc.coefs[MTCKD25_F296],
-                    context->pavg,
-                    context->h2o_cc.coefs[CKDF]);
+            glaunch(calc_water_vapor_ctm_optical_depth, ml->bins.num_wpoints,
+                    ml->device, ml->bins.num_wpoints, ml->num_layers,
+                    ml->tau, ml->h2o_cc.coefs[MTCKD25_S296], ml->tavg,
+                    ml->psavg, ml->ns, ml->h2o_cc.coefs[CKDS],
+                    ml->h2o_cc.coefs[MTCKD25_F296], ml->pavg, ml->h2o_cc.coefs[CKDF]);
         }
-        else if (context->use_o3_ctm && mol->id == O3)
+        else if (ml->use_o3_ctm && mol->id == O3)
         {
             /*Calculate the ozone continuum optical depths.*/
-            glaunch(calc_ozone_ctm_optical_depth,
-                    context->bins.num_wpoints,
-                    context->gpu_id,
-                    context->bins.num_wpoints,
-                    context->num_layers,
-                    context->o3_cc.cross_section,
-                    context->ns,
-                    context->tau);
+            glaunch(calc_ozone_ctm_optical_depth, ml->bins.num_wpoints,
+                    ml->device, ml->bins.num_wpoints, ml->num_layers,
+                    ml->o3_cc.cross_section, ml->ns, ml->tau);
         }
     }
 
-    for (m=0; m<context->num_cfcs; ++m)
+    for (m=0; m<ml->num_cfcs; ++m)
     {
-        CfcCrossSection_t *cfc = &(context->cfcs[m]);
+        CfcCrossSection_t *cfc = &(ml->cfcs[m]);
         int index = cfc->id;
-        fp_t const *xp = &(context->x_cfc[index*context->num_levels]);
+        fp_t const *xp = &(ml->x_cfc[index*ml->num_levels]);
         char *mesg = "Calculating spectra for %s.";
         log_info(mesg, cfc->name);
 
         /*Calculate CFC optical depths.*/
-        glaunch(calc_cfc_optical_depth, context->bins.num_wpoints, context->gpu_id,
-                context->bins.num_wpoints, context->num_layers, context->n, xp,
-                cfc->cross_section, context->tau);
+        glaunch(calc_cfc_optical_depth, ml->bins.num_wpoints, ml->device,
+                ml->bins.num_wpoints, ml->num_layers, ml->n, xp,
+                cfc->cross_section, ml->tau);
     }
 
-    if (context->optical_depth_method != line_sample)
+    if (ml->optical_depth_method != line_sample)
     {
         /*Interpolate line wing optical depth contributions.*/
-        glaunch(interpolate,
-                context->bins.n-1,
-                context->gpu_id,
-                context->bins,
-                context->tau);
-        glaunch(interpolate_last_bin,
-                context->num_layers,
-                context->gpu_id,
-                context->bins,
-                context->tau);
+        glaunch(interpolate, ml->bins.n-1, ml->device, ml->bins, ml->tau);
+        glaunch(interpolate_last_bin, ml->num_layers, ml->device, ml->bins, ml->tau);
     }
 
-    if (context->gpu_id != HOST_ONLY)
+    if (ml->device != HOST_ONLY)
     {
-        gmemcpy(tau,context->tau,context->num_layers*context->num_wpoints,context->gpu_id,FROM_DEVICE);
+        gmemcpy(tau, ml->tau, ml->num_layers*ml->grid.n, ml->device, FROM_DEVICE);
     }
     return RS_SUCCESS;
 }

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "debug.h"
+#include "device.h"
 #include "extern.h"
 #include "floating_point_type.h"
 #include "longwave.h"
@@ -12,23 +13,22 @@
 
 /*Reserve memory for the longwave.*/
 EXTERN int create_longwave(Longwave_t * const lw, int const num_levels,
-                           SpectralGrid_t const * const grid)
+                           SpectralGrid_t const * const grid, Device_t const * const device)
 {
     not_null(lw);
     not_null(grid);
+    not_null(device);
     in_range(num_levels, MIN_NUM_LEVELS, MAX_NUM_LEVELS);
     lw->num_levels = num_levels;
-    lw->n = grid->n;
-    lw->w0 = grid->w0;
-    lw->dw = grid->dw;
-    lw->gpu_id = grid->gpu_id;
-    if (lw->gpu_id != HOST_ONLY)
+    lw->grid = *grid;
+    lw->device = *device;
+    if (lw->device != HOST_ONLY)
     {
-        gmalloc(lw->layer_temperature, num_levels-1, lw->gpu_id);
-        gmalloc(lw->level_temperature, num_levels, lw->gpu_id);
-        gmalloc(lw->emissivity, lw->n, lw->gpu_id);
-        gmalloc(lw->flux_up, lw->n*num_levels, lw->gpu_id);
-        gmalloc(lw->flux_down, lw->n*num_levels, lw->gpu_id);
+        gmalloc(lw->layer_temperature, num_levels-1, lw->device);
+        gmalloc(lw->level_temperature, num_levels, lw->device);
+        gmalloc(lw->emissivity, lw->grid.n, lw->device);
+        gmalloc(lw->flux_up, lw->grid.n*num_levels, lw->device);
+        gmalloc(lw->flux_down, lw->grid.n*num_levels, lw->device);
     }
     return RS_SUCCESS;
 }
@@ -38,13 +38,13 @@ EXTERN int create_longwave(Longwave_t * const lw, int const num_levels,
 EXTERN int destroy_longwave(Longwave_t * const lw)
 {
     not_null(lw);
-    if (lw->gpu_id != HOST_ONLY)
+    if (lw->device != HOST_ONLY)
     {
-        gfree(lw->layer_temperature, lw->gpu_id);
-        gfree(lw->level_temperature, lw->gpu_id);
-        gfree(lw->emissivity, lw->gpu_id);
-        gfree(lw->flux_up, lw->gpu_id);
-        gfree(lw->flux_down, lw->gpu_id);
+        gfree(lw->layer_temperature, lw->device);
+        gfree(lw->level_temperature, lw->device);
+        gfree(lw->emissivity, lw->device);
+        gfree(lw->flux_up, lw->device);
+        gfree(lw->flux_down, lw->device);
     }
     return RS_SUCCESS;
 }
@@ -337,10 +337,12 @@ EXTERN int calculate_lw_fluxes(Longwave_t * const lw, Optics_t const * const opt
     not_null(emis);
     not_null(flux_up);
     not_null(flux_down);
-    assert(lw->gpu_id, optics->grid.gpu_id);
+    assert(lw->device, optics->device);
     assert(lw->num_levels, optics->num_layers+1);
-    assert(lw->n, optics->grid.n);
-    if (lw->gpu_id == HOST_ONLY)
+    int same_grids;
+    catch(compare_spectral_grids(&(lw->grid), &(optics->grid), &same_grids));
+    assert(same_grids, 1);
+    if (lw->device == HOST_ONLY)
     {
         lw->layer_temperature = T_layers;
         lw->level_temperature = T_levels;
@@ -350,17 +352,17 @@ EXTERN int calculate_lw_fluxes(Longwave_t * const lw, Optics_t const * const opt
     }
     else
     {
-        gmemcpy(lw->layer_temperature, T_layers, optics->num_layers, lw->gpu_id, FROM_HOST);
-        gmemcpy(lw->level_temperature, T_levels, lw->num_levels, lw->gpu_id, FROM_HOST);
-        gmemcpy(lw->emissivity, emis, lw->n, lw->gpu_id, FROM_HOST);
+        gmemcpy(lw->layer_temperature, T_layers, optics->num_layers, lw->device, FROM_HOST);
+        gmemcpy(lw->level_temperature, T_levels, lw->num_levels, lw->device, FROM_HOST);
+        gmemcpy(lw->emissivity, emis, lw->grid.n, lw->device, FROM_HOST);
     }
-    glaunch(lw_fluxes_kernel, lw->n, lw->gpu_id, lw->num_levels, lw->w0, lw->dw, lw->n,
-            T_surf, lw->layer_temperature, lw->level_temperature, optics->tau,
-            lw->emissivity, lw->flux_up, lw->flux_down);
-    if (lw->gpu_id != HOST_ONLY)
+    glaunch(lw_fluxes_kernel, lw->grid.n, lw->device, lw->num_levels, lw->grid.w0,
+            lw->grid.dw, lw->grid.n, T_surf, lw->layer_temperature, lw->level_temperature,
+            optics->tau, lw->emissivity, lw->flux_up, lw->flux_down);
+    if (lw->device != HOST_ONLY)
     {
-        gmemcpy(flux_up, lw->flux_up, lw->n*lw->num_levels, lw->gpu_id, FROM_DEVICE);
-        gmemcpy(flux_down, lw->flux_down, lw->n*lw->num_levels, lw->gpu_id, FROM_DEVICE);
+        gmemcpy(flux_up, lw->flux_up, lw->grid.n*lw->num_levels, lw->device, FROM_DEVICE);
+        gmemcpy(flux_down, lw->flux_down, lw->grid.n*lw->num_levels, lw->device, FROM_DEVICE);
     }
     return RS_SUCCESS;
 }
@@ -371,6 +373,6 @@ EXTERN int lw_get_spectral_grid_size(Longwave_t const * const lw, uint64_t * con
 {
     not_null(lw);
     not_null(n);
-    *n = lw->n;
+    *n = lw->grid.n;
     return RS_SUCCESS;
 }

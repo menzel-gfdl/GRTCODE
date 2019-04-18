@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "debug.h"
+#include "device.h"
 #include "floating_point_type.h"
 #include "optics.h"
 #include "rs_config.h"
@@ -8,24 +9,25 @@
 
 /*Reserve memory for the optics.*/
 int create_optics(Optics_t * const optics, int const num_layers, 
-                  SpectralGrid_t const * const grid)
+                  SpectralGrid_t const * const grid, Device_t const * const device)
 {
     not_null(optics);
     not_null(grid);
+    not_null(device);
     in_range(num_layers, MIN_NUM_LAYERS, MAX_NUM_LAYERS);
     optics->num_layers = num_layers;
-    char *mesg = "Initializing shortwave context:\nAtmospheric column properties:\n\t"
+    char *mesg = "Initializing optics object:\nAtmospheric column properties:\n\t"
                      "number of levels: %d\n\tnumber of layers: %d";
     log_info(mesg, num_layers+1, num_layers);
-    catch(create_spectral_grid(&(optics->grid), grid->w0, grid->wn, grid->dw,
-                               &(grid->gpu_id)));
+    optics->grid = *grid;
+    optics->device = *device;
     uint64_t n = num_layers*(optics->grid.n);
-    gmalloc(optics->g, n, optics->grid.gpu_id);
-    gmemset(optics->g, 0, n, optics->grid.gpu_id);
-    gmalloc(optics->omega, n, optics->grid.gpu_id);
-    gmemset(optics->omega, 0, n, optics->grid.gpu_id);
-    gmalloc(optics->tau, n, optics->grid.gpu_id);
-    gmemset(optics->tau, 0, n, optics->grid.gpu_id);
+    gmalloc(optics->g, n, optics->device);
+    gmemset(optics->g, 0, n, optics->device);
+    gmalloc(optics->omega, n, optics->device);
+    gmemset(optics->omega, 0, n, optics->device);
+    gmalloc(optics->tau, n, optics->device);
+    gmemset(optics->tau, 0, n, optics->device);
     return RS_SUCCESS;
 }
 
@@ -34,10 +36,9 @@ int create_optics(Optics_t * const optics, int const num_layers,
 int destroy_optics(Optics_t * const optics)
 {
     not_null(optics);
-    gfree(optics->g, optics->grid.gpu_id);
-    gfree(optics->omega, optics->grid.gpu_id);
-    gfree(optics->tau, optics->grid.gpu_id);
-    catch(destroy_spectral_grid(&(optics->grid)));
+    gfree(optics->g, optics->device);
+    gfree(optics->omega, optics->device);
+    gfree(optics->tau, optics->device);
     return RS_SUCCESS;
 }
 
@@ -51,7 +52,8 @@ int optics_compatible(Optics_t const * const one, Optics_t const * const two,
     not_null(result);
     int same_grids;
     catch(compare_spectral_grids(&(one->grid), &(two->grid), &same_grids));
-    if ((one->num_layers == two->num_layers) && (same_grids == 1))
+    if ((one->num_layers == two->num_layers) && (same_grids == 1) &&
+        (one->device == two->device))
     {
         *result = 1;
     }
@@ -65,14 +67,14 @@ int optics_compatible(Optics_t const * const one, Optics_t const * const two,
 
 /** @brief Add optics objects together.
     @return RS_SUCCESS or an error code.*/
-static int add_optics_objects(uint64_t const n, /**< Size of arrays.*/
-                              int const num_optics,
-                              fp_t const * const g_in,
-                              fp_t const * const omega_in,
-                              fp_t const * const tau_in,
-                              fp_t * const g_out,
-                              fp_t * const omega_out,
-                              fp_t * const tau_out
+static int add_optics_objects(uint64_t const n, /**< Size of output g, omega, and tau arrays.*/
+                              int const num_optics, /**< Number of mechanisms.*/
+                              fp_t const * const g_in, /**< Input asymmetric factor (n, mechanism).*/
+                              fp_t const * const omega_in, /**< Input single-scatter albedo (n, mechanism).*/
+                              fp_t const * const tau_in, /**< Input optical depth (n, mechanism).*/
+                              fp_t * const g_out, /**< Output asymmetric factor (n).*/
+                              fp_t * const omega_out, /**< Output single-scatter albedo (n).*/
+                              fp_t * const tau_out /**< Output optical depth (n).*/
                              )
 {
     uint64_t i;
@@ -131,45 +133,39 @@ int add_optics(Optics_t const * const * const optics, int const num_optics,
 {
     not_null(optics);
     not_null(result);
-    Optics_t const *o;
+    min_check(num_optics, 1);
+    Optics_t const *o = optics[0];
+    not_null(o);
     int j;
-    for (j=0; j<num_optics; ++j)
+    for (j=1; j<num_optics; ++j)
     {
         not_null(optics[j]);
-        if (j == 0)
+        int ok;
+        catch(optics_compatible(optics[j], o, &ok));
+        if (ok == 0)
         {
-            o = optics[j];
-        }
-        else
-        {
-            int ok;
-            catch(optics_compatible(optics[j], o, &ok));
-            if (ok == 0)
-            {
-                char *mesg = "input optics objects (%p, %p) are incompatible.";
-                raise(RS_VALUE_ERR, mesg, o, optics[j]);
-            }
+            char *mesg = "input optics objects (%p, %p) are incompatible.";
+            raise(RS_VALUE_ERR, mesg, o, optics[j]);
         }
     }
-
-    catch(create_optics(result, o->num_layers, &(o->grid)));
+    catch(create_optics(result, o->num_layers, &(o->grid), &(o->device)));
     fp_t *g = NULL;
     fp_t *omega = NULL;
     fp_t *tau = NULL;
     uint64_t n = o->num_layers*o->grid.n;
-    gmalloc(g, n*num_optics, o->grid.gpu_id);
-    gmalloc(omega, n*num_optics, o->grid.gpu_id);
-    gmalloc(tau, n*num_optics, o->grid.gpu_id);
+    gmalloc(g, n*num_optics, o->device);
+    gmalloc(omega, n*num_optics, o->device);
+    gmalloc(tau, n*num_optics, o->device);
     for (j=0; j<num_optics; ++j)
     {
-        gmemcpy(&(g[j*n]), optics[j]->g, n, o->grid.gpu_id, FROM_HOST);
-        gmemcpy(&(omega[j*n]), optics[j]->omega, n, o->grid.gpu_id, FROM_HOST);
-        gmemcpy(&(tau[j*n]), optics[j]->tau, n, o->grid.gpu_id, FROM_HOST);
+        gmemcpy(&(g[j*n]), optics[j]->g, n, o->device, FROM_HOST);
+        gmemcpy(&(omega[j*n]), optics[j]->omega, n, o->device, FROM_HOST);
+        gmemcpy(&(tau[j*n]), optics[j]->tau, n, o->device, FROM_HOST);
     }
-    glaunch(add_optics_objects, n, o->grid.gpu_id, n, num_optics, g, omega, tau, result->g,
+    glaunch(add_optics_objects, n, o->device, n, num_optics, g, omega, tau, result->g,
             result->omega, result->tau);
-    gfree(g, o->grid.gpu_id);
-    gfree(omega, o->grid.gpu_id);
-    gfree(tau, o->grid.gpu_id);
+    gfree(g, o->device);
+    gfree(omega, o->device);
+    gfree(tau, o->device);
     return RS_SUCCESS;
 }

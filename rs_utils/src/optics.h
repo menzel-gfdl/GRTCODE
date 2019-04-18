@@ -1,6 +1,7 @@
 #ifndef OPTICS_H_
 #define OPTICS_H_
 
+#include "device.h"
 #include "floating_point_type.h"
 #include "spectral_grid.h"
 
@@ -8,8 +9,9 @@
 /** @brief Container for optical properties.*/
 typedef struct Optics
 {
-    int num_layers; /**< Number of atmospheric pressure layers.*/
+    Device_t device; /**< Device object.*/
     SpectralGrid_t grid; /**< Spectral grid object.*/
+    int num_layers; /**< Number of atmospheric pressure layers.*/
     fp_t *g; /**< Asymmetric factor (layers,wavenumber).*/
     fp_t *omega; /**< Single-scattering albedo (layers,wavenumber).*/
     fp_t *tau; /**< Optical depth (layers,wavenumber).*/
@@ -20,7 +22,8 @@ typedef struct Optics
     @return RS_SUCCESS or an error code.*/
 int create_optics(Optics_t * const optics, /**< Optics object.*/
                   int const num_layers, /**< Number of atmospheric layers.*/
-                  SpectralGrid_t const * const grid /**< Spectral grid object.*/
+                  SpectralGrid_t const * const grid, /**< Spectral grid object.*/
+                  Device_t const * const device /**< Device object.*/
                  );
 
 

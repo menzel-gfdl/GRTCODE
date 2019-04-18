@@ -2,6 +2,7 @@
 #define SHORTWAVE_H_
 
 #include <stdint.h>
+#include "device.h"
 #include "extern.h"
 #include "floating_point_type.h"
 #include "optics.h"
@@ -12,8 +13,8 @@
 typedef struct Shortwave
 {
     int num_levels; /**< Number of atmospheric levels.*/
-    uint64_t n; /**< Spectral grid size.*/
-    int gpu_id; /**< Device id.*/
+    SpectralGrid_t grid; /**< Spectral grid.*/
+    Device_t device; /**< Device.*/
     fp_t *solar_flux; /**< Incident solar flux [W*cm/m^2].*/
     fp_t *flux_up; /**< Upward radiative flux [W*cm/m^2] (level, wavenumber).*/
     fp_t *flux_down; /**< Downward radiative flux [W*cm/m^2] (level, wavenumber).*/
@@ -24,7 +25,8 @@ typedef struct Shortwave
     @return RS_SUCCESS or an error code.*/
 EXTERN int create_shortwave(Shortwave_t * const sw, /**< Shortwave object.*/
                             int const num_levels, /**< Number of atmospheric levels.*/
-                            SpectralGrid_t const * const grid /**< Spectral grid.*/
+                            SpectralGrid_t const * const grid, /**< Spectral grid.*/
+                            Device_t const * const device /**< Device.*/
                            );
 
 

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdint.h>
 #include "debug.h"
+#include "device.h"
 #include "extern.h"
 #include "floating_point_type.h"
 #include "optics.h"
@@ -11,19 +12,20 @@
 
 /*Reserve memory for the shortwave.*/
 EXTERN int create_shortwave(Shortwave_t * const sw, int const num_levels,
-                            SpectralGrid_t const * const grid)
+                            SpectralGrid_t const * const grid, Device_t const * const device)
 {
     not_null(sw);
     not_null(grid);
+    not_null(device);
     in_range(num_levels, MIN_NUM_LEVELS, MAX_NUM_LEVELS);
     sw->num_levels = num_levels;
-    sw->n = grid->n;
-    sw->gpu_id = grid->gpu_id;
-    if (sw->gpu_id != HOST_ONLY)
+    sw->grid = *grid;
+    sw->device = *device;
+    if (sw->device != HOST_ONLY)
     {
-        gmalloc(sw->solar_flux, sw->n, sw->gpu_id);
-        gmalloc(sw->flux_up, sw->n*num_levels, sw->gpu_id);
-        gmalloc(sw->flux_down, sw->n*num_levels, sw->gpu_id);
+        gmalloc(sw->solar_flux, sw->grid.n, sw->device);
+        gmalloc(sw->flux_up, sw->grid.n*num_levels, sw->device);
+        gmalloc(sw->flux_down, sw->grid.n*num_levels, sw->device);
     }
     return RS_SUCCESS;
 }
@@ -33,11 +35,11 @@ EXTERN int create_shortwave(Shortwave_t * const sw, int const num_levels,
 EXTERN int destroy_shortwave(Shortwave_t * const sw)
 {
     not_null(sw);
-    if (sw->gpu_id != HOST_ONLY)
+    if (sw->device != HOST_ONLY)
     {
-        gfree(sw->solar_flux, sw->gpu_id);
-        gfree(sw->flux_up, sw->gpu_id);
-        gfree(sw->flux_down, sw->gpu_id);
+        gfree(sw->solar_flux, sw->device);
+        gfree(sw->flux_up, sw->device);
+        gfree(sw->flux_down, sw->device);
     }
     return RS_SUCCESS;
 }
@@ -553,10 +555,12 @@ EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, Optics_t const * const op
     not_null(solar_flux);
     not_null(flux_up);
     not_null(flux_down);
-    assert(sw->gpu_id, optics->grid.gpu_id);
+    assert(sw->device, optics->device);
     assert(sw->num_levels, optics->num_layers+1);
-    assert(sw->n, optics->grid.n);
-    if (sw->gpu_id == HOST_ONLY)
+    int same_grids;
+    catch(compare_spectral_grids(&(sw->grid), &(optics->grid), &same_grids));
+    assert(same_grids, 1);
+    if (sw->device == HOST_ONLY)
     {
         sw->solar_flux = solar_flux;
         sw->flux_up = flux_up;
@@ -564,15 +568,15 @@ EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, Optics_t const * const op
     }
     else
     {
-        gmemcpy(sw->solar_flux, solar_flux, sw->n, sw->gpu_id, FROM_HOST);
+        gmemcpy(sw->solar_flux, solar_flux, sw->grid.n, sw->device, FROM_HOST);
     }
-    glaunch(sw_fluxes_kernel, sw->n, sw->gpu_id, sw->num_levels, sw->n, optics->omega,
-            optics->g, optics->tau, mu_dir, mu_dif, sfc_alpha_dir, sfc_alpha_dif,
-            sw->solar_flux, sw->flux_up, sw->flux_down);
-    if (sw->gpu_id != HOST_ONLY)
+    glaunch(sw_fluxes_kernel, sw->grid.n, sw->device, sw->num_levels, sw->grid.n,
+            optics->omega, optics->g, optics->tau, mu_dir, mu_dif, sfc_alpha_dir,
+            sfc_alpha_dif, sw->solar_flux, sw->flux_up, sw->flux_down);
+    if (sw->device != HOST_ONLY)
     {
-        gmemcpy(flux_up, sw->flux_up, sw->n*sw->num_levels, sw->gpu_id, FROM_DEVICE);
-        gmemcpy(flux_down, sw->flux_down, sw->n*sw->num_levels, sw->gpu_id, FROM_DEVICE);
+        gmemcpy(flux_up, sw->flux_up, sw->grid.n*sw->num_levels, sw->device, FROM_DEVICE);
+        gmemcpy(flux_down, sw->flux_down, sw->grid.n*sw->num_levels, sw->device, FROM_DEVICE);
     }
     return RS_SUCCESS;
 }
@@ -583,6 +587,6 @@ EXTERN int sw_get_spectral_grid_size(Shortwave_t const * const sw, uint64_t * co
 {
     not_null(sw);
     not_null(n);
-    *n = sw->n;
+    *n = sw->grid.n;
     return RS_SUCCESS;
 }

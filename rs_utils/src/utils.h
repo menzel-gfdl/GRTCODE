@@ -50,12 +50,6 @@ int to_fp_t(double const d,
             fp_t * const f);
 
 
-/** @brief Determine the number of CUDA-enabled GPUs on the system.
-    @return RS_SUCCESS or an error code.*/
-int get_num_gpus(int * num_devices,
-                 int const verbose);
-
-
 /** @brief Find the array indices that bracket the input value.
     @return RS_SUCCESS or an error code.*/
 int get_sorted_bounds(fp_t const val, /**< Value to bracket.*/

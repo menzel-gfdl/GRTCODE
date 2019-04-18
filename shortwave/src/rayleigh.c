@@ -29,7 +29,8 @@ HOST DEVICE static int rayleigh_kernel(double const w, /**< Wavenumber [1/cm].*/
 /** @brief Calculate the optical properties due to rayleigh scattering.
     @return RS_SUCCESS or an error code.*/
 static int rayleigh(int const num_layers, /**< Number of atmospheric pressure layers.*/
-                    double const * const w, /**< Spectral grid points [1/cm].*/
+                    double const w0, /**< Spectral grid lower bound [1/cm].*/
+                    double const dw, /**< Spectral grid resolution [1/cm].*/
                     uint64_t const num_wpoints, /**< Spectral grid size.*/
                     fp_t const * const n, /**< Integrated number density [cm^-2] of
                                                each atmospheric layer.*/
@@ -49,8 +50,9 @@ static int rayleigh(int const num_layers, /**< Number of atmospheric pressure la
     {
         for (j=0; j<num_wpoints; ++j)
         {
+            double const w = w0 + j*dw;
             uint64_t offset = i*num_wpoints + j;
-            rayleigh_kernel(w[j], n[i], &(omega[offset]), &(g[offset]), &(tau[offset]));
+            rayleigh_kernel(w, n[i], &(omega[offset]), &(g[offset]), &(tau[offset]));
         }
     }
     return RS_SUCCESS;
@@ -60,7 +62,8 @@ static int rayleigh(int const num_layers, /**< Number of atmospheric pressure la
 #ifdef __NVCC__
 /** @brief Calculate the optical properties due to rayleigh scattering.*/
 __global__ static void rayleigh_d(int const num_layers, /**< Number of atmospheric pressure layers.*/
-                                  double const * const w, /**< Spectral grid points [1/cm].*/
+                                  double const w0, /**< Spectral grid lower bound [1/cm].*/
+                                  double const dw, /**< Spectral grid resolution [1/cm].*/
                                   uint64_t const num_wpoints, /**< Spectral grid size.*/
                                   fp_t const * const n, /**< Integrated number density [cm^-2] of
                                                              each atmospheric layer.*/
@@ -76,11 +79,12 @@ __global__ static void rayleigh_d(int const num_layers, /**< Number of atmospher
     uint64_t i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < num_wpoints)
     {
+        double const w = w0 + i*dw;
         int j;
         for (j=0; j<num_layers; ++j)
         {
             uint64_t offset = j*num_wpoints + i;
-            rayleigh_kernel(w[i], n[j], &(omega[offset]), &(g[offset]), &(tau[offset]));
+            rayleigh_kernel(w, n[j], &(omega[offset]), &(g[offset]), &(tau[offset]));
         }
     }
     return;
@@ -93,11 +97,10 @@ int rayleigh_scattering(Optics_t * const optics, fp_t * const pressure)
 {
     not_null(optics);
     not_null(pressure);
-
     fp_t *p;
     fp_t number_density[MAX_NUM_LAYERS];
     fp_t *n;
-    if (optics->grid.gpu_id == HOST_ONLY)
+    if (optics->device == HOST_ONLY)
     {
         p = pressure;
         n = number_density;
@@ -106,24 +109,25 @@ int rayleigh_scattering(Optics_t * const optics, fp_t * const pressure)
     {
         /*Place data on device.*/
         int num_levels = optics->num_layers + 1;
-        gmalloc(p, num_levels, optics->grid.gpu_id);
-        gmemcpy(p, pressure, num_levels, optics->grid.gpu_id, FROM_HOST);
-        gmalloc(n, optics->num_layers, optics->grid.gpu_id);
+        gmalloc(p, num_levels, optics->device);
+        gmemcpy(p, pressure, num_levels, optics->device, FROM_HOST);
+        gmalloc(n, optics->num_layers, optics->device);
     }
 
     /*Calculate integrated number densities [cm^2] in each atmospheric layer.*/
-    glaunch(calc_number_densities, optics->num_layers, optics->grid.gpu_id,
+    glaunch(calc_number_densities, optics->num_layers, optics->device,
             optics->num_layers, pressure, n);
 
     /*Calculate optical properties for Rayleigh scattering.*/
-    glaunch(rayleigh, optics->grid.n, optics->grid.gpu_id, optics->num_layers,
-            optics->grid.w, optics->grid.n, n, optics->omega, optics->g, optics->tau);
+    glaunch(rayleigh, optics->grid.n, optics->device, optics->num_layers,
+            optics->grid.w0, optics->grid.dw, optics->grid.n, n, optics->omega,
+            optics->g, optics->tau);
 
     /*Clean up.*/
-    if (optics->grid.gpu_id != HOST_ONLY)
+    if (optics->device != HOST_ONLY)
     {
-        gfree(p, optics->grid.gpu_id);
-        gfree(n, optics->grid.gpu_id);
+        gfree(p, optics->device);
+        gfree(n, optics->device);
     }
     return RS_SUCCESS;
 }
