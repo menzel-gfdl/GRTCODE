@@ -1,5 +1,6 @@
 #include <string.h>
 #include "cfcs.h"
+#include "curtis_godson.h"
 #include "debug.h"
 #include "floating_point_type.h"
 #ifdef __NVCC__
@@ -45,8 +46,6 @@ int launch(GrtContext_t * const context,
 
     /*Calculate the total number density of air molecules integrated across
       each layer.*/
-    log_info("Integrating total number density across %d layers.",
-             context->num_layers);
     glaunch(calc_number_densities,
             context->num_layers,
             context->gpu_id,
@@ -55,9 +54,6 @@ int launch(GrtContext_t * const context,
             context->n);
 
     /*Calculate integrated average layer quantities.*/
-    log_info("Calculating Curtis-Godson pressures and temperatures across"
-                 " %d layers.",
-             context->num_layers);
     glaunch(calc_pressures_and_temperatures,
             context->num_layers,
             context->gpu_id,
@@ -73,15 +69,12 @@ int launch(GrtContext_t * const context,
     {
         Molecule_t *mol = &(context->mols[m]);
         int index;
-        throw(molecule_hash(mol->id,
-                            &index));
+        catch(molecule_hash(mol->id, &index));
+        char *mesg = "Calculating spectra for %s.";
+        log_info(mesg, mol->name);
 
         /*Calculate the integrated average layer partial pressure.*/
         fp_t const *xp = &(context->x[index*context->num_levels]);
-        log_info("Calculating Curtis-Godson partial pressures and abundances"
-                     " across %d layers for molecule %s.",
-                 context->num_layers,
-                 mol->name);
         glaunch(calc_partial_pressures_and_number_densities,
                 context->num_layers,
                 context->gpu_id,
@@ -93,10 +86,6 @@ int launch(GrtContext_t * const context,
                 context->ns);
 
         /*Calculate pressure shifted line center positions.*/
-        log_info("Calculating pressure-shifted line center positions"
-                     " across %d layers for molecule %s.",
-                 context->num_layers,
-                 mol->name);
         glaunch(calc_line_centers,
                 mol->line_params.num_lines,
                 context->gpu_id,
@@ -108,10 +97,6 @@ int launch(GrtContext_t * const context,
                 context->linecenter);
 
         /*Calculate total partition functions.*/
-        log_info("Calculating total partition functions across %d layers"
-                     " for molecule %s.",
-                 context->num_layers,
-                 mol->name);
         glaunch(calc_partition_functions,
                 mol->num_isotopologues,
                 context->gpu_id,
@@ -122,10 +107,6 @@ int launch(GrtContext_t * const context,
                 mol->q);
 
         /*Calculate temperature-corrected line strengths.*/
-        log_info("Calculating temperature-corrected line strengths"
-                     " across %d layers for molecule %s.",
-                 context->num_layers,
-                 mol->name);
         glaunch(calc_line_strengths,
                 mol->line_params.num_lines,
                 context->gpu_id,
@@ -141,10 +122,6 @@ int launch(GrtContext_t * const context,
                 context->snn);
 
         /*Calcluate temperature and pressure corrected lorentz half-widths.*/
-        log_info("Calculating temperature- and pressure-corrected lorentz"
-                     " half-widths across %d layers for molecule %s.",
-                 context->num_layers,
-                 mol->name);
         glaunch(calc_lorentz_hw,
                 mol->line_params.num_lines,
                 context->gpu_id,
@@ -159,10 +136,6 @@ int launch(GrtContext_t * const context,
                 context->gamma);
 
         /*Calculate doppler half-widths.*/
-        log_info("Calculating doppler half-widths across %d layers for"
-                     " molecule %s.",
-                 context->num_layers,
-                 mol->name);
         glaunch(calc_doppler_hw,
                 mol->line_params.num_lines,
                 context->gpu_id,
@@ -175,10 +148,6 @@ int launch(GrtContext_t * const context,
 
         /*Calculate the molecule's optical depths and add them to existing
           values.*/
-        log_info("Calculating optical depths across %d layers for molecule"
-                     " %s.",
-                 context->num_layers,
-                 mol->name);
         switch (context->optical_depth_method)
         {
             case wavenumber_sweep:
@@ -237,9 +206,6 @@ int launch(GrtContext_t * const context,
         if (context->use_h2o_ctm && mol->id == H2O)
         {
             /*Calculate the water vapor continuum optical depths.*/
-            log_info("Calculating optical depth contribution due to the"
-                         " water vapor continuum across %d layers.",
-                     context->num_layers);
             glaunch(calc_water_vapor_ctm_optical_depth,
                     context->bins.num_wpoints,
                     context->gpu_id,
@@ -258,9 +224,6 @@ int launch(GrtContext_t * const context,
         else if (context->use_o3_ctm && mol->id == O3)
         {
             /*Calculate the ozone continuum optical depths.*/
-            log_info("Calculating optical depth contribution due to the"
-                         " ozone continuum across %d layers.",
-                     context->num_layers);
             glaunch(calc_ozone_ctm_optical_depth,
                     context->bins.num_wpoints,
                     context->gpu_id,
@@ -277,11 +240,10 @@ int launch(GrtContext_t * const context,
         CfcCrossSection_t *cfc = &(context->cfcs[m]);
         int index = cfc->id;
         fp_t const *xp = &(context->x_cfc[index*context->num_levels]);
+        char *mesg = "Calculating spectra for %s.";
+        log_info(mesg, cfc->name);
 
         /*Calculate CFC optical depths.*/
-        log_info("Calculating optical depth contribution due to CFC %s"
-                     " across %d layers.",
-                 cfc->name, context->num_layers);
         glaunch(calc_cfc_optical_depth, context->bins.num_wpoints, context->gpu_id,
                 context->bins.num_wpoints, context->num_layers, context->n, xp,
                 cfc->cross_section, context->tau);
@@ -290,9 +252,6 @@ int launch(GrtContext_t * const context,
     if (context->optical_depth_method != line_sample)
     {
         /*Interpolate line wing optical depth contributions.*/
-        log_info("Interpolating line wing optical depth contributions across"
-                     " %d layers.",
-                 context->num_layers);
         glaunch(interpolate,
                 context->bins.n-1,
                 context->gpu_id,
@@ -309,5 +268,5 @@ int launch(GrtContext_t * const context,
     {
         gmemcpy(tau,context->tau,context->num_layers*context->num_wpoints,context->gpu_id,FROM_DEVICE);
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }

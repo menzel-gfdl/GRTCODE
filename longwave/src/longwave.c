@@ -54,19 +54,19 @@ EXTERN int destroy_longwave(Longwave_t * const lw)
     @return RS_SUCCESS or an error code.*/
 HOST DEVICE static int planck_law(fp_t const T, /**< Temperature [K].*/
                                   fp_t const w, /**< Wavenumber [1/cm].*/
-                                  fp_t * const I /**< Spectral radiance [W/m].*/
+                                  fp_t * const I /**< Spectral radiance [W*cm/m^2].*/
                                  )
 {
     not_null(I);
 
     /*Constants, defined as:
-      c1 = 2*h*c*c with units: [(W*cm^3)/m]
+      c1 = 2*h*c*c with units: [(W*cm^4)/m^2]
       c2 = h*c/k with units: [cm*K]
       where:
       h = planck's constant
       c = speed of light
       k = Boltzmann's constant*/
-    fp_t const c1 = 1.1910429526245744e-10;
+    fp_t const c1 = 1.1910429526245744e-8;
     fp_t const c2 = 1.4387773538277202;
     clear_floating_point_exceptions();
     fp_t e = c2*w/T;
@@ -94,7 +94,7 @@ HOST DEVICE static int effective_planck(fp_t const Tcenter, /**< Temperature [K]
                                         fp_t const w, /**< Wavenumber [1/cm].*/
                                         fp_t const tau, /**< Optical depth of layer at input
                                                              wavenumber.*/
-                                        fp_t * const I /**< Spectral radiance [W/m].*/
+                                        fp_t * const I /**< Spectral radiance [W*cm/m^2].*/
                                        )
 {
     not_null(I);
@@ -130,10 +130,10 @@ HOST DEVICE static int lw_flux(int const nlevels, /**< Number of atmospheric pre
                                fp_t const emis, /**< Emissivity at the input wavenumber of the
                                                      Earth's surface.*/
                                fp_t * const flux_up, /**< Upward longwave radiative fluxes
-                                                          [W/m] at the input wavenumber at
+                                                          [W*cm/m^2] at the input wavenumber at
                                                           each pressure level.*/
                                fp_t * const flux_down /**< Downward longwave radiative fluxes
-                                                           [W/m] at the input wavenumber at
+                                                           [W*cm/m^2] at the input wavenumber at
                                                            each pressure level.*/
                               )
 {
@@ -241,10 +241,10 @@ static int lw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
                             fp_t const * const emis, /**< Emissivity of the Earth's surface
                                                           at each spectral grid point.*/
                             fp_t * const flux_up, /**< Upward longwave radiative fluxes
-                                                       [W/m] at each spectral grid point at
+                                                       [W*cm/m^2] at each spectral grid point at
                                                        each pressure level.*/
                             fp_t * const flux_down /**< Downward longwave radiative fluxes
-                                                        [W/m] at each spectral grid point
+                                                        [W*cm/m^2] at each spectral grid point
                                                         at each pressure level.*/
                            )
 {
@@ -290,10 +290,10 @@ __global__ static void lw_fluxes_kernel_d(int const num_levels, /**< Number of a
                                           fp_t const * const emis, /**< Emissivity of the Earth's surface
                                                                         at each spectral grid point.*/
                                           fp_t * const flux_up, /**< Upward longwave radiative fluxes
-                                                                     [W/m] at each spectral grid point at
+                                                                     [W*cm/m^2] at each spectral grid point at
                                                                      each pressure level.*/
                                           fp_t * const flux_down /**< Downward longwave radiative fluxes
-                                                                      [W/m] at each spectral grid point
+                                                                      [W*cm/m^2] at each spectral grid point
                                                                       at each pressure level.*/
                                          )
 {

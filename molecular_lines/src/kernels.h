@@ -6,41 +6,6 @@
 #include "spectral_bin.h"
 
 
-/** @brief Calculate integrated number densities.
-    @return SUCCESS or an error code.*/
-int calc_number_densities(int const num_layers, /*Number of atmospheric layers.*/
-                          fp_t const * const p, /*Pressure [atm] (levels).*/
-                          fp_t * const n /*Integrated number densities
-                                           [cm^-2] (layers).*/
-                         );
-
-
-/** @brief Calculate layer pressures and temperatures.
-    @return SUCCESS or an error code.*/
-int calc_pressures_and_temperatures(int const num_layers, /*Number of atmospheric
-                                                            layers.*/
-                                    fp_t const * const p, /*Pressure [atm] (levels).*/
-                                    fp_t const * const t, /*Temperature [K] (levels).*/
-                                    fp_t * const pavg, /*Pressure [atm] (layers).*/
-                                    fp_t * const tavg /*Pressure [atm] (layers).*/
-                                   );
-
-
-/** @brief Calculate partial pressures and number densities.
-    @return SUCCESS or an error code.*/
-int calc_partial_pressures_and_number_densities(int const num_layers, /*Number of
-                                                                        atmospheric layers.*/
-                                                fp_t const * const p, /*Pressure [atm] (levels).*/
-                                                fp_t const * const x, /*Abundance (levels).*/
-                                                fp_t const * const n, /*Integrated number densities
-                                                                        [cm^-2] (layers).*/
-                                                fp_t * const ps, /*Partial pressure [atm]
-                                                                   (layers).*/
-                                                fp_t * const ns /*Integrated molecular number
-                                                                  densities [cm^-2] (layers).*/
-                                               );
-
-
 /** @brief Calculate pressure-shifted line center positions.
     @return SUCCESS or an error code.*/
 int calc_line_centers(uint64_t const num_lines, /*Number of molecular lines.*/

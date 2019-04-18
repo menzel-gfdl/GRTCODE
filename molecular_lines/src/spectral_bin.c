@@ -78,7 +78,7 @@ int create_spectral_bins(SpectralBins_t *bins,
     gmemcpy(bins->w,w,bins->isize,gpu_id,FROM_HOST);
     gmalloc(bins->tau,bins->isize*bins->num_layers,gpu_id);
     bins->gpu_id = gpu_id;
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -90,5 +90,5 @@ int destroy_spectral_bins(SpectralBins_t *bins)
     gfree(bins->tau,bins->gpu_id);
     gfree(bins->l,bins->gpu_id);
     gfree(bins->r,bins->gpu_id);
-    return SUCCESS;
+    return RS_SUCCESS;
 }

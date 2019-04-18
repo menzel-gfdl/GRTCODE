@@ -9,7 +9,7 @@
 /** @brief Solar flux object.*/
 typedef struct SolarFlux
 {
-    fp_t *incident_flux; /**< Incident solar flux [W/m] (wavenumber).*/
+    fp_t *incident_flux; /**< Incident solar flux [W*cm/m^2] (wavenumber).*/
     uint64_t n; /**< Size of spectral grid.*/
 } SolarFlux_t;
 

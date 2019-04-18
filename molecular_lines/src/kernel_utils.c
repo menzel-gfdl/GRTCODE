@@ -26,7 +26,7 @@ HOST DEVICE int bracket(uint64_t const array_size, /**< Size of input array.*/
     {
         *left = l;
         *right = r;
-        return RANGE_ERR;
+        return RS_RANGE_ERR;
     }
     if (array[l] == val)
     {
@@ -57,16 +57,13 @@ HOST DEVICE int bracket(uint64_t const array_size, /**< Size of input array.*/
             }
             if (l > r || l == r)
             {
-                raise(VALUE_ERR,
-                      "Something went wrong (l=%zu,r=%zu).",
-                      l,
-                      r);
+                sentinel();
             }
         }
     }
     *left = l;
     *right = r;
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -98,7 +95,7 @@ HOST DEVICE int bin_quad_interp(fp_t const * const x, /**<*/
         }
         tau[j] += t;
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -118,5 +115,5 @@ HOST DEVICE int bin_no_interp(uint64_t const left,
     {
         tau[j] += taub[j-left];
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }

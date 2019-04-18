@@ -96,7 +96,7 @@ static int alloc_line_params(LineParams_t * const line_params,
     gmalloc(line_params->en,num_lines,gpu_id);
     gmalloc(line_params->n,num_lines,gpu_id);
     gmalloc(line_params->d,num_lines,gpu_id);
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -111,7 +111,7 @@ int free_line_params(LineParams_t * const line_params)
     gfree(line_params->en,line_params->gpu_id);
     gfree(line_params->n,line_params->gpu_id);
     gfree(line_params->d,line_params->gpu_id);
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -120,7 +120,7 @@ static int realloc_line_params(LineParams_t * const line_params)
     not_null(line_params);
     LineParams_t t;
     gmemcpy(&t,line_params,1,HOST_ONLY,FROM_HOST);
-    throw(alloc_line_params(line_params,
+    catch(alloc_line_params(line_params,
                             t.num_lines,
                             t.gpu_id));
     gmemcpy(line_params->iso,t.iso,t.num_lines,t.gpu_id,FROM_HOST);
@@ -131,8 +131,8 @@ static int realloc_line_params(LineParams_t * const line_params)
     gmemcpy(line_params->en,t.en,t.num_lines,t.gpu_id,FROM_HOST);
     gmemcpy(line_params->n,t.n,t.num_lines,t.gpu_id,FROM_HOST);
     gmemcpy(line_params->d,t.d,t.num_lines,t.gpu_id,FROM_HOST);
-    throw(free_line_params(&t));
-    return SUCCESS;
+    catch(free_line_params(&t));
+    return RS_SUCCESS;
 }
 
 
@@ -149,12 +149,12 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
             val->nil = NULL;
             break;
         case I32:
-            throw(to_int(sval,
+            catch(to_int(sval,
                          &(val->i)));
             break;
         case F64:
         case F32:
-            throw(to_double(sval,
+            catch(to_double(sval,
                             &(val->d)));
             if (typ == F32)
             {
@@ -164,22 +164,18 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
                 }
                 else
                 {
-                    raise(VALUE_ERR,
-                          "value %e from column %d cannot be safely"
-                              " cast as a float.",
-                          val->d,
-                          col);
+                    char *mesg = "value %e from column %d cannot be safely"
+                                 " cast as a float.";
+                    raise(RS_VALUE_ERR, mesg, val->d, col);
                 }
             }
             break;
         default:
-            raise(VALUE_ERR,
-                  "cast failed on col %d, LookupCast_t %d, sval: %s.",
-                  HITRAN2012_fmt[col][0],
-                  HITRAN2012_fmt[col][1],
-                  sval);
+            {char *mesg = "cast failed on col %d, LookupCast_t %d, sval: %s.";
+            raise(RS_VALUE_ERR, mesg, HITRAN2012_fmt[col][0], HITRAN2012_fmt[col][1],
+                  sval);}
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -194,12 +190,10 @@ int parse_hitran_file(LineParams_t * const line_params,
     not_null(filename);
 
     /*Open the file.*/
-    log_info("Opening and reading HITRAN line parameters from file %s.",
-             filename);
+    char *mesg = "Opening and reading HITRAN line parameters from file %s.";
+    log_info(mesg, filename);
     FILE *fp = NULL;
-    open_file(fp,
-              filename,
-              "r");
+    open_file(&fp, filename, "r");
 
     /*Count the number of lines in the file.*/
     size_t const max_line = 163;
@@ -217,9 +211,7 @@ int parse_hitran_file(LineParams_t * const line_params,
 
     /*Malloc space.*/
     LineParams_t lp;
-    throw(alloc_line_params(&lp,
-                            n,
-                            HOST_ONLY));
+    catch(alloc_line_params(&lp, n, HOST_ONLY));
 
     /*Parse out the line parameters.*/
     n = 0;
@@ -229,29 +221,21 @@ int parse_hitran_file(LineParams_t * const line_params,
         line_count++;
         if ((ll-HITRAN2012_recordLen) > HITRAN2012_pad)
         {
-            raise(VALUE_ERR,
-                  "Found bad record at line %zu (%zu exceeds max %zu chars)"
-                      " in file %s.",
-                  line_count,
-                  (size_t)ll,
-                  max_line,
-                  filename);
+            mesg = "Found bad record at line %zu (%zu exceeds max %zu chars)"
+                   " in file %s.";
+            raise(RS_VALUE_ERR, mesg, line_count, (size_t)ll, max_line, filename);
         }
         else if (ll < HITRAN2012_recordLen)
         {
-            raise(VALUE_ERR,
-                  "Found bad record at line %zu (%zu less than %zu chars)"
-                      " in file %s.",
-                  line_count,
-                  (size_t)ll,
-                  max_line,
-                  filename);
+            mesg = "Found bad record at line %zu (%zu less than %zu chars)"
+                   " in file %s.";
+            raise(RS_VALUE_ERR, mesg, line_count, (size_t)ll, max_line, filename);
         }
         unsigned int val_idx = 0;
         size_t offset = 0;
         int col;
         int go_to_next_line = 0;
-        for (col=0;col<NCOLS;++col)
+        for (col=0; col<NCOLS; ++col)
         {
             if (go_to_next_line)
             {
@@ -260,15 +244,13 @@ int parse_hitran_file(LineParams_t * const line_params,
             size_t len = HITRAN2012_fmt[col][0];
             unsigned int t = HITRAN2012_fmt[col][1];
             char tmp[16];
-            strncpy(tmp,&(buf[offset]),len);
+            strncpy(tmp, &(buf[offset]), len);
             tmp[len]='\0';
             offset += len;
             if (t != NIL)
             {
                 HITRAN2012_vals_t val;
-                throw(HITRAN2012_cast(&val,
-                                      col,
-                                      tmp));
+                catch(HITRAN2012_cast(&val, col, tmp));
 
                 /*Column indices for parsing.*/
                 enum RefLinePtrIdx
@@ -318,12 +300,8 @@ int parse_hitran_file(LineParams_t * const line_params,
                         lp.d[n] = val.f;
                         break;
                     default:
-                        raise(VALUE_ERR,
-                              "Unknown column index (%d) on line %zu in file"
-                                  "%s.",
-                              val_idx,
-                              n,
-                              filename);
+                        mesg = "Unknown column index (%d) on line %zu in file %s.";
+                        raise(RS_VALUE_ERR, mesg, val_idx, n, filename);
                 }
                 ++val_idx;
             }
@@ -337,21 +315,20 @@ int parse_hitran_file(LineParams_t * const line_params,
             }
         }
     }
-    gfree(buf,HOST_ONLY);
+    gfree(buf, HOST_ONLY);
 
     /*Close the file.*/
     if (fclose(fp))
     {
-        raise(IO_ERR,
-              "error closing file %s.",
-              filename);
+        mesg = "error closing file %s.";
+        raise(RS_IO_ERR, mesg, filename);
     }
 
     /*Reallocate if necessary.*/
     if (lp.num_lines != n)
     {
         lp.num_lines = n;
-        throw(realloc_line_params(&lp));
+        catch(realloc_line_params(&lp));
     }
 
     /*Adjust the raw read-in line strengths.*/
@@ -384,7 +361,7 @@ int parse_hitran_file(LineParams_t * const line_params,
     }
     else
     {
-        throw(alloc_line_params(line_params,
+        catch(alloc_line_params(line_params,
                                 lp.num_lines,
                                 gpu_id));
         gmemcpy(line_params->iso,lp.iso,lp.num_lines,gpu_id,FROM_HOST);
@@ -395,7 +372,7 @@ int parse_hitran_file(LineParams_t * const line_params,
         gmemcpy(line_params->en,lp.en,lp.num_lines,gpu_id,FROM_HOST);
         gmemcpy(line_params->n,lp.n,lp.num_lines,gpu_id,FROM_HOST);
         gmemcpy(line_params->d,lp.d,lp.num_lines,gpu_id,FROM_HOST);
-        throw(free_line_params(&lp));
+        catch(free_line_params(&lp));
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }

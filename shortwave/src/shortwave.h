@@ -14,9 +14,9 @@ typedef struct Shortwave
     int num_levels; /**< Number of atmospheric levels.*/
     uint64_t n; /**< Spectral grid size.*/
     int gpu_id; /**< Device id.*/
-    fp_t *solar_flux; /**< Incident solar flux [W/m].*/
-    fp_t *flux_up; /**< Upward radiative flux [W/m] (level,wavenumber).*/
-    fp_t *flux_down; /**< Downward radiative flux [W/m] (level,wavenumber).*/
+    fp_t *solar_flux; /**< Incident solar flux [W*cm/m^2].*/
+    fp_t *flux_up; /**< Upward radiative flux [W*cm/m^2] (level, wavenumber).*/
+    fp_t *flux_down; /**< Downward radiative flux [W*cm/m^2] (level, wavenumber).*/
 } Shortwave_t;
 
 
@@ -43,9 +43,9 @@ EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, /**< Shortwave object.*/
                                fp_t const mu_dif, /**< Cosine of zenith angle for diffuse beam.*/
                                fp_t const sfc_alpha_dir, /**< Surface albedo for direct beam.*/
                                fp_t const sfc_alpha_dif, /**< Surface albedo for diffuse beam.*/
-                               fp_t * const solar_flux, /**< Solar flux [W/m] (wavenumber).*/
-                               fp_t * const flux_up, /**< Upward flux [W/m] (level, wavenumber).*/
-                               fp_t * const flux_down /**< Downward flux [W/m] (level, wavenumber.*/
+                               fp_t * const solar_flux, /**< Solar flux [W*cm/m^2] (wavenumber).*/
+                               fp_t * const flux_up, /**< Upward flux [W*cm/m^2] (level, wavenumber).*/
+                               fp_t * const flux_down /**< Downward flux [W*cm/m^2] (level, wavenumber).*/
                               );
 
 

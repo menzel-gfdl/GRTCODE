@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "cfcs.h"
@@ -26,22 +27,21 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
             snprintf(xsc->name, CFC_NAME_LEN, "F12");
             break;
         default:
-            raise(VALUE_ERR, "unrecognized CFC id %d.", id);
+            {char *mesg = "unrecognized CFC id %d.";
+            raise(RS_VALUE_ERR, mesg, id);}
     }
 
     /*Read in the data.*/
-    log_info("Reading in CFC cross sections from file %s.", filepath);
     int num_lines;
     int num_cols;
     char **buf;
-    throw(parse_csv(filepath, &num_lines, &num_cols, 1, &buf));
+    catch(parse_csv(filepath, &num_lines, &num_cols, 1, &buf));
     int const ncols_req = 2;
     if (num_cols != ncols_req)
     {
-        raise(VALUE_ERR,
-              "The number of columns (%d) in file %s does not match"
-                  " the expected number (%d).",
-              num_cols, filepath, ncols_req);
+        char *mesg = "The number of columns (%d) in file %s does not match"
+                     " the expected number (%d).";
+        raise(RS_VALUE_ERR, mesg, num_cols, filepath, ncols_req);
     }
 
     /*Convert the data from strings to floating point.*/
@@ -52,8 +52,8 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
     for (j=0; j<data_size; ++j)
     {
         double d;
-        throw(to_double(buf[j], &d));
-        throw(to_fp_t(d, &(fbuf[j])));
+        catch(to_double(buf[j], &d));
+        catch(to_fp_t(d, &(fbuf[j])));
         gfree(buf[j], HOST_ONLY);
     }
     gfree(buf, HOST_ONLY);
@@ -68,7 +68,7 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
     fp_t *y = &(fbuf[num_lines]);
     for (j=0; (unsigned int)j<num_wpoints; ++j)
     {
-        throw(linear_interpolation(x, y, num_lines, (fp_t)(w0 + j*res), &(c[j])));
+        catch(linear_interpolation(x, y, num_lines, (fp_t)(w0 + j*res), &(c[j])));
     }
     gfree(fbuf, HOST_ONLY);
     if (gpu_id == HOST_ONLY)
@@ -83,7 +83,7 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
     }
     xsc->num_wpoints = num_wpoints;
     xsc->gpu_id = gpu_id;
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -92,7 +92,7 @@ int free_cfc_cross_sections(CfcCrossSection_t *xsc)
 {
     not_null(xsc);
     gfree(xsc->cross_section, xsc->gpu_id);
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -102,7 +102,7 @@ int activate_cfc(uint32_t * const cfc_bit_field, int const id)
     in_range(id, 0, NUM_CFCS);
     uint32_t const one = 1;
     *cfc_bit_field = (*cfc_bit_field) | (one << id);
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 

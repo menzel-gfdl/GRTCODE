@@ -10,78 +10,8 @@
 #include "tips2017.h"
 
 
-/** @brief Calculate integrated number densities.
-    @return SUCCESS or an error code.*/
-int calc_number_densities(int const num_layers, /*Number of atmospheric layers.*/
-                          fp_t const * const p, /*Pressure [atm] (levels).*/
-                          fp_t * const n /*Integrated number densities
-                                           [cm^-2] (layers).*/
-                         )
-{
-    fp_t const c = 2.147822334314468e+25; /*[1/(cm^2*atm)]*/
-    int i;
-#pragma omp parallel for default(none) private(i)
-    for (i=0;i<num_layers;++i)
-    {
-        fp_t dp = p[i] - p[i+1];
-        dp = dp >= 0.f ? dp : dp*-1.f;
-        n[i] = c*dp;
-    }
-    return SUCCESS;
-}
-
-
-/** @brief Calculate layer pressures and temperatures.
-    @return SUCCESS or an error code.*/
-int calc_pressures_and_temperatures(int const num_layers, /*Number of atmospheric
-                                                            layers.*/
-                                    fp_t const * const p, /*Pressure [atm] (levels).*/
-                                    fp_t const * const t, /*Temperature [K] (levels).*/
-                                    fp_t * const pavg, /*Pressure [atm] (layers).*/
-                                    fp_t * const tavg /*Pressure [atm] (layers).*/
-                                   )
-{
-    int i;
-#pragma omp parallel for default(none) private(i)
-    for (i=0;i<num_layers;++i)
-    {
-        pavg[i] = 0.5f*(p[i] + p[i+1]);
-        tavg[i] = 0.5f*(t[i] + t[i+1]);
-    }
-    return SUCCESS;
-}
-
-
-/** @brief Calculate partial pressures and number densities.
-    @return SUCCESS or an error code.*/
-int calc_partial_pressures_and_number_densities(int const num_layers, /*Number of
-                                                                        atmospheric layers.*/
-                                                fp_t const * const p, /*Pressure [atm] (levels).*/
-                                                fp_t const * const x, /*Abundance (levels).*/
-                                                fp_t const * const n, /*Integrated number densities
-                                                                        [cm^-2] (layers).*/
-                                                fp_t * const ps, /*Partial pressure [atm]
-                                                                   (layers).*/
-                                                fp_t * const ns /*Integrated molecular number
-                                                                  densities [cm^-2] (layers).*/
-                                               )
-{
-    fp_t const third = 1.f/3.f;
-    fp_t const sixth = 1.f/6.f;
-    int i;
-#pragma omp parallel for default(none) private(i)
-    for (i=0;i<num_layers;++i)
-    {
-        ps[i] = third*(x[i]*p[i] + x[i+1]*p[i+1])
-                + sixth*(x[i]*p[i+1] + x[i+1]*p[i]);
-        ns[i] = n[i]*0.5f*(x[i] + x[i+1]);
-    }
-    return SUCCESS;
-}
-
-
 /** @brief Calculate pressure-shifted line center positions.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_line_centers(uint64_t const num_lines, /*Number of molecular lines.*/
                       int const num_layers, /*Number of atmospheric layers.*/
                       fp_t const * const v0, /*Unshifted line center
@@ -103,7 +33,7 @@ int calc_line_centers(uint64_t const num_lines, /*Number of molecular lines.*/
             vnn[i*num_lines+j] = v0[j] + delta[j]*p[i];
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -125,12 +55,12 @@ int calc_partition_functions(int const num_layers, /*Number of atmospheric layer
             q[i*num_iso+j] = 1.f/Q(mol_id,t[i],j+1);
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
 /** @brief Calculate temperature-corrected line intensities.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_line_strengths(uint64_t const num_lines, /*Number of molecular lines.*/
                         int const num_layers, /*Number of atmospheric layers.*/
                         int const num_iso, /*Number of molecular
@@ -161,12 +91,12 @@ int calc_line_strengths(uint64_t const num_lines, /*Number of molecular lines.*/
                                  q[i*num_iso+iso[j]-1];
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
 /** @brief Calculate lorentz halfwidths.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_lorentz_hw(uint64_t const num_lines, /*Number of molecular lines.*/
                     int const num_layers, /*Number of atmospheric layers.*/
                     fp_t const * const n, /*Coefficient of temperature
@@ -196,12 +126,12 @@ int calc_lorentz_hw(uint64_t const num_lines, /*Number of molecular lines.*/
                                    yself[j]*ps[i]);
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
 /** @brief Calculate doppler halfwidths.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_doppler_hw(uint64_t const num_lines, /*Number of molecular lines.*/
                     int const num_layers, /*Number of atmospheric layers.*/
                     fp_t const m, /*Molecular mass [g].*/
@@ -226,7 +156,7 @@ int calc_doppler_hw(uint64_t const num_lines, /*Number of molecular lines.*/
                                    SQRT((2.f*kb*t[i])/(m*c*c));
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -278,12 +208,12 @@ int sort_lines(uint64_t const num_lines, /*Number of molecular lines.*/
             }
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
 /** @brief Calculate optical depths.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_optical_depth_bin_sweep(uint64_t const num_lines, /*Number of molecular lines.*/
                                  int const num_layers, /*Number of atmospheric layers.*/
                                  fp_t * const vnn, /*Pressure-shifted line
@@ -441,12 +371,12 @@ int calc_optical_depth_bin_sweep(uint64_t const num_lines, /*Number of molecular
             }
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
 /** @brief Calculate optical depths.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_optical_depth_line_sweep(uint64_t const num_lines, /*Number of molecular lines.*/
                                   int const num_layers, /*Number of atmospheric layers.*/
                                   fp_t * const vnn, /*Pressure-shifted line
@@ -559,12 +489,12 @@ int calc_optical_depth_line_sweep(uint64_t const num_lines, /*Number of molecula
             }
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
 /** @brief Calculate optical depths by sampling all lines.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_optical_depth_line_sample(uint64_t const num_lines, /*Number of molecular lines.*/
                                    int const num_layers, /*Number of atmospheric layers.*/
                                    fp_t * const vnn, /*Pressure-shifted line
@@ -618,7 +548,7 @@ int calc_optical_depth_line_sample(uint64_t const num_lines, /*Number of molecul
             }
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -651,7 +581,7 @@ int calc_water_vapor_ctm_optical_depth(uint64_t const num_wpoints,
                                     EXP(T0F[j]*(tref-T[i]))));
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -673,7 +603,7 @@ int calc_ozone_ctm_optical_depth(uint64_t const num_wpoints,
             tau[i*num_wpoints+j] += N[i]*cross_section[j];
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -724,7 +654,7 @@ int interpolate(SpectralBins_t const bins,
             }
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
@@ -768,12 +698,12 @@ int interpolate_last_bin(SpectralBins_t const bins,
                           t);
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }
 
 
 /** @brief Calculate the optical depth contribution of a CFC.
-    @return SUCCESS or an error code.*/
+    @return RS_SUCCESS or an error code.*/
 int calc_cfc_optical_depth(uint64_t const num_wpoints, int const num_layers,
                            fp_t const * const n, fp_t const * const x,
                            fp_t const * const cross_section, fp_t * const tau)
@@ -789,5 +719,5 @@ int calc_cfc_optical_depth(uint64_t const num_wpoints, int const num_layers,
             tau[i*num_wpoints+j] += half*n[i]*(x[i]+x[i+1])*cross_section[j];
         }
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }

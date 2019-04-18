@@ -49,7 +49,7 @@
 
 #define log_mesg(mesg, ...) { \
     if (rs_get_verbosity() >= RS_NONE) { \
-        char s_[1024]; \
+        char s__[1024]; \
         snprintf(s__, 1024, mesg, __VA_ARGS__); \
         fprintf(stdout, "\r\33[2K %s\n", s__); \
     }}

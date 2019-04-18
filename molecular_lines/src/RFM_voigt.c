@@ -54,7 +54,7 @@ HOST DEVICE int rfm_voigt_line_shape(LineShapeInputs_t const vals,
             float const XI = (DWNO + i*WRES - WNOADJ)*REPWID;
             K[i] = REPWID*Y/(M_PI*(XI*XI+YQ));
         }
-        return SUCCESS;
+        return RS_SUCCESS;
     }
 
     float const YRRTPI = Y*RSQRPI;
@@ -229,5 +229,5 @@ HOST DEVICE int rfm_voigt_line_shape(LineShapeInputs_t const vals,
         }
         K[i] = RSQRPI*REPWID*K[i];
     }
-    return SUCCESS;
+    return RS_SUCCESS;
 }

@@ -353,11 +353,11 @@ HOST DEVICE static int sw_flux(int const nlevels, /**< Number of atmospheric pre
                                                               a direct beam.*/
                                fp_t const sfc_alpha_dif, /**< Albedo of the Earth's surface for
                                                               a diffuse beam.*/
-                               fp_t const solar_flux, /**< Incident solar flux [W/m] at the top
+                               fp_t const solar_flux, /**< Incident solar flux [W*cm/m^2] at the top
                                                            of the atmosphere.*/
-                               fp_t * const flux_up, /**< Upward shortwave radiative flux [W/m]
+                               fp_t * const flux_up, /**< Upward shortwave radiative flux [W*cm/m^2]
                                                           at each atmospheric pressure level.*/
-                               fp_t * const flux_down /**< Downward shortwave radiative flux [W/m]
+                               fp_t * const flux_down /**< Downward shortwave radiative flux [W*cm/m^2]
                                                            at each atmospheric pressure level.*/
                               )
 {
@@ -440,14 +440,14 @@ static int sw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
                                                            a direct beam.*/
                             fp_t const sfc_alpha_dif, /**< Albedo of the Earth's surface for
                                                            a diffuse beam.*/
-                            fp_t const * const solar_flux, /**< Incident solar flux [W/m] at the top
+                            fp_t const * const solar_flux, /**< Incident solar flux [W*cm/m^2] at the top
                                                                 of the atmosphere at each spectral
                                                                 grid point.*/
                             fp_t * const flux_up, /**< Upward shortwave radiative fluxes
-                                                       [W/m] at each spectral grid point at
+                                                       [W*cm/m^2] at each spectral grid point at
                                                        each pressure level.*/
                             fp_t * const flux_down /**< Downward shortwave radiative fluxes
-                                                        [W/m] at each spectral grid point
+                                                        [W*cm/m^2] at each spectral grid point
                                                         at each pressure level.*/
                            )
 {
@@ -500,14 +500,14 @@ __global__ static void sw_fluxes_kernel_d(int const num_levels, /**< Number of a
                                                                          a direct beam.*/
                                           fp_t const sfc_alpha_dif, /**< Albedo of the Earth's surface for
                                                                          a diffuse beam.*/
-                                          fp_t const * const solar_flux, /**< Incident solar flux [W/m] at the top
+                                          fp_t const * const solar_flux, /**< Incident solar flux [W*cm/m^2] at the top
                                                                               of the atmosphere at each spectral
                                                                               grid point.*/
                                           fp_t * const flux_up, /**< Upward shortwave radiative fluxes
-                                                                     [W/m] at each spectral grid point at
+                                                                     [W*cm/m^2] at each spectral grid point at
                                                                      each pressure level.*/
                                           fp_t * const flux_down /**< Downward shortwave radiative fluxes
-                                                                      [W/m] at each spectral grid point
+                                                                      [W*cm/m^2] at each spectral grid point
                                                                       at each pressure level.*/
                                          )
 {

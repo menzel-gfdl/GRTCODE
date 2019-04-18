@@ -22,8 +22,9 @@ esac],[single_precision=false])
 AM_CONDITIONAL([USE_SINGLE_PRECISION], [test x$single_precision = xtrue])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
-                 molecular_lines/Makefile molecular_lines/src/Makefile
                  rs_utils/Makefile rs_utils/src/Makefile
+                 molecular_lines/Makefile molecular_lines/src/Makefile
                  shortwave/Makefile shortwave/src/Makefile
-                 longwave/Makefile longwave/src/Makefile])
+                 longwave/Makefile longwave/src/Makefile
+                 rfmip-irf/Makefile rfmip-irf/src/Makefile])
 AC_OUTPUT
