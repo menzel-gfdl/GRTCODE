@@ -6,3 +6,5 @@ declare datadir="../../data"
             -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
             -F11 $datadir/cfc_cross_sections/F11.xsc.296.0.760.0.csv  \
             -F12 $datadir/cfc_cross_sections/F12.xsc.296.3.760.0.csv
+
+

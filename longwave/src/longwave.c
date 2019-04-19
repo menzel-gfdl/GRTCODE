@@ -231,6 +231,7 @@ static int lw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
                             double const w0, /**< Spectral grid lower bound [1/cm].*/
                             double const wres, /**< Spectral grid resolution [1/cm].*/
                             uint64_t const num_wpoints, /*Spectral grid size.*/
+                            uint64_t const max_num_wpoints, /**< Maximum spectral grid size.*/
                             fp_t const T_surf, /**< Temperature [K] of the Earth's surface.*/
                             fp_t const * const T_layers, /**< Temperature [K] of each
                                                               atmospheric layer.*/
@@ -260,7 +261,7 @@ static int lw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
         int j;
         for (j=0; j<num_layers; ++j)
         {
-            tau_buf[j] = tau[j*num_wpoints+i];
+            tau_buf[j] = tau[j*max_num_wpoints+i];
         }
         lw_flux(num_levels, w, T_surf, T_layers, T_levels, tau_buf, emis[i],
                 flux_up_buf, flux_down_buf);
@@ -280,6 +281,7 @@ __global__ static void lw_fluxes_kernel_d(int const num_levels, /**< Number of a
                                           double const w0, /**< Spectral grid lower bound [1/cm].*/
                                           double const wres, /**< Spectral grid resolution [1/cm].*/
                                           uint64_t const num_wpoints, /**< Spectral grid size.*/
+                                          uint64_t const max_num_wpoints, /**< Maximum spectral grid size.*/
                                           fp_t const T_surf, /**< Temperature [K] of the Earth's surface.*/
                                           fp_t const * const T_layers, /**< Temperature [K] of each
                                                                             atmospheric layer.*/
@@ -308,7 +310,7 @@ __global__ static void lw_fluxes_kernel_d(int const num_levels, /**< Number of a
         int j;
         for (j=0; j<num_layers; ++j)
         {
-            tau_buf[j] = tau[j*num_wpoints+tid];
+            tau_buf[j] = tau[j*max_num_wpoints+tid];
         }
         lw_flux(num_levels, w, T_surf, T_layers, T_levels, tau_buf, emis[tid],
                 flux_up_buf, flux_down_buf);
@@ -328,7 +330,8 @@ __global__ static void lw_fluxes_kernel_d(int const num_levels, /**< Number of a
 EXTERN int calculate_lw_fluxes(Longwave_t * const lw, Optics_t const * const optics,
                                fp_t const T_surf, fp_t * const T_layers,
                                fp_t * const T_levels, fp_t * const emis,
-                               fp_t * const flux_up, fp_t * const flux_down)
+                               fp_t * const flux_up, fp_t * const flux_down,
+                               double const * const x, double const * const X)
 {
     not_null(lw);
     not_null(optics);
@@ -356,13 +359,36 @@ EXTERN int calculate_lw_fluxes(Longwave_t * const lw, Optics_t const * const opt
         gmemcpy(lw->level_temperature, T_levels, lw->num_levels, lw->device, FROM_HOST);
         gmemcpy(lw->emissivity, emis, lw->grid.n, lw->device, FROM_HOST);
     }
-    glaunch(lw_fluxes_kernel, lw->grid.n, lw->device, lw->num_levels, lw->grid.w0,
-            lw->grid.dw, lw->grid.n, T_surf, lw->layer_temperature, lw->level_temperature,
-            optics->tau, lw->emissivity, lw->flux_up, lw->flux_down);
+
+    double w0 = lw->grid.w0;
+    uint64_t lb = 0;
+    double wn = lw->grid.wn;
+    uint64_t n = lw->grid.n;
+    if (x != NULL)
+    {
+        in_range(*x, w0, wn);
+        w0 = *x;
+        lb = floor((w0-lw->grid.w0)/lw->grid.dw);
+    }
+    if (X != NULL)
+    {
+        in_range(*X, w0, wn);
+        min_check(*X, w0);
+        wn = *X;
+        n = floor((wn-w0)/lw->grid.dw) - lb + 1;
+        max_check(n, lw->grid.n);
+    }
+    max_check(lb+n, lw->grid.n);
+    char *mesg = "Running longwave solver over spectral range %e (%lu) - %e (%lu) [1/cm]";
+    log_info(mesg, w0, lb, wn, lb+n);
+
+    glaunch(lw_fluxes_kernel, n, lw->device, lw->num_levels, w0,
+            lw->grid.dw, n, lw->grid.n, T_surf, lw->layer_temperature, lw->level_temperature,
+            optics->tau, &(lw->emissivity[lb]), lw->flux_up, lw->flux_down);
     if (lw->device != HOST_ONLY)
     {
-        gmemcpy(flux_up, lw->flux_up, lw->grid.n*lw->num_levels, lw->device, FROM_DEVICE);
-        gmemcpy(flux_down, lw->flux_down, lw->grid.n*lw->num_levels, lw->device, FROM_DEVICE);
+        gmemcpy(flux_up, lw->flux_up, n*lw->num_levels, lw->device, FROM_DEVICE);
+        gmemcpy(flux_down, lw->flux_down, n*lw->num_levels, lw->device, FROM_DEVICE);
     }
     return RS_SUCCESS;
 }

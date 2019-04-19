@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 
     /*Create a spectral grid.*/
     double const w0 = 1.;
-    double const wn = 3250.;
+    double const wn = 50000.;
     double const dw = 0.1;
     SpectralGrid_t grid;
     catch(create_spectral_grid(&grid, w0, wn, dw));
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     Atmosphere_t atm;
     atm.num_wavenumber = grid.n;
     atm.x = 0;
-    atm.num_columns = 2;
+    atm.num_columns = 1;
     atm.z = 0;
     atm.num_levels = 61;
     atm.num_layers = atm.num_levels - 1;
@@ -236,6 +236,12 @@ int main(int argc, char **argv)
             ppmv = &(ppmv[i*atm.num_levels]);
             catch(grt_set_molecule_ppmv(&molecular_lines, molecules[j], ppmv));
         }
+        for (j=0; j<num_cfcs; ++j)
+        {
+            fp_t *ppmv = atm.cfc_ppmv[j];
+            ppmv = &(ppmv[i*atm.num_levels]);
+            catch(grt_set_cfc_ppmv(&molecular_lines, cfcs[j], ppmv));
+        }
         catch(grt_calculate_optical_depth(&molecular_lines, level_pressure,
                                           level_temperature, &optics_ml));
 
@@ -243,17 +249,24 @@ int main(int argc, char **argv)
         fp_t surface_temperature = atm.surface_temperature[i];
         fp_t *layer_temperature = &(atm.layer_temperature[i*atm.num_layers]);
         fp_t *surface_emissivity = &(atm.surface_emissivity[i*atm.num_wavenumber]);
+        double lw_solver_w0 = 1.;
+        double lw_solver_wn = 3250.;
+        SpectralGrid_t lw_solver_grid;
+        catch(create_spectral_grid(&lw_solver_grid, lw_solver_w0, lw_solver_wn, grid.dw));
         catch(calculate_lw_fluxes(&longwave, &optics_ml, surface_temperature,
                                   layer_temperature, level_temperature,
-                                  surface_emissivity, flux_up, flux_down));
+                                  surface_emissivity, flux_up, flux_down,
+                                  &(lw_solver_grid.w0), &(lw_solver_grid.wn)));
 
         /*Integrate fluxes and write them to the output file.*/
         fp_t flux_up_total[atm.num_levels];
         fp_t flux_down_total[atm.num_levels];
         for (j=0; j<atm.num_levels; ++j)
         {
-            integrate(&(flux_up[j*grid.n]), grid.n, grid.dw, &(flux_up_total[j]));
-            integrate(&(flux_down[j*grid.n]), grid.n, grid.dw, &(flux_down_total[j]));
+            integrate(&(flux_up[j*lw_solver_grid.n]), lw_solver_grid.n, lw_solver_grid.dw,
+                      &(flux_up_total[j]));
+            integrate(&(flux_down[j*lw_solver_grid.n]), lw_solver_grid.n, lw_solver_grid.dw,
+                      &(flux_down_total[j]));
         }
         write_fluxes(&output, RLU, i+atm.x, flux_up_total);
         write_fluxes(&output, RLD, i+atm.x, flux_down_total);
