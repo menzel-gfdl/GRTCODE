@@ -25,7 +25,7 @@
 #define reset(start, count) { \
     start[0] = 0; start[1] = 0; start[2] = 0; start[3] = 0; \
     count[0] = 1; count[1] = 1; count[2] = 1; count[3] = 1;}
-#define Patoatm 9.86923e-6
+#define Patomb 0.01
 #define toppmv 1.e6
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -142,7 +142,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     int i;
     for (i=0; i<(atm->num_columns*atm->num_levels); ++i)
     {
-        atm->level_pressure[i] *= Patoatm;
+        atm->level_pressure[i] *= Patomb;
     }
 
     alloc(atm->layer_pressure, atm->num_columns*atm->num_layers);
@@ -155,7 +155,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     get_var(ncid, varid, start, count, atm->layer_pressure);
     for (i=0; i<(atm->num_columns*atm->num_layers); ++i)
     {
-        atm->level_pressure[i] *= Patoatm;
+        atm->layer_pressure[i] *= Patomb;
     }
 
     alloc(atm->level_temperature, atm->num_columns*atm->num_levels);
@@ -232,7 +232,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     char *molecule_names[32];
     molecule_names[CH4] = "methane_GM";
     molecule_names[CO] = "carbon_monoxide_GM";
-    molecule_names[CO2] = "carbon_dixoide_GM";
+    molecule_names[CO2] = "carbon_dioxide_GM";
     molecule_names[H2O] = "water_vapor";
     molecule_names[N2O] = "nitrous_oxide_GM";
     molecule_names[O2] = "oxygen_GM";

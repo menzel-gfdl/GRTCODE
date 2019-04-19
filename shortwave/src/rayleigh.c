@@ -97,26 +97,33 @@ int rayleigh_scattering(Optics_t * const optics, fp_t * const pressure)
 {
     not_null(optics);
     not_null(pressure);
+    fp_t const mbtoatm = 0.000986923f;
+    int num_levels = optics->num_layers + 1;
+    fp_t p_atm[MAX_NUM_LEVELS];
+    int i;
+    for (i=0; i<num_levels; ++i)
+    {
+        p_atm[i] = pressure[i]*mbtoatm;
+    }
     fp_t *p;
     fp_t number_density[MAX_NUM_LAYERS];
     fp_t *n;
     if (optics->device == HOST_ONLY)
     {
-        p = pressure;
+        p = p_atm;
         n = number_density;
     }
     else
     {
         /*Place data on device.*/
-        int num_levels = optics->num_layers + 1;
         gmalloc(p, num_levels, optics->device);
-        gmemcpy(p, pressure, num_levels, optics->device, FROM_HOST);
+        gmemcpy(p, p_atm, num_levels, optics->device, FROM_HOST);
         gmalloc(n, optics->num_layers, optics->device);
     }
 
     /*Calculate integrated number densities [cm^2] in each atmospheric layer.*/
     glaunch(calc_number_densities, optics->num_layers, optics->device,
-            optics->num_layers, pressure, n);
+            optics->num_layers, p, n);
 
     /*Calculate optical properties for Rayleigh scattering.*/
     glaunch(rayleigh, optics->grid.n, optics->device, optics->num_layers,

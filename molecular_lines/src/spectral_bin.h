@@ -3,7 +3,6 @@
 #define SPECTRAL_BIN_H_
 
 #include <stdint.h>
-#include "debug.h"
 #include "floating_point_type.h"
 
 

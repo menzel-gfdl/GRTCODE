@@ -7,12 +7,7 @@
 #include "device.h"
 #include "floating_point_type.h"
 #include "longwave.h"
-/*
 #include "molecular_lines.h"
-*/
-#include "molecules.h"
-#include "cfcs.h"
-
 #include "optics.h"
 #include "rayleigh.h"
 #include "return_codes.h"
@@ -55,12 +50,18 @@ static void activate_species(Parser_t const parser, /**< Parser object.*/
                              int * const array, /**< Array.*/
                              int const tag, /**< Value to store in array.*/
                              int * spot, /**< Current spot in array.*/
-                             int const max_size /**< Size of input array.*/
+                             int const max_size, /**< Size of input array.*/
+                             char **values /**< Array to store argument values.*/
                             )
 {
-    if (get_argument(parser, arg, NULL))
+    char buffer[valuelen];
+    if (get_argument(parser, arg, buffer))
     {
         array[*spot] = tag;
+        if (values != NULL)
+        {
+            snprintf(values[*spot], valuelen, "%s", buffer);
+        }
         *spot += 1;
         if (*spot >= max_size)
         {
@@ -94,7 +95,9 @@ int main(int argc, char **argv)
     add_argument(&parser, "-O2", NULL, "Include O2.", NULL);
     add_argument(&parser, "-O3", NULL, "Include O3.", NULL);
     add_argument(&parser, "-c", "--line-cutoff", "Cutoff [1/cm] from line center.", &one);
+    add_argument(&parser, "-h2o-ctm", NULL, "Directory containing H2O continuum files", &one);
     add_argument(&parser, "-o", NULL, "Name of output file.", &one);
+    add_argument(&parser, "-o3-ctm", NULL, "Directory containing O3 continuum files", &one);
     add_argument(&parser, "-r", "--spectral-resolution", "Spectral resolution [1/cm].", &one);
     add_argument(&parser, "-v", "--verbose", "Increase verbosity.", NULL);
     add_argument(&parser, "-w", "--spectral-lower-bound", "Spectral lower bound [1/cm].", &one);
@@ -122,7 +125,7 @@ int main(int argc, char **argv)
 
     /*Create a spectral grid.*/
     double const w0 = 1.;
-    double const wn = 50000.;
+    double const wn = 3250.;
     double const dw = 0.1;
     SpectralGrid_t grid;
     catch(create_spectral_grid(&grid, w0, wn, dw));
@@ -130,25 +133,31 @@ int main(int argc, char **argv)
     /*Determine which molecules to use.*/
     int molecules[32];
     int num_molecules = 0;
-    activate_species(parser, "-CH4", molecules, CH4, &num_molecules, 32);
-    activate_species(parser, "-CO", molecules, CO, &num_molecules, 32);
-    activate_species(parser, "-CO2", molecules, CO2, &num_molecules, 32);
-    activate_species(parser, "-H2O", molecules, H2O, &num_molecules, 32);
-    activate_species(parser, "-N2O", molecules, N2O, &num_molecules, 32);
-    activate_species(parser, "-O2", molecules, O2, &num_molecules, 32);
-    activate_species(parser, "-O3", molecules, O3, &num_molecules, 32);
+    activate_species(parser, "-CH4", molecules, CH4, &num_molecules, 32, NULL);
+    activate_species(parser, "-CO", molecules, CO, &num_molecules, 32, NULL);
+    activate_species(parser, "-CO2", molecules, CO2, &num_molecules, 32, NULL);
+    activate_species(parser, "-H2O", molecules, H2O, &num_molecules, 32, NULL);
+    activate_species(parser, "-N2O", molecules, N2O, &num_molecules, 32, NULL);
+    activate_species(parser, "-O2", molecules, O2, &num_molecules, 32, NULL);
+    activate_species(parser, "-O3", molecules, O3, &num_molecules, 32, NULL);
 
     /*Determine which CFCs to use.*/
     int cfcs[32];
+    char *cfc_paths[32];
+    int i;
+    for (i=0; i<32; ++i)
+    {
+        cfc_paths[i] = malloc(sizeof(*(cfc_paths[i]))*valuelen);
+    }
     int num_cfcs = 0;
-    activate_species(parser, "-F11", cfcs, F11, &num_cfcs, 32);
-    activate_species(parser, "-F12", cfcs, F12, &num_cfcs, 32);
+    activate_species(parser, "-F11", cfcs, F11, &num_cfcs, 32, cfc_paths);
+    activate_species(parser, "-F12", cfcs, F12, &num_cfcs, 32, cfc_paths);
 
     /*Read in the atmospheric input data.*/
     Atmosphere_t atm;
     atm.num_wavenumber = grid.n;
     atm.x = 0;
-    atm.num_columns = 1;
+    atm.num_columns = 2;
     atm.z = 0;
     atm.num_levels = 61;
     atm.num_layers = atm.num_levels - 1;
@@ -164,9 +173,38 @@ int main(int argc, char **argv)
     get_argument(parser, "solar_flux", buffer);
     catch(create_solar_flux(&solar_flux, &grid, buffer, total_solar_irradiance));
 
+    /*Initialize a molecular lines object.*/
+    char hitran_path[valuelen];
+    get_argument(parser, "hitran_file", hitran_path);
+    char h2o_ctm[valuelen];
+    if (!get_argument(parser, "-h2o-ctm", h2o_ctm))
+    {
+        snprintf(h2o_ctm, valuelen, "%s", "none");
+    }
+    char o3_ctm[valuelen];
+    if (!get_argument(parser, "-o3-ctm", o3_ctm))
+    {
+        snprintf(o3_ctm, valuelen, "%s", "none");
+    }
+    MolecularLines_t molecular_lines;
+    catch(create_molecular_lines(&molecular_lines, atm.num_levels, &grid, &device,
+                                 hitran_path, h2o_ctm, o3_ctm, NULL, NULL));
+
+    /*Add molecules and CFCs.*/
+    for (i=0; i<num_molecules; ++i)
+    {
+        catch(grt_add_molecule(&molecular_lines, molecules[i], NULL, NULL));
+    }
+    for (i=0; i<num_cfcs; ++i)
+    {
+        catch(grt_add_cfc(&molecular_lines, cfcs[i], cfc_paths[i]));
+    }
+
     /*Initialize an optics object.*/
-    Optics_t optics;
-    catch(create_optics(&optics, atm.num_layers, &grid, &device));
+    Optics_t optics_ml;
+    catch(create_optics(&optics_ml, atm.num_layers, &grid, &device));
+    Optics_t optics_rayleigh;
+    catch(create_optics(&optics_rayleigh, atm.num_layers, &grid, &device));
 
     /*Initialize a longwave object.*/
     Longwave_t longwave;
@@ -186,22 +224,32 @@ int main(int argc, char **argv)
     /*Loop through the columns.*/
     fp_t *flux_up = malloc(sizeof(*flux_up)*atm.num_levels*grid.n);
     fp_t *flux_down = malloc(sizeof(*flux_down)*atm.num_levels*grid.n);
-    int i;
     for (i=0; i<atm.num_columns; ++i)
     {
+        /*Calculate molecular spectra.*/
+        fp_t *level_pressure = &(atm.level_pressure[i*atm.num_levels]);
+        fp_t *level_temperature = &(atm.level_temperature[i*atm.num_levels]);
+        int j;
+        for (j=0; j<num_molecules; ++j)
+        {
+            fp_t *ppmv = atm.ppmv[j];
+            ppmv = &(ppmv[i*atm.num_levels]);
+            catch(grt_set_molecule_ppmv(&molecular_lines, molecules[j], ppmv));
+        }
+        catch(grt_calculate_optical_depth(&molecular_lines, level_pressure,
+                                          level_temperature, &optics_ml));
+
         /*Calculate longwave fluxes.*/
         fp_t surface_temperature = atm.surface_temperature[i];
         fp_t *layer_temperature = &(atm.layer_temperature[i*atm.num_layers]);
-        fp_t *level_temperature = &(atm.level_temperature[i*atm.num_levels]);
         fp_t *surface_emissivity = &(atm.surface_emissivity[i*atm.num_wavenumber]);
-        catch(calculate_lw_fluxes(&longwave, &optics, surface_temperature,
+        catch(calculate_lw_fluxes(&longwave, &optics_ml, surface_temperature,
                                   layer_temperature, level_temperature,
                                   surface_emissivity, flux_up, flux_down));
 
         /*Integrate fluxes and write them to the output file.*/
         fp_t flux_up_total[atm.num_levels];
         fp_t flux_down_total[atm.num_levels];
-        int j;
         for (j=0; j<atm.num_levels; ++j)
         {
             integrate(&(flux_up[j*grid.n]), grid.n, grid.dw, &(flux_up_total[j]));
@@ -211,16 +259,21 @@ int main(int argc, char **argv)
         write_fluxes(&output, RLD, i+atm.x, flux_down_total);
 
         /*Calculate the optical properities of a column.*/
-        fp_t *level_pressure = &(atm.level_pressure[i*atm.num_levels]);
-        catch(rayleigh_scattering(&optics, level_pressure));
+        catch(rayleigh_scattering(&optics_rayleigh, level_pressure));
+
+        /*Calculate the combined optical properties.*/
+        Optics_t const * const optics_mech[2] = {&optics_ml, &optics_rayleigh};
+        Optics_t optics_combined;
+        catch(add_optics(optics_mech, 2, &optics_combined));
 
         /*Calculate shortwave fluxes.*/
         fp_t const zen_dir = atm.solar_zenith_angle[i];
         fp_t const zen_dif = 0.5;
         fp_t const albedo_dir = atm.surface_albedo[i];
         fp_t const albedo_dif = albedo_dir;
-        catch(calculate_sw_fluxes(&shortwave, &optics, zen_dir, zen_dif, albedo_dir,
+        catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif, albedo_dir,
                                   albedo_dif, solar_flux.incident_flux, flux_up, flux_down));
+        catch(destroy_optics(&optics_combined));
 
         /*Integrate fluxes and write them to the output file.*/
         for (j=0; j<atm.num_levels; ++j)
@@ -239,7 +292,13 @@ int main(int argc, char **argv)
     catch(destroy_shortwave(&shortwave));
     catch(destroy_longwave(&longwave));
     catch(destroy_solar_flux(&solar_flux));
-    catch(destroy_optics(&optics));
+    catch(destroy_optics(&optics_ml));
+    catch(destroy_optics(&optics_rayleigh));
+    catch(destroy_molecular_lines(&molecular_lines));
     destroy_parser(&parser);
+    for (i=0; i<32; ++i)
+    {
+        free(cfc_paths[i]);
+    }
     return EXIT_SUCCESS;
 }

@@ -1,2 +1,8 @@
-#!/bin/bash
-./rfmip_irf ../../data/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc 0 ../../data/HITRAN_files/hitran2016.par ../../data/solar_flux.csv -v
+#!/bin/bash -x
+declare datadir="../../data"
+./rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
+            0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
+            -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
+            -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
+            -F11 $datadir/cfc_cross_sections/F11.xsc.296.0.760.0.csv  \
+            -F12 $datadir/cfc_cross_sections/F12.xsc.296.3.760.0.csv
