@@ -10,7 +10,7 @@
 typedef struct SolarFlux
 {
     SpectralGrid_t grid; /**< Spectral grid.*/
-    fp_t *incident_flux; /**< Incident solar flux [W*cm/m^2] (wavenumber).*/
+    fp_t *incident_flux; /**< Incident solar flux [cm] (wavenumber).*/
     uint64_t n; /**< Size of spectral grid.*/
 } SolarFlux_t;
 
@@ -19,9 +19,7 @@ typedef struct SolarFlux
     @return RS_SUCCESS or an error code.*/
 EXTERN int create_solar_flux(SolarFlux_t * const solar_flux, /**< Solar flux object.*/
                              SpectralGrid_t const * const grid, /**< Spectral grid.*/
-                             char const * const filepath, /**< Solar flux csv file.*/
-                             fp_t const total_solar_irradiance /**< Total incident solar irradiance
-                                                                    [W/m^2] at top of atmosphere.*/
+                             char const * const filepath /**< Solar flux csv file.*/
                             );
 
 

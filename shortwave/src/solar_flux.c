@@ -9,7 +9,7 @@
 
 /*Read in data for the solar flux.*/
 EXTERN int create_solar_flux(SolarFlux_t * const solar_flux, SpectralGrid_t const * const grid,
-                             char const * const filepath, fp_t const total_solar_irradiance)
+                             char const * const filepath)
 {
     not_null(solar_flux);
     not_null(grid);
@@ -65,10 +65,9 @@ EXTERN int create_solar_flux(SolarFlux_t * const solar_flux, SpectralGrid_t cons
     catch(reimann_sum(c, grid->n, grid->dw, &total_flux));
 
     /*Adjust the spectral.*/
-    fp_t ratio = total_solar_irradiance/total_flux;
     for (j=0; j<grid->n; ++j)
     {
-        c[j] *= ratio;
+        c[j] /= total_flux;
     }
     solar_flux->incident_flux = c;
     solar_flux->n = grid->n;

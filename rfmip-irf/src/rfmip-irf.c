@@ -169,9 +169,8 @@ int main(int argc, char **argv)
 
     /*Read in the incident solar flux.*/
     SolarFlux_t solar_flux;
-    fp_t total_solar_irradiance = 1407.679; /*[W/m^2]*/
     get_argument(parser, "solar_flux", buffer);
-    catch(create_solar_flux(&solar_flux, &grid, buffer, total_solar_irradiance));
+    catch(create_solar_flux(&solar_flux, &grid, buffer));
 
     /*Initialize a molecular lines object.*/
     char hitran_path[valuelen];
@@ -285,7 +284,8 @@ int main(int argc, char **argv)
         fp_t const albedo_dir = atm.surface_albedo[i];
         fp_t const albedo_dif = albedo_dir;
         catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif, albedo_dir,
-                                  albedo_dif, solar_flux.incident_flux, flux_up, flux_down));
+                                  albedo_dif, atm.total_solar_irradiance[i],
+                                  solar_flux.incident_flux, flux_up, flux_down));
         catch(destroy_optics(&optics_combined));
 
         /*Integrate fluxes and write them to the output file.*/

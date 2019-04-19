@@ -45,7 +45,8 @@ EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, /**< Shortwave object.*/
                                fp_t const mu_dif, /**< Cosine of zenith angle for diffuse beam.*/
                                fp_t const sfc_alpha_dir, /**< Surface albedo for direct beam.*/
                                fp_t const sfc_alpha_dif, /**< Surface albedo for diffuse beam.*/
-                               fp_t * const solar_flux, /**< Solar flux [W*cm/m^2] (wavenumber).*/
+                               fp_t const total_solar_irradiance, /**< Total solar irradiance [W/m^2].*/
+                               fp_t * const solar_flux, /**< Solar flux [cm] (wavenumber).*/
                                fp_t * const flux_up, /**< Upward flux [W*cm/m^2] (level, wavenumber).*/
                                fp_t * const flux_down /**< Downward flux [W*cm/m^2] (level, wavenumber).*/
                               );
