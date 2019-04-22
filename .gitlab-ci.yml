@@ -1,31 +1,24 @@
-build:lscgpu50-d:
+build:gfdl-ws:
   stage: build
   tags:
-    - gpudevbox
+    - gfdl-ws
   script:
-    - source /opt/lmod/lmod/init/bash
-    - module load cuda/9.1
-    - module load gcc/7.3.0
     - autoreconf --install
-    - ./configure --prefix /home/Raymond.Menzel/local/molecular_lines
-                  --enable-fortran-bindings --enable-cuda CC=nvcc
-                  CFLAGS="-g -O2 -fopenmp" NVCCFLAGS="-ccbin gcc"
-                  FC=gfortran FFLAGS="-g -O2 -fopenmp" LDFLAGS="-fopenmp"
-                  PYTHON=/home/Raymond.Menzel/packages/Python-3.5.5/bin/python3
+    - ./configure --prefix /home/Raymond.Menzel/local/rfmip-irf CFLAGS="-g -O2 -Wall -Wextra -pedantic -std=c99 -fopenmp" CPPFLAGS="-I/home/Raymond.Menzel/local/include" LDFLAGS="-L/home/Raymond.Menzel/local/lib"
     - make
   artifacts:
     untracked: true
     expire_in: 5 mins
 
 
-deploy:lscgpu50-d:
+deploy:gfdl-ws:
   stage: deploy
   tags:
-    - gpudevbox
+    - gfdl-ws
   script:
     - make install
   dependencies:
-    - build:lscgpu50-d
+    - build:gfdl-ws
 
 
 build:lscsky50-d:
@@ -33,13 +26,8 @@ build:lscsky50-d:
   tags:
     - skylake
   script:
-    - source /opt/lmod/lmod/init/bash
-    - module load gcc/7.2.0
     - autoreconf --install
-    - ./configure --prefix /home/Raymond.Menzel/local/molecular_lines
-                  --enable-fortran-bindings CC=gcc CFLAGS="-g -O2 -fopenmp"
-                  FC=gfortran FFLAGS="-g -O2 -fopenmp" LDFLAGS="-fopenmp"
-                  PYTHON=/home/Raymond.Menzel/local/bin/python3
+    - ./configure --prefix /home/Raymond.Menzel/local/rfmip-irf CC="/opt/intel/2019_up2/compilers_and_libraries_2019.2.187/linux/bin/intel64/icc" CFLAGS="-g -O2 -warn all -qopenmp" CPPFLAGS="-I/opt/hdf5/1.10.1/INTEL/include -I/opt/netcdf/4.6.1/INTEL/include" LDFLAGS="-L/opt/hdf5/1.10.1/INTEL/lib -L/opt/netcdf/4.6.1/INTEL/lib64"
     - make
   artifacts:
     untracked: true
