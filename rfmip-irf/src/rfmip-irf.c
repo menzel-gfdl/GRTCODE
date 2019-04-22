@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     Atmosphere_t atm;
     atm.num_wavenumber = grid.n;
     atm.x = 0;
-    atm.num_columns = 1;
+    atm.num_columns = 2;
     atm.z = 0;
     atm.num_levels = 61;
     atm.num_layers = atm.num_levels - 1;
@@ -270,32 +270,35 @@ int main(int argc, char **argv)
         write_fluxes(&output, RLU, i+atm.x, flux_up_total);
         write_fluxes(&output, RLD, i+atm.x, flux_down_total);
 
-        /*Calculate the optical properities of a column.*/
-        catch(rayleigh_scattering(&optics_rayleigh, level_pressure));
-
-        /*Calculate the combined optical properties.*/
-        Optics_t const * const optics_mech[2] = {&optics_ml, &optics_rayleigh};
-        Optics_t optics_combined;
-        catch(add_optics(optics_mech, 2, &optics_combined));
-
-        /*Calculate shortwave fluxes.*/
         fp_t const zen_dir = atm.solar_zenith_angle[i];
-        fp_t const zen_dif = 0.5;
-        fp_t const albedo_dir = atm.surface_albedo[i];
-        fp_t const albedo_dif = albedo_dir;
-        catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif, albedo_dir,
-                                  albedo_dif, atm.total_solar_irradiance[i],
-                                  solar_flux.incident_flux, flux_up, flux_down));
-        catch(destroy_optics(&optics_combined));
-
-        /*Integrate fluxes and write them to the output file.*/
-        for (j=0; j<atm.num_levels; ++j)
+        if (zen_dir > 0.)
         {
-            integrate(&(flux_up[j*grid.n]), grid.n, grid.dw, &(flux_up_total[j]));
-            integrate(&(flux_down[j*grid.n]), grid.n, grid.dw, &(flux_down_total[j]));
+            /*Calculate the optical properities of a column.*/
+            catch(rayleigh_scattering(&optics_rayleigh, level_pressure));
+
+            /*Calculate the combined optical properties.*/
+            Optics_t const * const optics_mech[2] = {&optics_ml, &optics_rayleigh};
+            Optics_t optics_combined;
+            catch(add_optics(optics_mech, 2, &optics_combined));
+
+            /*Calculate shortwave fluxes.*/
+            fp_t const zen_dif = 0.5;
+            fp_t const albedo_dir = atm.surface_albedo[i];
+            fp_t const albedo_dif = albedo_dir;
+            catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif,
+                                      albedo_dir, albedo_dif, atm.total_solar_irradiance[i],
+                                      solar_flux.incident_flux, flux_up, flux_down));
+            catch(destroy_optics(&optics_combined));
+
+            /*Integrate fluxes and write them to the output file.*/
+            for (j=0; j<atm.num_levels; ++j)
+            {
+                integrate(&(flux_up[j*grid.n]), grid.n, grid.dw, &(flux_up_total[j]));
+                integrate(&(flux_down[j*grid.n]), grid.n, grid.dw, &(flux_down_total[j]));
+            }
+            write_fluxes(&output, RSU, i+atm.x, flux_up_total);
+            write_fluxes(&output, RSD, i+atm.x, flux_down_total);
         }
-        write_fluxes(&output, RSU, i+atm.x, flux_up_total);
-        write_fluxes(&output, RSD, i+atm.x, flux_down_total);
     }
 
     /*Clean up.*/
