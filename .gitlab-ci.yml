@@ -21,7 +21,7 @@ deploy:gfdl-ws:
     - build:gfdl-ws
 
 
-build:lscsky50-d:
+.build:lscsky50-d:
   stage: build
   tags:
     - skylake
@@ -34,7 +34,7 @@ build:lscsky50-d:
     expire_in: 5 mins
 
 
-deploy:lscsky50-d:
+.deploy:lscsky50-d:
   stage: deploy
   tags:
     - skylake
