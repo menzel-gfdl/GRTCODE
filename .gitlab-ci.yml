@@ -11,7 +11,7 @@ build:gfdl-ws:
     expire_in: 5 mins
 
 
-deploy:gfdl-ws:
+.deploy:gfdl-ws:
   stage: deploy
   tags:
     - gfdl-ws
