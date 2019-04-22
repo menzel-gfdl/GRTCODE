@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     Atmosphere_t atm;
     atm.num_wavenumber = grid.n;
     atm.x = 0;
-    atm.num_columns = 2;
+    atm.num_columns = 100;
     atm.z = 0;
     atm.num_levels = 61;
     atm.num_layers = atm.num_levels - 1;
@@ -186,8 +186,9 @@ int main(int argc, char **argv)
         snprintf(o3_ctm, valuelen, "%s", "none");
     }
     MolecularLines_t molecular_lines;
+    int method = line_sweep;
     catch(create_molecular_lines(&molecular_lines, atm.num_levels, &grid, &device,
-                                 hitran_path, h2o_ctm, o3_ctm, NULL, NULL));
+                                 hitran_path, h2o_ctm, o3_ctm, NULL, &method));
 
     /*Add molecules and CFCs.*/
     for (i=0; i<num_molecules; ++i)
