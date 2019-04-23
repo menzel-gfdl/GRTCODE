@@ -43,6 +43,8 @@ deploy:lscsky50-d:
   tags:
     - skylake
   script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
     - make install
   dependencies:
     - build:lscsky50-d
