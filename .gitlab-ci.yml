@@ -21,7 +21,7 @@ build:gfdl-ws:
     - build:gfdl-ws
 
 
-.build:lscsky50-d:
+build:lscsky50-d:
   stage: build
   tags:
     - skylake
@@ -31,10 +31,10 @@ build:gfdl-ws:
     - make
   artifacts:
     untracked: true
-    expire_in: 5 mins
+    expire_in: 1 days
 
 
-.deploy:lscsky50-d:
+deploy:lscsky50-d:
   stage: deploy
   tags:
     - skylake
