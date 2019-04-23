@@ -26,6 +26,8 @@ build:lscsky50-d:
   tags:
     - skylake
   script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
     - autoreconf --install
     - ./configure --prefix /home/Raymond.Menzel/local/rfmip-irf CC="/opt/intel/2019_up2/compilers_and_libraries_2019.2.187/linux/bin/intel64/icc" CFLAGS="-g -O2 -qopenmp" CPPFLAGS="-I/opt/hdf5/1.10.1/INTEL/include -I/opt/netcdf/4.6.1/INTEL/include" LDFLAGS="-L/opt/hdf5/1.10.1/INTEL/lib -L/opt/netcdf/4.6.1/INTEL/lib64"
     - make
