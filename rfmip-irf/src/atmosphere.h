@@ -15,6 +15,7 @@ typedef struct Atmosphere
     uint64_t num_wavenumber; /**< Number of wavenumber points.*/
     int num_molecules; /**< Number of molecules.*/
     int num_cfcs; /**< Number of CFCs.*/
+    int num_cias; /**< Number of CIAs.*/
     fp_t *level_pressure; /**< Pressure [atm] (column, level).*/
     fp_t *layer_pressure; /**< Pressure [atm] (column, layer).*/
     fp_t *level_temperature; /**< Temperature [K] (column, level).*/
@@ -26,6 +27,7 @@ typedef struct Atmosphere
     fp_t *surface_emissivity; /**< Surface emissivity (column, wavenumber).*/
     fp_t **ppmv; /**< Molecular abundance [ppmv] (molecule, column, level).*/
     fp_t **cfc_ppmv; /**< CFC abundance [ppmv] (CFC, column, level).*/
+    fp_t **cia_ppmv; /**< CIA abindance [ppmv] (molecule, column, level).*/
 } Atmosphere_t;
 
 
@@ -66,7 +68,9 @@ void create_atmosphere(Atmosphere_t * const atm, /**< Atmosphere object.*/
                        int const * const molecules, /**< Array of molecule ids.*/
                        int const num_molecules, /**< Number of molecules.*/
                        int const * const cfcs, /**< Array of CFC ids.*/
-                       int const num_cfcs /**< Number of CFCs.*/
+                       int const num_cfcs, /**< Number of CFCs.*/
+                       int const * const cias, /**< Array of CIA ids.*/
+                       int const num_cias /**< NUmber of CIAs.*/
                       );
 
 

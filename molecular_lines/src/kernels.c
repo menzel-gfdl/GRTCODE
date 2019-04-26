@@ -702,8 +702,7 @@ int interpolate_last_bin(SpectralBins_t const bins,
 }
 
 
-/** @brief Calculate the optical depth contribution of a CFC.
-    @return RS_SUCCESS or an error code.*/
+/*Calculate the optical depth contribution of a CFC.*/
 int calc_cfc_optical_depth(uint64_t const num_wpoints, int const num_layers,
                            fp_t const * const n, fp_t const * const x,
                            fp_t const * const cross_section, fp_t * const tau)
@@ -717,6 +716,35 @@ int calc_cfc_optical_depth(uint64_t const num_wpoints, int const num_layers,
         for (j=0; j<num_wpoints; ++j)
         {
             tau[i*num_wpoints+j] += half*n[i]*(x[i]+x[i+1])*cross_section[j];
+        }
+    }
+    return RS_SUCCESS;
+}
+
+
+/*Calculate the optical depth contribution of collision-induced absorption.*/
+int calc_cia_optical_depth(uint64_t const num_wpoints, int const num_layers,
+                           fp_t const * const p, fp_t const * const t, fp_t const * const x1,
+                           fp_t const * const x2, fp_t const * const cross_section,
+                           fp_t * const tau)
+{
+    fp_t const quarter = 0.25;
+    fp_t const m = 28.97/6.02214076e23; /*[g].*/
+    fp_t const g = 980.; /*[cm/s^2]*/
+    fp_t const k = 1.38064852e-16; /*[(g*cm^2)/(s^2*K)].*/
+    fp_t const atmtobarye = 1.013e6; /*[g/(cm*s^2*atm)].*/
+    fp_t const c = (atmtobarye*atmtobarye)/(k*m*g*2.); /*[K/(atm^2*cm^5)].*/
+    int i;
+    uint64_t j;
+#pragma omp parallel for collapse(2) default(none) private(i,j)
+    for (i=0; i<num_layers; ++i)
+    {
+        for (j=0; j<num_wpoints; ++j)
+        {
+            fp_t n = c*((p[i]*p[i] - p[i+1]*p[i+1])/t[i])*quarter*(x1[i]+x1[i+1])*
+                     (x2[i]+x2[i+1]);
+            n = (n >= 0) ? n : n*-1.f;
+            tau[i*num_wpoints+j] += n*cross_section[j];
         }
     }
     return RS_SUCCESS;

@@ -8,6 +8,7 @@
 #include <omp.h>
 #endif
 #include "cfcs.h"
+#include "collision_induced_absorption.h"
 #include "debug.h"
 #include "floating_point_type.h"
 #include "launch.h"
@@ -98,11 +99,13 @@ EXTERN int create_molecular_lines(MolecularLines_t * const ml, /**< Molecular li
         ml->optical_depth_method = wavenumber_sweep;
     }
 
-    /*Prepare to add molecules/cfcs.*/
+    /*Prepare to add molecules/cfcs/cias.*/
     ml->num_molecules = 0;
     ml->molecule_bit_field = 0;
     ml->num_cfcs = 0;
     ml->cfc_bit_field = 0;
+    ml->num_cias = 0;
+    ml->cia_bit_field = 0;
 
     /*Pepare water vapor continuum.*/
     ml->use_h2o_ctm = 0;
@@ -129,6 +132,7 @@ EXTERN int create_molecular_lines(MolecularLines_t * const ml, /**< Molecular li
     /*Reserve memory.*/
     gmalloc(ml->x, ml->num_levels*NUM_MOLS, ml->device);
     gmalloc(ml->x_cfc, ml->num_levels*NUM_CFCS, ml->device);
+    gmalloc(ml->x_cia, ml->num_levels*NUM_CIAS, ml->device);
     gmalloc(ml->n, ml->num_layers, ml->device);
     gmalloc(ml->pavg, ml->num_layers, ml->device);
     gmalloc(ml->tavg, ml->num_layers, ml->device);
@@ -169,9 +173,14 @@ EXTERN int destroy_molecular_lines(MolecularLines_t * const ml /**< Molecular li
     {
         catch(free_cfc_cross_sections(&(ml->cfcs[i])));
     }
+    for (i=0; i<ml->num_cias; ++i)
+    {
+        catch(free_collision_induced_cross_sections(&(ml->cia[i])));
+    }
     catch(destroy_spectral_bins(&(ml->bins)));
     gfree(ml->x, ml->device);
     gfree(ml->x_cfc, ml->device);
+    gfree(ml->x_cia, ml->device);
     gfree(ml->n, ml->device);
     gfree(ml->pavg, ml->device);
     gfree(ml->tavg, ml->device);
@@ -187,11 +196,14 @@ EXTERN int destroy_molecular_lines(MolecularLines_t * const ml /**< Molecular li
         gfree(ml->t, ml->device);
         gfree(ml->tau, ml->device);
     }
-    if (ml->use_h2o_ctm && is_molecule_active(ml->molecule_bit_field, H2O))
+    int id;
+    catch(molecule_hash(H2O, &id));
+    if (ml->use_h2o_ctm && is_active(ml->molecule_bit_field, id))
     {
         catch(free_water_vapor_continuum_coefs(&(ml->h2o_cc)));
     }
-    if (ml->use_o3_ctm && is_molecule_active(ml->molecule_bit_field, O3))
+    catch(molecule_hash(O3, &id));
+    if (ml->use_o3_ctm && is_active(ml->molecule_bit_field, id))
     {
         catch(free_ozone_continuum_coefs(&(ml->o3_cc)));
     }
@@ -212,7 +224,9 @@ EXTERN int grt_add_molecule(MolecularLines_t * const ml, /**< Molecular lines ob
                            )
 {
     not_null(ml);
-    if (is_molecule_active(ml->molecule_bit_field, molecule_id))
+    int id;
+    catch(molecule_hash(molecule_id, &id));
+    if (is_active(ml->molecule_bit_field, id))
     {
         char *mesg = "molecule %d has already been added.";
         raise(RS_VALUE_ERR, mesg, molecule_id);
@@ -220,7 +234,7 @@ EXTERN int grt_add_molecule(MolecularLines_t * const ml, /**< Molecular lines ob
     int index = ml->num_molecules;
     (ml->num_molecules)++;
     in_range(ml->num_molecules, 1, NUM_MOLS);
-    catch(activate_molecule(&(ml->molecule_bit_field), molecule_id));
+    catch(activate(&(ml->molecule_bit_field), id));
     double w0;
     if (min_line_center != NULL)
     {
@@ -280,14 +294,14 @@ EXTERN int grt_set_molecule_ppmv(MolecularLines_t * const ml, /**< Molecular lin
 {
     not_null(ml);
     not_null(ppmv);
-    if (!is_molecule_active(ml->molecule_bit_field, molecule_id))
+    int index;
+    catch(molecule_hash(molecule_id, &index));
+    if (!is_active(ml->molecule_bit_field, index))
     {
         char *mesg = "molecule %d is not being used.";
         log_warn(mesg, molecule_id);
         return RS_SUCCESS;
     }
-    int index;
-    catch(molecule_hash(molecule_id, &index));
     fp_t a[ml->num_levels];
     int i;
     for (i=0; i<ml->num_levels; ++i)
@@ -308,7 +322,8 @@ EXTERN int grt_add_cfc(MolecularLines_t * const ml, /**< Molecular lines object.
                       )
 {
     not_null(ml);
-    if (is_cfc_active(ml->cfc_bit_field, cfc_id))
+    in_range(cfc_id, 0, NUM_CFCS);
+    if (is_active(ml->cfc_bit_field, cfc_id))
     {
         char *mesg = "cfc %d has already been added.";
         raise(RS_VALUE_ERR, mesg, cfc_id);
@@ -316,7 +331,7 @@ EXTERN int grt_add_cfc(MolecularLines_t * const ml, /**< Molecular lines object.
     int index = ml->num_cfcs;
     (ml->num_cfcs)++;
     in_range(ml->num_cfcs, 1, NUM_CFCS);
-    catch(activate_cfc(&(ml->cfc_bit_field), cfc_id));
+    catch(activate(&(ml->cfc_bit_field), cfc_id));
 
     /*Read in the CFC cross section values.*/
     catch(get_cfc_cross_sections(&(ml->cfcs[index]), cfc_id, filepath,
@@ -337,7 +352,8 @@ EXTERN int grt_set_cfc_ppmv(MolecularLines_t * const ml, /**< Molecular lines ob
 {
     not_null(ml);
     not_null(ppmv);
-    if (!is_cfc_active(ml->cfc_bit_field, cfc_id))
+    in_range(cfc_id, 0, NUM_CFCS);
+    if (!is_active(ml->cfc_bit_field, cfc_id))
     {
         char *mesg = "CFC %d is not being used.";
         log_warn(mesg, cfc_id);
@@ -351,6 +367,68 @@ EXTERN int grt_set_cfc_ppmv(MolecularLines_t * const ml, /**< Molecular lines ob
     }
     int offset = cfc_id*ml->num_levels;
     gmemcpy(&(ml->x_cfc[offset]), a, ml->num_levels, ml->device, FROM_HOST);
+    return RS_SUCCESS;
+}
+
+
+/*Activate collision-induced absorption between two species.*/
+EXTERN int grt_add_cia(MolecularLines_t * const ml, int const species1, int const species2,
+                       char const * const filepath)
+{
+    not_null(ml);
+    int i;
+    in_range(species1, 0, NUM_CIAS);
+    in_range(species2, 0, NUM_CIAS);
+    for (i=0; i<ml->num_cias; ++i)
+    {
+        CollisionInducedAbsorption_t *m = &(ml->cia[i]);
+        if ((m->id[0] + m->id[1]) == (species1 + species2))
+        {
+            char *mesg = "CIA with %s and %s is already active.";
+            raise(RS_VALUE_ERR, mesg, m->name[0], m->name[1]);
+        }
+    }
+    int index = ml->num_cias;
+    (ml->num_cias)++;
+    if (!is_active(ml->cia_bit_field, species1))
+    {
+        catch(activate(&(ml->cia_bit_field), species1));
+    }
+    if (!is_active(ml->cia_bit_field, species2))
+    {
+        catch(activate(&(ml->cia_bit_field), species2));
+    }
+    int id[2] = {species1, species2};
+    catch(get_collision_induced_cross_sections(&(ml->cia[index]), id,
+                                               filepath, ml->grid.n, ml->grid.w0,
+                                               ml->grid.dw, ml->device));
+    char *mesg = "Using collision-induced absorption between %s and %s.";
+    log_info(mesg, ml->cia[index].name[0], ml->cia[index].name[1]);
+    return RS_SUCCESS;
+}
+
+
+/*Update a CIA species' ppmv.*/
+EXTERN int grt_set_cia_ppmv(MolecularLines_t * const ml, int const cia_id,
+                            fp_t const * const ppmv)
+{
+    not_null(ml);
+    not_null(ppmv);
+    in_range(cia_id, 0, NUM_CIAS);
+    if (!is_active(ml->cia_bit_field, cia_id))
+    {
+        char *mesg = "CIA %d is not being used.";
+        log_warn(mesg, cia_id);
+        return RS_SUCCESS;
+    }
+    fp_t a[MAX_NUM_LEVELS];
+    int i;
+    for (i=0; i<ml->num_levels; ++i)
+    {
+        a[i] = ppmv[i]*1.e-6;
+    }
+    int offset = cia_id*ml->num_levels;
+    gmemcpy(&(ml->x_cia[offset]), a, ml->num_levels, ml->device, FROM_HOST);
     return RS_SUCCESS;
 }
 

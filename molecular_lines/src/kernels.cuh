@@ -189,13 +189,24 @@ __global__ void interpolate_last_bin_d(SpectralBins_t const bins,
                                       );
 
 
-/** @brief Calculate the optical depth contribution of a CFC.
-    @return SUCCESS or an error code.*/
+/** @brief Calculate the optical depth contribution of a CFC.*/
 __global__ void calc_cfc_optical_depth_d(uint64_t const num_wpoints, /**< Spectral grid size.*/
                                          int const num_layers, /**< Number of atmospheric layers.*/
                                          fp_t const * const n, /**< Integrated number density [cm^-2] (layers).*/
                                          fp_t const * const x, /**< CFC abundance [ppmv] (levels).*/
                                          fp_t const * const cross_section, /**< CFC cross section [cm^2] (wavenumber).*/
+                                         fp_t * const tau /**< Optical depth (layer, wavenumber).*/
+                                        );
+
+
+/** @brief Calculate the optical depth contribution of collision-induced absorption.*/
+__global__ void calc_cia_optical_depth_d(uint64_t const num_wpoints, /**< Spectral grid size.*/
+                                         int const num_layers, /**< Number of atmospheric layers.*/
+                                         fp_t const * const p, /**< Pressure [atm] (levels).*/
+                                         fp_t const * const t, /**< Temperature [K] (layers).*/
+                                         fp_t const * const x1, /**< Abundance [ppmv] of species one (levels).*/
+                                         fp_t const * const x2, /**< Abundance [ppmv] of species two (levels).*/
+                                         fp_t const * const cross_section, /**< Collision-induced absorption cross section [cm^4] (wavenumber).*/
                                          fp_t * const tau /**< Optical depth (layer, wavenumber).*/
                                         );
 

@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "cfcs.h"
+#include "collision_induced_absorption.h"
 #include "device.h"
 #include "extern.h"
 #include "floating_point_type.h"
@@ -144,55 +145,50 @@
 */
 typedef struct MolecularLines
 {
-    /*--- Parameters directly supplied by the user. ---*/
     Device_t device; /**< Id of the device associated with this object.*/
     int num_levels; /**< Number of atmospheric levels.*/
-    SpectralGrid_t grid; /**< Spectral grid.*/
-    double wcutoff; /**< Cutoff from spectral line center [1/cm].*/
-    char hitran_path[DIR_PATH_LEN]; /**< Path to the HITRAN database file.*/
-    char h2o_ctm_dir[DIR_PATH_LEN]; /**< Path to the water vapor continuum
-                                         directory.*/
-    char o3_ctm_dir[DIR_PATH_LEN]; /**< Path to the ozone continuum
-                                        directory.*/
-    int optical_depth_method; /**< Flag specifying which method will be
-                                   used to calculate the optical depths.*/
-
-    /*--- Parameters implicitly defined by the code. ---*/
     int num_layers; /**< Number of atmospheric layers (num_levels-1).*/
-    int num_molecules; /**< Number of molecules.*/
-    uint64_t molecule_bit_field; /**< Bit field used to determine which
-                                      molecules are currently in use.*/
-    Molecule_t mols[NUM_MOLS]; /**< Array of molecule structures.*/
-    int num_cfcs; /**< Number of cfcs.*/
-    uint32_t cfc_bit_field; /**< Bit field used to determine which cfcs are
-                                 currently in use.*/
-    CfcCrossSection_t cfcs[NUM_CFCS]; /**< CFC cross section data structures.*/
-    int use_h2o_ctm; /**< Flag indicating if using the water vapor
-                          continuum is used.*/
-    int use_o3_ctm; /**< Flag indicating if the ozone continuum is used.*/
-    SpectralBins_t bins; /**< Spectral bins.*/
 
-    fp_t *x; /**< Abundance (molecules,levels).*/
+    int num_molecules; /**< Number of molecules.*/
+    uint64_t molecule_bit_field; /**< Bit field used to determine which molecules are currently in use.*/
+    Molecule_t mols[NUM_MOLS]; /**< Array of molecule structures.*/
+
+    int num_cfcs; /**< Number of cfcs.*/
+    uint64_t cfc_bit_field; /**< Bit field used to determine which cfcs are currently in use.*/
+    CfcCrossSection_t cfcs[NUM_CFCS]; /**< CFC cross section data structures.*/
     fp_t *x_cfc; /**< CFC abundance (CFC, levels).*/
-    fp_t *n; /**< Total number of molecules [1/cm^2] (layers).*/
-    fp_t *pavg; /**< Pressure [atm] (layers).*/
-    fp_t *tavg; /**< Temperature [K] (layers).*/
-    fp_t *psavg; /**< Molecular partial pressure [atm] (layers).*/
-    fp_t *ns; /**< Number of molecules [1/cm^2] of a particular species
-                   (layers).*/
-    fp_t *linecenter; /**< Pressure-shifted line center positions [1/cm]
-                           (layers,lines).*/
-    fp_t *snn; /**< Line strength [1/cm] (layers,lines).*/
-    fp_t *gamma; /**< Temperature- and pressure-corrected lorentz
-                       half-width [1/cm] (layers,lines).*/
-    fp_t *alpha; /**< Doppler half-width [1/cm] (layers,lines).*/
-    WaterVaporContinuumCoefs_t h2o_cc; /**< Structure containing water vapor
-                                            continuum coefficients.*/
-    OzoneContinuumCoefs_t o3_cc; /**< Structure containing ozone continuum
-                                      coefficients.*/
-    fp_t *p; /**< Pressure [atm] (levels).*/
-    fp_t *t; /**< Temperature [K] (levels).*/
-    fp_t *tau; /**< Optical depths (layer,wavenumber).*/
+
+    int num_cias; /**< Number of collision-induced absorption continua.*/
+    uint64_t cia_bit_field; /**< Bit field used to determine with species are currently in use.*/
+    CollisionInducedAbsorption_t cia[MAX_NUM_CIAS]; /**< Collision-induce absorption structures.*/
+    fp_t *x_cia; /**< Collision-induced absorption abundances (molecule, level).*/
+
+    char h2o_ctm_dir[DIR_PATH_LEN]; /**< Path to the water vapor continuum directory.*/
+    int use_h2o_ctm; /**< Flag indicating if using the water vapor continuum is used.*/
+    WaterVaporContinuumCoefs_t h2o_cc; /**< Water vapor continuum coefficients.*/
+
+    char o3_ctm_dir[DIR_PATH_LEN]; /**< Path to the ozone continuum directory.*/
+    int use_o3_ctm; /**< Flag indicating if the ozone continuum is used.*/
+    OzoneContinuumCoefs_t o3_cc; /**< Oone continuum coefficients.*/
+
+    SpectralGrid_t grid; /**< Spectral grid.*/
+    SpectralBins_t bins; /**< Spectral bins.*/
+    char hitran_path[DIR_PATH_LEN]; /**< Path to the HITRAN database file.*/
+    double wcutoff; /**< Cutoff from spectral line center [1/cm].*/
+    int optical_depth_method; /**< Flag specifying which method will be used to calculate the optical depths.*/
+    fp_t *x; /**< Abundance (molecule, level).*/
+    fp_t *n; /**< Integrated number density [1/cm^2] (layer).*/
+    fp_t *pavg; /**< Pressure [atm] (layer).*/
+    fp_t *tavg; /**< Temperature [K] (layer).*/
+    fp_t *psavg; /**< Molecular partial pressure [atm] (layer).*/
+    fp_t *ns; /**< Integrated number density [1/cm^2] of a particular species (layer).*/
+    fp_t *linecenter; /**< Pressure-shifted line center position [1/cm] (layer, line).*/
+    fp_t *snn; /**< Line strength [1/cm] (layer, line).*/
+    fp_t *gamma; /**< Temperature- and pressure-corrected lorentz half-width [1/cm] (layer, line).*/
+    fp_t *alpha; /**< Doppler half-width [1/cm] (layer, line).*/
+    fp_t *p; /**< Pressure [atm] (level).*/
+    fp_t *t; /**< Temperature [K] (level).*/
+    fp_t *tau; /**< Optical depth (layer, wavenumber).*/
 } MolecularLines_t;
 
 
@@ -260,6 +256,23 @@ EXTERN int grt_add_cfc(MolecularLines_t * const ml, /**< Molecular lines object.
     @return RS_SUCCESS or an error code.*/
 EXTERN int grt_set_cfc_ppmv(MolecularLines_t * const ml, /**< Molecular lines object.*/
                             int const cfc_id, /**< CFC id.*/
+                            fp_t const * const ppmv /**< Abundance [ppmv] (level).*/
+                           );
+
+
+/** @brief Activate collision-induced absorption between two species.
+    @return RS_SUCCESS or an error code.*/
+EXTERN int grt_add_cia(MolecularLines_t * const ml, /**< Molecular lines object.*/
+                       int const species1, /**< Id of species.*/
+                       int const species2, /**< Id of species.*/
+                       char const * const filepath /**< Path to cross section csv file.*/
+                      );
+
+
+/** @brief Update a CIA species' ppmv.
+    @return RS_SUCCESS or an error code.*/
+EXTERN int grt_set_cia_ppmv(MolecularLines_t * const ml, /**< Molecularlines object.*/
+                            int const cia_id, /**< CIA species id.*/
                             fp_t const * const ppmv /**< Abundance [ppmv] (level).*/
                            );
 

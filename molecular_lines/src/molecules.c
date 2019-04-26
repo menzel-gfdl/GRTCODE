@@ -325,19 +325,3 @@ int molecule_hash(int const mol_id, int * const hash)
     *hash = mol_id - 1;
     return RS_SUCCESS;
 }
-
-
-int activate_molecule(uint64_t * const molecule_bit_field, int const mol_id)
-{
-    not_null(molecule_bit_field);
-    uint64_t const one = 1;
-    *molecule_bit_field = (*molecule_bit_field) | (one << (mol_id-1));
-    return RS_SUCCESS;
-}
-
-
-int is_molecule_active(uint64_t const molecule_bit_field, int const mol_id)
-{
-    uint64_t const one = 1;
-    return molecule_bit_field & (one << (mol_id-1));
-}

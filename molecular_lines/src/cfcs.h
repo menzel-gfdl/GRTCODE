@@ -44,16 +44,4 @@ int free_cfc_cross_sections(CfcCrossSection_t *xsc /*CFC cross section object.*/
                            );
 
 
-/*Mark CFC as active.*/
-int activate_cfc(uint32_t * const cfc_bit_field, /*Flag controlling which CFCs are active.*/
-                 int const id /*CFC id.*/
-                );
-
-
-/*Determine whether CFC is active.*/
-int is_cfc_active(uint32_t const cfc_bit_field, /*Flag controlling which CFCs are active.*/
-                  int const id /*CFC id.*/
-                 );
-
-
 #endif

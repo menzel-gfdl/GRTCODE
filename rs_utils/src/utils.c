@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -259,4 +260,24 @@ int reimann_sum(fp_t const * const data, int const data_size, fp_t const dx,
         *out += dx*0.5*(data[i] + data[i+1]);
     }
     return RS_SUCCESS;
+}
+
+
+/*Turn on bit in bit field.*/
+int activate(uint64_t * const bit_field, int const index)
+{
+    not_null(bit_field);
+    in_range(index, 0, 63);
+    uint64_t const one = 1;
+    *bit_field = (*bit_field) | (one << index);
+    return RS_SUCCESS;
+}
+
+
+/*Check if bit is turned on in bit field.*/
+int is_active(uint64_t const bit_field, int const index)
+{
+    in_range(index, 0, 63);
+    uint64_t const one = 1;
+    return bit_field & (one << index);
 }

@@ -51,6 +51,7 @@ static void get_ppmv(int const ncid, /**< Netcdf file id.*/
     int varid;
     nc_catch(nc_inq_varid(ncid, name, &varid));
     char unit[1024];
+    memset(unit, '\0', 1024);
     nc_catch(nc_get_att_text(ncid, varid, "units", unit));
     char *end;
     fp_t unit_val = strtod(unit, &end);
@@ -99,6 +100,7 @@ static void get_gm_ppmv(int const ncid, /**< Netcdf file id.*/
     int varid;
     nc_catch(nc_inq_varid(ncid, name, &varid));
     char unit[1024];
+    memset(unit, '\0', 1024);
     nc_catch(nc_get_att_text(ncid, varid, "units", unit));
     char *end;
     fp_t unit_val = strtod(unit, &end);
@@ -123,7 +125,8 @@ static void get_gm_ppmv(int const ncid, /**< Netcdf file id.*/
 /*Reserve memory and read in atmospheric data.*/
 void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
                        int const experiment, int const * const molecules,
-                       int const num_molecules, int const * const cfcs, int const num_cfcs)
+                       int const num_molecules, int const * const cfcs,
+                       int const num_cfcs, int const * const cias, int const num_cias)
 {
     int ncid;
     nc_catch(nc_open(filepath, NC_NOWRITE, &ncid));
@@ -237,11 +240,9 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     molecule_names[N2O] = "nitrous_oxide_GM";
     molecule_names[O2] = "oxygen_GM";
     molecule_names[O3] = "ozone";
-
     fp_t *xh2o;
     get_ppmv(ncid, molecule_names[H2O], experiment, atm->x, atm->num_columns, atm->z,
              atm->num_levels, atm->level_pressure, atm->layer_pressure, &xh2o);
-
     alloc(atm->ppmv, num_molecules);
     atm->num_molecules = num_molecules;
     for (i=0; i<num_molecules; ++i)
@@ -273,7 +274,6 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     char *cfc_names[32];
     cfc_names[F11] = "cfc11eq_GM";
     cfc_names[F12] = "cfc12_GM";
-
     alloc(atm->cfc_ppmv, num_cfcs);
     atm->num_cfcs = num_cfcs;
     for (i=0; i<num_cfcs; ++i)
@@ -288,6 +288,25 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         }
         atm->cfc_ppmv[i] = p;
     }
+
+    char *cia_names[32];
+    cia_names[CIA_N2] = "nitrogen_GM";
+    cia_names[CIA_O2] = "oxygen_GM";
+    alloc(atm->cia_ppmv, num_cias);
+    atm->num_cias = num_cias;
+    for (i=0; i<num_cias; ++i)
+    {
+        fp_t *p;
+        get_gm_ppmv(ncid, cia_names[cias[i]], experiment, atm->num_columns,
+                    atm->num_levels, &p);
+        int j;
+        for (j=0; j<atm->num_columns*atm->num_levels; ++j)
+        {
+            p[j] *= toppmv/(1. + xh2o[j]);
+        }
+        atm->cia_ppmv[i] = p;
+    }
+
     free(xh2o);
     nc_catch(nc_close(ncid));
     return;
@@ -317,6 +336,11 @@ void destroy_atmosphere(Atmosphere_t * const atm)
         free(atm->cfc_ppmv[i]);
     }
     free(atm->cfc_ppmv);
+    for (i=0; i<atm->num_cias; ++i)
+    {
+        free(atm->cia_ppmv[i]);
+    }
+    free(atm->cia_ppmv);
     return;
 }
 

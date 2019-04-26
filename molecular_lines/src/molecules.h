@@ -107,12 +107,4 @@ int molecule_hash(int const mol_id,
                   int * const hash);
 
 
-int activate_molecule(uint64_t * const molecule_bit_field,
-                      int const mol_id);
-
-
-int is_molecule_active(uint64_t const molecule_bit_field,
-                       int const mol_id);
-
-
 #endif

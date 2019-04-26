@@ -94,21 +94,3 @@ int free_cfc_cross_sections(CfcCrossSection_t *xsc)
     gfree(xsc->cross_section, xsc->gpu_id);
     return RS_SUCCESS;
 }
-
-
-int activate_cfc(uint32_t * const cfc_bit_field, int const id)
-{
-    not_null(cfc_bit_field);
-    in_range(id, 0, NUM_CFCS);
-    uint32_t const one = 1;
-    *cfc_bit_field = (*cfc_bit_field) | (one << id);
-    return RS_SUCCESS;
-}
-
-
-int is_cfc_active(uint32_t const cfc_bit_field, int const id)
-{
-    in_range(id, 0, NUM_CFCS);
-    uint32_t const one = 1;
-    return cfc_bit_field & (one << id);
-}
