@@ -4,41 +4,47 @@ build:gfdl-ws:
     - gfdl-ws
   script:
     - autoreconf --install
-    - ./configure --prefix /home/Raymond.Menzel/local/rfmip-irf CFLAGS="-g -O2 -Wall -Wextra -pedantic -std=c99 -fopenmp" CPPFLAGS="-I/home/Raymond.Menzel/local/include" LDFLAGS="-L/home/Raymond.Menzel/local/lib"
+    - ./configure --prefix /home/fms/opt/gfdl-grtcode CFLAGS="-g -O2 -Wall -Wextra -pedantic -std=c99 -fopenmp" CPPFLAGS="-I/home/Raymond.Menzel/local/include" LDFLAGS="-L/home/Raymond.Menzel/local/lib"
     - make
   artifacts:
     untracked: true
-    expire_in: 5 mins
+    expire_in: 1 days
 
 
-.deploy:gfdl-ws:
+deploy:gfdl-ws:
   stage: deploy
+  environment: gfdl-ws
   tags:
-    - gfdl-ws
+    - gfdl-ws_deploy
   script:
     - make install
   dependencies:
     - build:gfdl-ws
 
 
-.build:lscsky50-d:
+build:lscsky50-d:
   stage: build
   tags:
     - skylake
   script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
     - autoreconf --install
-    - ./configure --prefix /home/Raymond.Menzel/local/rfmip-irf CC="/opt/intel/2019_up2/compilers_and_libraries_2019.2.187/linux/bin/intel64/icc" CFLAGS="-g -O2 -qopenmp" CPPFLAGS="-I/opt/hdf5/1.10.1/INTEL/include -I/opt/netcdf/4.6.1/INTEL/include" LDFLAGS="-L/opt/hdf5/1.10.1/INTEL/lib -L/opt/netcdf/4.6.1/INTEL/lib64"
+    - ./configure --prefix /opt/gfdl-grtcode CC="icc" CFLAGS="-g -O2 -qopenmp" CPPFLAGS="-I/opt/hdf5/1.10.1/INTEL/include -I/opt/netcdf/4.6.1/INTEL/include" LDFLAGS="-L/opt/hdf5/1.10.1/INTEL/lib -L/opt/netcdf/4.6.1/INTEL/lib64"
     - make
   artifacts:
     untracked: true
-    expire_in: 5 mins
+    expire_in: 1 days
 
 
-.deploy:lscsky50-d:
+deploy:lscsky50-d:
   stage: deploy
+  environment: skylake
   tags:
     - skylake
   script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
     - make install
   dependencies:
     - build:lscsky50-d
