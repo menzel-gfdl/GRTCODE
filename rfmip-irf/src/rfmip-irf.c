@@ -186,9 +186,21 @@ int main(int argc, char **argv)
     catch(create_device(&device, NULL));
 
     /*Create a spectral grid.*/
-    double const w0 = 1.;
-    double const wn = 50000.;
-    double const dw = 0.1;
+    double w0 = 1.;
+    if (get_argument(parser, "-w", buffer))
+    {
+        w0 = atof(buffer);
+    }
+    double wn = 50000.;
+    if (get_argument(parser, "-W", buffer))
+    {
+        wn = atof(buffer);
+    }
+    double dw = 0.1;
+    if (get_argument(parser, "-r", buffer))
+    {
+        dw = atof(buffer);
+    }
     SpectralGrid_t grid;
     catch(create_spectral_grid(&grid, w0, wn, dw));
 
@@ -236,9 +248,25 @@ int main(int argc, char **argv)
     Atmosphere_t atm;
     atm.num_wavenumber = grid.n;
     atm.x = 0;
-    atm.num_columns = 1;
+    if (get_argument(parser, "-x", buffer))
+    {
+        atm.x = atoi(buffer);
+    }
+    atm.num_columns = 100;
+    if (get_argument(parser, "-X", buffer))
+    {
+        atm.num_columns = atoi(buffer) - atm.x + 1;
+    }
     atm.z = 0;
+    if (get_argument(parser, "-z", buffer))
+    {
+        atm.z = atoi(buffer);
+    }
     atm.num_levels = 61;
+    if (get_argument(parser, "-Z", buffer))
+    {
+        atm.num_levels = atoi(buffer) - atm.z + 1;
+    }
     atm.num_layers = atm.num_levels - 1;
     get_argument(parser, "experiment", buffer);
     int experiment = atoi(buffer);
@@ -359,8 +387,8 @@ int main(int argc, char **argv)
             integrate(&(flux_down[j*lw_solver_grid.n]), lw_solver_grid.n, lw_solver_grid.dw,
                       &(flux_down_total[j]));
         }
-        write_fluxes(&output, RLU, i+atm.x, flux_up_total);
-        write_fluxes(&output, RLD, i+atm.x, flux_down_total);
+        write_fluxes(&output, RLU, i, flux_up_total);
+        write_fluxes(&output, RLD, i, flux_down_total);
 
         fp_t const zen_dir = atm.solar_zenith_angle[i];
         if (zen_dir > 0.)
@@ -388,8 +416,8 @@ int main(int argc, char **argv)
                 integrate(&(flux_up[j*grid.n]), grid.n, grid.dw, &(flux_up_total[j]));
                 integrate(&(flux_down[j*grid.n]), grid.n, grid.dw, &(flux_down_total[j]));
             }
-            write_fluxes(&output, RSU, i+atm.x, flux_up_total);
-            write_fluxes(&output, RSD, i+atm.x, flux_down_total);
+            write_fluxes(&output, RSU, i, flux_up_total);
+            write_fluxes(&output, RSD, i, flux_down_total);
         }
     }
 

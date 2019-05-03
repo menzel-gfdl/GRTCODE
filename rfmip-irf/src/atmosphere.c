@@ -18,9 +18,11 @@
 #ifdef SINGLE_PRECISION
 #define get_var(a, b, c, d, e) nc_catch(nc_get_vara_float(a, b, c, d, e))
 #define put_var(a, b, c, d, e) nc_catch(nc_put_vara_float(a, b, c, d, e))
+#define put_att(a, b, c, d, e, f) nc_catch(nc_put_att_float(a, b, c, d, e ,f))
 #else
 #define get_var(a, b, c, d, e) nc_catch(nc_get_vara_double(a, b, c, d, e))
 #define put_var(a, b, c, d, e) nc_catch(nc_put_vara_double(a, b, c, d, e))
+#define put_att(a, b, c, d, e, f) nc_catch(nc_put_att_double(a, b, c, d, e ,f))
 #endif
 #define reset(start, count) { \
     start[0] = 0; start[1] = 0; start[2] = 0; start[3] = 0; \
@@ -371,6 +373,13 @@ static void add_flux_variable(Output_t * const o, /**< Output object.*/
 /*Create an output file and write metadata.*/
 Output_t create_flux_file(char const * const filepath, Atmosphere_t const * const atm)
 {
+#ifdef SINGLE_PRESCISION
+    nc_type type = NC_FLOAT;
+    float zero = 0;
+#else
+    nc_type type = NC_DOUBLE;
+    double zero = 0;
+#endif
     Output_t o;
     nc_catch(nc_create(filepath, NC_NETCDF4, &o.ncid));
     nc_catch(nc_def_dim(o.ncid, "expt", 1, &(o.dimid[EXPT])));
@@ -379,7 +388,9 @@ Output_t create_flux_file(char const * const filepath, Atmosphere_t const * cons
     add_flux_variable(&o, "rlu", "upwelling_longwave_flux_in_air", RLU);
     add_flux_variable(&o, "rld", "downwelling_longwave_flux_in_air", RLD);
     add_flux_variable(&o, "rsu", "upwelling_shortwave_flux_in_air", RSU);
+    put_att(o.ncid, o.varid[RSU], "_FillValue", type, 1, &zero);
     add_flux_variable(&o, "rsd", "downwelling_shortwave_flux_in_air", RSD);
+    put_att(o.ncid, o.varid[RSD], "_FillValue", type, 1, &zero);
     return o;
 }
 
