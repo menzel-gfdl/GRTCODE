@@ -1,5 +1,6 @@
 #include <string.h>
 #include "cfcs.h"
+#include "collision_induced_absorption.h"
 #include "curtis_godson.h"
 #include "debug.h"
 #include "floating_point_type.h"
@@ -151,6 +152,22 @@ int launch(MolecularLines_t * const ml, /**< Molecular lines object.*/
         glaunch(calc_cfc_optical_depth, ml->bins.num_wpoints, ml->device,
                 ml->bins.num_wpoints, ml->num_layers, ml->n, xp,
                 cfc->cross_section, ml->tau);
+    }
+
+    for (m=0; m<ml->num_cias; ++m)
+    {
+        CollisionInducedAbsorption_t *cia = &(ml->cia[m]);
+        int index1 = cia->id[0];
+        fp_t const *xp1 = &(ml->x_cia[index1*ml->num_levels]);
+        int index2 = cia->id[1];
+        fp_t const *xp2 = &(ml->x_cia[index2*ml->num_levels]);
+        char *mesg = "Calculating CIA spectra for %s - %s.";
+        log_info(mesg, cia->name[0], cia->name[1]);
+
+        /*Calculate collision-induced absorption optical depths.*/
+        glaunch(calc_cia_optical_depth, ml->bins.num_wpoints, ml->device,
+                ml->bins.num_wpoints, ml->num_layers, ml->p, ml->tavg, xp1, xp2,
+                cia->cross_section, ml->tau);
     }
 
     if (ml->optical_depth_method != line_sample)

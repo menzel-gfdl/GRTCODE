@@ -207,4 +207,17 @@ int calc_cfc_optical_depth(uint64_t const num_wpoints, /**< Spectral grid size.*
                           );
 
 
+/** @brief Calculate the optical depth contribution of collision-induced absorption.
+    @return SUCCESS or an error code.*/
+int calc_cia_optical_depth(uint64_t const num_wpoints, /**< Spectral grid size.*/
+                           int const num_layers, /**< Number of atmospheric layers.*/
+                           fp_t const * const p, /**< Pressure [atm] (levels).*/
+                           fp_t const * const t, /**< Temperature [K] (layers).*/
+                           fp_t const * const x1, /**< Abundance [ppmv] of species one (levels).*/
+                           fp_t const * const x2, /**< Abundance [ppmv] of species two (levels).*/
+                           fp_t const * const cross_section, /**< Collision-induced absorption cross section [cm^4] (wavenumber).*/
+                           fp_t * const tau /**< Optical depth (layer, wavenumber).*/
+                          );
+
+
 #endif

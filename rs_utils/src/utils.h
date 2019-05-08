@@ -1,6 +1,7 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "debug.h"
@@ -77,6 +78,20 @@ int reimann_sum(fp_t const * const data, /**< Data to be integrated.*/
                 fp_t const dx, /**< Spacing between data points.*/
                 fp_t * const out /**< Integral result.*/
                );
+
+
+/** @brief Turn on bit in bit field.
+    @return RS_SUCCESS or an error code.*/
+int activate(uint64_t * const bit_field, /**< Bit field.*/
+             int const index /**< Bit index (0 - 63).*/
+            );
+
+
+/** @brief Check if bit is turned on in bit field.
+    @return 0 if bit is off, else nonzero.*/
+int is_active(uint64_t const bit_field, /**< Bit field.*/
+              int const index /**< Bit index (0 - 63).*/
+             );
 
 
 #endif
