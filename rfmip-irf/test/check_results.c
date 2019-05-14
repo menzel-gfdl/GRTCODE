@@ -22,7 +22,7 @@ int check_result(fp_t const * const actual, fp_t const * const expected, size_t 
                  fp_t const tolerance)
 {
     int failures = 0;
-    int i;
+    size_t i;
     for (i=0; i<size; ++i)
     {
         fp_t err = 100.*(fabs(actual[i] - expected[i]))/expected[i];
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     {
         tolerance = atof(buf);
     }
-    printf("Using a tolerance of %e\%\n", tolerance);
+    printf("Using a tolerance of %e%%\n", tolerance);
     int any_failures = 0;
 
     fp_t rlu[61] = {
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
         478.205401787838};
     read_data(ncid, "rlu", buffer, num_levels);
     int failures = check_result(buffer, rlu, num_levels, tolerance);
-    printf("%d/%d failures for upwelling longwave radation.\n", failures, num_levels);
+    printf("%d/%zu failures for upwelling longwave radation.\n", failures, num_levels);
     any_failures += failures;
 
     fp_t rld[61] = {
@@ -121,7 +121,7 @@ int main(int argc, char **argv)
         339.344787478897};
     read_data(ncid, "rld", buffer, num_levels);
     failures = check_result(buffer, rld, num_levels, tolerance);
-    printf("%d/%d failures for downwelling longwave radation.\n", failures, num_levels);
+    printf("%d/%zu failures for downwelling longwave radation.\n", failures, num_levels);
     any_failures += failures;
 
     fp_t rsu[61] = {
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
         98.5545218347325};
     read_data(ncid, "rsu", buffer, num_levels);
     failures = check_result(buffer, rsu, num_levels, tolerance);
-    printf("%d/%d failures for upwelling shortwave radation.\n", failures, num_levels);
+    printf("%d/%zu failures for upwelling shortwave radation.\n", failures, num_levels);
     any_failures += failures;
 
     fp_t rsd[61] = {
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
         565.796584405592};
     read_data(ncid, "rsd", buffer, num_levels);
     failures = check_result(buffer, rsd, num_levels, tolerance);
-    printf("%d/%d failures for downwelling shortwave radation.\n", failures, num_levels);
+    printf("%d/%zu failures for downwelling shortwave radation.\n", failures, num_levels);
     any_failures += failures;
 
     nc_catch(nc_close(ncid));
