@@ -38,5 +38,7 @@ m4/ltversion.m4
 m4/lt~obsolete.m4
 rfmip-irf/src/rfmip_irf
 rfmip-irf/src/*.nc
+rfmip-irf/test/*.nc
+rfmip-irf/test/check_results
 longwave/test/test_longwave
 shortwave/test/test_shortwave
