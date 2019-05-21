@@ -24,7 +24,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
                  rs_utils/Makefile rs_utils/src/Makefile
                  molecular_lines/Makefile molecular_lines/src/Makefile
-                 shortwave/Makefile shortwave/src/Makefile
-                 longwave/Makefile longwave/src/Makefile
-                 rfmip-irf/Makefile rfmip-irf/src/Makefile])
+                 shortwave/Makefile shortwave/src/Makefile shortwave/test/Makefile
+                 longwave/Makefile longwave/src/Makefile longwave/test/Makefile
+                 rfmip-irf/Makefile rfmip-irf/src/Makefile rfmip-irf/test/Makefile])
 AC_OUTPUT

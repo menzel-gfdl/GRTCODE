@@ -11,6 +11,16 @@ build:gfdl-ws:
     expire_in: 1 days
 
 
+test:gfdl-ws:
+  stage: test
+  tags:
+    - gfdl-ws
+  script:
+    - make check
+  dependencies:
+    - build:gfdl-ws
+
+
 deploy:gfdl-ws:
   stage: deploy
   environment: gfdl-ws
@@ -35,6 +45,18 @@ build:lscsky50-d:
   artifacts:
     untracked: true
     expire_in: 1 days
+
+
+test:lscsky50-d:
+  stage: test
+  tags:
+    - skylake
+  script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
+    - make check
+  dependencies:
+    - build:lscsky50-d
 
 
 deploy:lscsky50-d:
