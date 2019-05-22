@@ -61,13 +61,22 @@ typedef struct Output
 } Output_t;
 
 
+/** @brief Container for CFC/HFC arguments.*/
+typedef struct Cfc
+{
+    int id;
+    char *path;
+    int use_equivalent_ppmv;
+} Cfc_t;
+
+
 /**@ brief Reserve memory and read in atmospheric data.*/
 void create_atmosphere(Atmosphere_t * const atm, /**< Atmosphere object.*/
                        char const * const filepath, /**< Input data file.*/
                        int const experiment, /**< Experiment index.*/
                        int const * const molecules, /**< Array of molecule ids.*/
                        int const num_molecules, /**< Number of molecules.*/
-                       int const * const cfcs, /**< Array of CFC ids.*/
+                       Cfc_t const * const cfc, /**< Array of Cfc_t objects.*/
                        int const num_cfcs, /**< Number of CFCs.*/
                        int const * const cias, /**< Array of CIA ids.*/
                        int const num_cias /**< NUmber of CIAs.*/

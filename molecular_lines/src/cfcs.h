@@ -5,14 +5,21 @@
 #include "floating_point_type.h"
 
 
-#define CFC_NAME_LEN 8
+#define CFC_NAME_LEN 16
 
 
 /*CFC identifiers.*/
 typedef enum CfcId
 {
-    F11 = 0,
-    F12,
+    CFC11 = 0,
+    CFC12,
+    CFC113,
+    HCFC22,
+    HCFC141b,
+    HCFC142b,
+    HFC23,
+    HFC125,
+    HFC134a,
     NUM_CFCS
 } CfcId_t;
 

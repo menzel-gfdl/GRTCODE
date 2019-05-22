@@ -1,15 +1,53 @@
 #!/bin/bash -x
 export OMP_NUM_THREADS="4"
 declare datadir="../../data"
+
+
+#Physics index = 1
 ../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
-                 0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
-                 -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
-                 -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
-                 -F11 $datadir/cfc_cross_sections/F11.xsc.296.0.760.0.csv  \
-                 -F12 $datadir/cfc_cross_sections/F12.xsc.296.3.760.0.csv \
-                 -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
-                 -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
-                 -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
-                 -x 0 -X 0 -o output.nc
-./check_results output.nc
-rm output.nc
+  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
+  -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
+  -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
+  -CFC-11 $datadir/cfc_cross_sections/CFC-11_absorption_cross_sections.csv \
+  -CFC-12 $datadir/cfc_cross_sections/CFC-12_absorption_cross_sections.csv \
+  -CFC-113 $datadir/cfc_cross_sections/CFC-113_absorption_cross_sections.csv \
+  -HCFC-22 $datadir/cfc_cross_sections/HCFC-22_absorption_cross_sections.csv \
+  -HCFC-141b $datadir/cfc_cross_sections/HCFC-141b_absorption_cross_sections.csv \
+  -HCFC-142b $datadir/cfc_cross_sections/HCFC-142b_absorption_cross_sections.csv \
+  -HFC-23 $datadir/cfc_cross_sections/HFC-23_absorption_cross_sections.csv \
+  -HFC-125 $datadir/cfc_cross_sections/HFC-125_absorption_cross_sections.csv \
+  -HFC-134a $datadir/cfc_cross_sections/HFC-134a_absorption_cross_sections.csv \
+  -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
+  -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
+  -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
+  -x 0 -X 0 -o output.physics_index1.nc
+
+
+#Physics index = 2
+../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
+  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
+  -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
+  -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
+  -CFC-11-eq $datadir/cfc_cross_sections/CFC-11_absorption_cross_sections.csv  \
+  -CFC-12 $datadir/cfc_cross_sections/CFC-12_absorption_cross_sections.csv \
+  -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
+  -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
+  -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
+  -x 0 -X 0 -o output.physics_index2.nc
+./check_results output.physics_index2.nc
+
+
+#Physics index = 3
+../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
+  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
+  -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
+  -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
+  -CFC-12-eq $datadir/cfc_cross_sections/CFC-12_absorption_cross_sections.csv  \
+  -HFC-134a-eq $datadir/cfc_cross_sections/HFC-134a_absorption_cross_sections.csv \
+  -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
+  -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
+  -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
+  -x 0 -X 0 -o output.physics_index3.nc
+
+
+#rm output.nc

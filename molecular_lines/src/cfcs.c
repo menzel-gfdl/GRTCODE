@@ -20,11 +20,32 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
     xsc->id = id;
     switch(id)
     {
-        case F11:
-            snprintf(xsc->name, CFC_NAME_LEN, "F11");
+        case CFC11:
+            snprintf(xsc->name, CFC_NAME_LEN, "CFC-11");
             break;
-        case F12:
-            snprintf(xsc->name, CFC_NAME_LEN, "F12");
+        case CFC12:
+            snprintf(xsc->name, CFC_NAME_LEN, "CFC-12");
+            break;
+        case CFC113:
+            snprintf(xsc->name, CFC_NAME_LEN, "CFC-113");
+            break;
+        case HCFC22:
+            snprintf(xsc->name, CFC_NAME_LEN, "HCFC-22");
+            break;
+        case HCFC141b:
+            snprintf(xsc->name, CFC_NAME_LEN, "HCFC-141b");
+            break;
+        case HCFC142b:
+            snprintf(xsc->name, CFC_NAME_LEN, "HCFC-142b");
+            break;
+        case HFC23:
+            snprintf(xsc->name, CFC_NAME_LEN, "HFC-23");
+            break;
+        case HFC125:
+            snprintf(xsc->name, CFC_NAME_LEN, "HFC-125");
+            break;
+        case HFC134a:
+            snprintf(xsc->name, CFC_NAME_LEN, "HFC-134a");
             break;
         default:
             {char *mesg = "unrecognized CFC id %d.";

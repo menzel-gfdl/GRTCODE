@@ -127,7 +127,7 @@ static void get_gm_ppmv(int const ncid, /**< Netcdf file id.*/
 /*Reserve memory and read in atmospheric data.*/
 void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
                        int const experiment, int const * const molecules,
-                       int const num_molecules, int const * const cfcs,
+                       int const num_molecules, Cfc_t const * const cfc,
                        int const num_cfcs, int const * const cias, int const num_cias)
 {
     int ncid;
@@ -273,16 +273,67 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         atm->ppmv[i] = p;
     }
 
-    char *cfc_names[32];
-    cfc_names[F11] = "cfc11eq_GM";
-    cfc_names[F12] = "cfc12_GM";
     alloc(atm->cfc_ppmv, num_cfcs);
     atm->num_cfcs = num_cfcs;
     for (i=0; i<num_cfcs; ++i)
     {
+        char *cfc_name;
+        switch (cfc[i].id)
+        {
+            case CFC11:
+                if (cfc[i].use_equivalent_ppmv)
+                {
+                    cfc_name = "cfc11eq_GM";
+                }
+                else
+                {
+                    cfc_name = "cfc11_GM";
+                }
+                break;
+            case CFC12:
+                if (cfc[i].use_equivalent_ppmv)
+                {
+                    cfc_name = "cfc12eq_GM";
+                }
+                else
+                {
+                    cfc_name = "cfc12_GM";
+                }
+                break;
+            case CFC113:
+                cfc_name = "cfc113_GM";
+                break;
+            case HCFC22:
+                cfc_name = "hcfc22_GM";
+                break;
+            case HCFC141b:
+                cfc_name = "hcfc141b_GM";
+                break;
+            case HCFC142b:
+                cfc_name = "hcfc142b_GM";
+                break;
+            case HFC23:
+                cfc_name = "hfc23_GM";
+                break;
+            case HFC125:
+                cfc_name = "hfc125_GM";
+                break;
+            case HFC134a:
+                if (cfc[i].use_equivalent_ppmv)
+                {
+                    cfc_name = "hfc134aeq_GM";
+                }
+                else
+                {
+                    cfc_name = "hfc134a_GM";
+                }
+                break;
+            default:
+                fprintf(stderr, "[%s: %d] unknown CFC id.\n", __FILE__, __LINE__);
+                exit(EXIT_FAILURE);
+        }
         fp_t *p;
-        get_gm_ppmv(ncid, cfc_names[cfcs[i]], experiment, atm->num_columns,
-                    atm->num_levels, &p);
+        get_gm_ppmv(ncid, cfc_name, experiment, atm->num_columns, atm->num_levels, &p);
         int j;
         for (j=0; j<atm->num_columns*atm->num_levels; ++j)
         {

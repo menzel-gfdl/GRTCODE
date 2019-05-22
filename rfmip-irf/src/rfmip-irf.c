@@ -26,7 +26,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 #define MAX_NUM_MOLECULES 7
-#define MAX_NUM_CFCS 2
+#define MAX_NUM_CFCS 9
 #define MAX_NUM_CIAS 3
 
 
@@ -47,15 +47,14 @@ static void integrate(fp_t const * const in, /**< Data to be integrated.*/
 }
 
 
-/** @brief Set a species as active.*/
-static void activate_species(Parser_t const parser, /**< Parser object.*/
-                             char const * const arg, /**< Arg to check for.*/
-                             int * const array, /**< Array.*/
-                             int const tag, /**< Value to store in array.*/
-                             int * spot, /**< Current spot in array.*/
-                             int const max_size, /**< Size of input array.*/
-                             char **values /**< Array to store argument values.*/
-                            )
+/** @brief Set a molecular species as active.*/
+static void activate_molecule(Parser_t const parser, /**< Parser object.*/
+                              char const * const arg, /**< Arg to check for.*/
+                              int * const array, /**< Array.*/
+                              int const tag, /**< Value to store in array.*/
+                              int * spot, /**< Current spot in array.*/
+                              int const max_size /**< Size of input array.*/
+                             )
 {
     char buffer[valuelen];
     if (get_argument(parser, arg, buffer))
@@ -66,10 +65,39 @@ static void activate_species(Parser_t const parser, /**< Parser object.*/
             exit(EXIT_FAILURE);
         }
         array[*spot] = tag;
-        if (values != NULL)
+        *spot += 1;
+    }
+    return;
+}
+
+
+/** @brief Set a CFC as active.*/
+static void activate_cfc(Parser_t const parser, /**< Parser object.*/
+                         char const * const arg, /**< Arg to check for.*/
+                         char const * const arg_eq, /**< Equivalent arg.*/
+                         Cfc_t * const array, /**< Array of Cfc_t objects.*/
+                         int const id, /**< CFC id to store.*/
+                         int * spot, /**< Current spot in array.*/
+                         int const max_size)
+{
+    int found;
+    int use_eq = 0;
+    char buffer[valuelen];
+    found = get_argument(parser, arg, buffer);
+    if (!found && arg_eq != NULL)
+    {
+        use_eq = get_argument(parser, arg_eq, buffer);
+    }
+    if (found || use_eq)
+    {
+        if (*spot >= max_size)
         {
-            snprintf(values[*spot], valuelen, "%s", buffer);
+            fprintf(stderr, "Array is too small, increase size.\n");
+            exit(EXIT_FAILURE);
         }
+        array[*spot].id = id;
+        snprintf(array[*spot].path, valuelen, "%s", buffer);
+        array[*spot].use_equivalent_ppmv = use_eq;
         *spot += 1;
     }
     return;
@@ -147,9 +175,19 @@ int main(int argc, char **argv)
     add_argument(&parser, "-CH4", NULL, "Include CH4.", NULL);
     add_argument(&parser, "-CO", NULL, "Include CO.", NULL);
     add_argument(&parser, "-CO2", NULL, "Include CO2.", NULL);
-    add_argument(&parser, "-F11", NULL, "CSV file with F11 cross sections.", &one);
-    add_argument(&parser, "-F12", NULL, "CSV file with F12 cross sections.", &one);
+    add_argument(&parser, "-CFC-11", NULL, "CSV file with CFC-11 cross sections.", &one);
+    add_argument(&parser, "-CFC-11-eq", NULL, "CSV file with CFC-11 cross sections.", &one);
+    add_argument(&parser, "-CFC-12", NULL, "CSV file with CFC-12 cross sections.", &one);
+    add_argument(&parser, "-CFC-12-eq", NULL, "CSV file with CFC-12 cross sections.", &one);
+    add_argument(&parser, "-CFC-113", NULL, "CSV file with CFC-113 cross sections.", &one);
     add_argument(&parser, "-H2O", NULL, "Include H2O.", NULL);
+    add_argument(&parser, "-HCFC-22", NULL, "CSV file with HCFC-22 cross sections.", &one);
+    add_argument(&parser, "-HCFC-141b", NULL, "CSV file with HCFC-141b cross sections.", &one);
+    add_argument(&parser, "-HCFC-142b", NULL, "CSV file with HCFC-142b cross sections.", &one);
+    add_argument(&parser, "-HFC-23", NULL, "CSV file with HFC-23 cross sections.", &one);
+    add_argument(&parser, "-HFC-125", NULL, "CSV file with HFC-125 cross sections.", &one);
+    add_argument(&parser, "-HFC-134a", NULL, "CSV file with HFC-134a cross sections.", &one);
+    add_argument(&parser, "-HFC-134a-eq", NULL, "CSV file with HFC-134a cross sections.", &one);
     add_argument(&parser, "-N2-N2", NULL, "CSV file with N2-N2 collison cross sections", &one);
     add_argument(&parser, "-N2O", NULL, "Include N2O.", NULL);
     add_argument(&parser, "-O2", NULL, "Include O2.", NULL);
@@ -207,25 +245,32 @@ int main(int argc, char **argv)
     /*Determine which molecules to use.*/
     int molecules[MAX_NUM_MOLECULES];
     int num_molecules = 0;
-    activate_species(parser, "-CH4", molecules, CH4, &num_molecules, MAX_NUM_MOLECULES, NULL);
-    activate_species(parser, "-CO", molecules, CO, &num_molecules, MAX_NUM_MOLECULES, NULL);
-    activate_species(parser, "-CO2", molecules, CO2, &num_molecules, MAX_NUM_MOLECULES, NULL);
-    activate_species(parser, "-H2O", molecules, H2O, &num_molecules, MAX_NUM_MOLECULES, NULL);
-    activate_species(parser, "-N2O", molecules, N2O, &num_molecules, MAX_NUM_MOLECULES, NULL);
-    activate_species(parser, "-O2", molecules, O2, &num_molecules, MAX_NUM_MOLECULES, NULL);
-    activate_species(parser, "-O3", molecules, O3, &num_molecules, MAX_NUM_MOLECULES, NULL);
+    activate_molecule(parser, "-CH4", molecules, CH4, &num_molecules, MAX_NUM_MOLECULES);
+    activate_molecule(parser, "-CO", molecules, CO, &num_molecules, MAX_NUM_MOLECULES);
+    activate_molecule(parser, "-CO2", molecules, CO2, &num_molecules, MAX_NUM_MOLECULES);
+    activate_molecule(parser, "-H2O", molecules, H2O, &num_molecules, MAX_NUM_MOLECULES);
+    activate_molecule(parser, "-N2O", molecules, N2O, &num_molecules, MAX_NUM_MOLECULES);
+    activate_molecule(parser, "-O2", molecules, O2, &num_molecules, MAX_NUM_MOLECULES);
+    activate_molecule(parser, "-O3", molecules, O3, &num_molecules, MAX_NUM_MOLECULES);
 
-    /*Determine which CFCs to use.*/
-    int cfcs[MAX_NUM_CFCS];
-    char *cfc_paths[MAX_NUM_CFCS];
+    /*Determine which CFCs to use.  "Equivalent" concentrations will override
+      non-equivalent ones if both are flags are used.*/
+    Cfc_t cfc[MAX_NUM_CFCS];
     int i;
     for (i=0; i<MAX_NUM_CFCS; ++i)
     {
-        cfc_paths[i] = malloc(sizeof(*(cfc_paths[i]))*valuelen);
+        cfc[i].path = malloc(sizeof(*(cfc[i].path))*valuelen);
     }
     int num_cfcs = 0;
-    activate_species(parser, "-F11", cfcs, F11, &num_cfcs, MAX_NUM_CFCS, cfc_paths);
-    activate_species(parser, "-F12", cfcs, F12, &num_cfcs, MAX_NUM_CFCS, cfc_paths);
+    activate_cfc(parser, "-CFC-11", "-CFC-11eq", cfc, CFC11, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CFC-12", "-CFC-12eq", cfc, CFC12, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CFC-113", NULL, cfc, CFC113, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HCFC-22", NULL, cfc, HCFC22, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HCFC-141b", NULL, cfc, HCFC141b, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HCFC-142b", NULL, cfc, HCFC142b, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-23", NULL, cfc, HFC23, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-125", NULL, cfc, HFC125, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-134a", "-HFC-134aeq", cfc, HFC134a, &num_cfcs, MAX_NUM_CFCS);
 
     /*Determine which collision-induced absorption spectra to include.*/
     int cia_species[MAX_NUM_CIAS];
@@ -271,7 +316,7 @@ int main(int argc, char **argv)
     get_argument(parser, "experiment", buffer);
     int experiment = atoi(buffer);
     get_argument(parser, "input_file", buffer);
-    create_atmosphere(&atm, buffer, experiment, molecules, num_molecules, cfcs,
+    create_atmosphere(&atm, buffer, experiment, molecules, num_molecules, cfc,
                       num_cfcs, cia_species, num_cia_species);
 
     /*Read in the incident solar flux.*/
@@ -304,7 +349,7 @@ int main(int argc, char **argv)
     }
     for (i=0; i<num_cfcs; ++i)
     {
-        catch(grt_add_cfc(&molecular_lines, cfcs[i], cfc_paths[i]));
+        catch(grt_add_cfc(&molecular_lines, cfc[i].id, cfc[i].path));
     }
     for (i=0; i<num_cias; ++i)
     {
@@ -353,7 +398,7 @@ int main(int argc, char **argv)
         {
             fp_t *ppmv = atm.cfc_ppmv[j];
             ppmv = &(ppmv[i*atm.num_levels]);
-            catch(grt_set_cfc_ppmv(&molecular_lines, cfcs[j], ppmv));
+            catch(grt_set_cfc_ppmv(&molecular_lines, cfc[j].id, ppmv));
         }
         for (j=0; j<num_cia_species; ++j)
         {
@@ -435,7 +480,7 @@ int main(int argc, char **argv)
     destroy_parser(&parser);
     for (i=0; i<MAX_NUM_CFCS; ++i)
     {
-        free(cfc_paths[i]);
+        free(cfc[i].path);
     }
     for (i=0; i<MAX_NUM_CIAS; ++i)
     {

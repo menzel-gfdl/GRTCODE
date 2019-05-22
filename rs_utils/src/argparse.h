@@ -2,7 +2,7 @@
 #define ARGPARSE_H_
 
 
-#define namelen 12
+#define namelen 18
 #define longnamelen 24
 #define desclen 512
 #define valuelen 512
