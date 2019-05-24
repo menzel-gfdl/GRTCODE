@@ -262,15 +262,15 @@ int main(int argc, char **argv)
         cfc[i].path = malloc(sizeof(*(cfc[i].path))*valuelen);
     }
     int num_cfcs = 0;
-    activate_cfc(parser, "-CFC-11", "-CFC-11eq", cfc, CFC11, &num_cfcs, MAX_NUM_CFCS);
-    activate_cfc(parser, "-CFC-12", "-CFC-12eq", cfc, CFC12, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CFC-11", "-CFC-11-eq", cfc, CFC11, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CFC-12", "-CFC-12-eq", cfc, CFC12, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-CFC-113", NULL, cfc, CFC113, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HCFC-22", NULL, cfc, HCFC22, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HCFC-141b", NULL, cfc, HCFC141b, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HCFC-142b", NULL, cfc, HCFC142b, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HFC-23", NULL, cfc, HFC23, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HFC-125", NULL, cfc, HFC125, &num_cfcs, MAX_NUM_CFCS);
-    activate_cfc(parser, "-HFC-134a", "-HFC-134aeq", cfc, HFC134a, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-134a", "-HFC-134a-eq", cfc, HFC134a, &num_cfcs, MAX_NUM_CFCS);
 
     /*Determine which collision-induced absorption spectra to include.*/
     int cia_species[MAX_NUM_CIAS];
