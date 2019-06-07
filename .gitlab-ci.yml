@@ -24,6 +24,8 @@ test:gfdl-ws:
 deploy:gfdl-ws:
   stage: deploy
   environment: gfdl-ws
+  only:
+    - master
   tags:
     - gfdl-ws_deploy
   script:
@@ -62,6 +64,8 @@ test:lscsky50-d:
 deploy:lscsky50-d:
   stage: deploy
   environment: skylake
+  only:
+    - master
   tags:
     - skylake
   script:
