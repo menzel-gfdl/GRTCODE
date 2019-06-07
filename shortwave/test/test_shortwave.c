@@ -1,0 +1,251 @@
+#include <stdint.h>
+#include <stdlib.h>
+#include "debug.h"
+#include "device.h"
+#include "optics.h"
+#include "rs_config.h"
+#include "shortwave.h"
+#include "spectral_grid.h"
+
+
+typedef struct Atmosphere
+{
+    Device_t device;
+    int num_levels;
+    fp_t mu_dir;
+    fp_t mu_dif;
+    fp_t surface_albedo_dir;
+    fp_t surface_albedo_dif;
+    fp_t total_solar_irradiance;
+    fp_t *solar_flux;
+    fp_t *flux_up;
+    fp_t *flux_down;
+} Atmosphere_t;
+
+
+static int create_atmosphere(Atmosphere_t * const atmos, SpectralGrid_t const * const grid,
+                             int const num_levels, Device_t const device)
+{
+    int num_layers = num_levels - 1;
+    atmos->device = device;
+    atmos->num_levels = num_levels;
+    atmos->solar_flux = NULL;
+    gmalloc(atmos->solar_flux, grid->n, device);
+    atmos->flux_up = NULL;
+    gmalloc(atmos->flux_up, grid->n*num_levels, device);
+    atmos->flux_down = NULL;
+    gmalloc(atmos->flux_down, grid->n*num_levels, device);
+    return RS_SUCCESS;
+}
+
+
+static int destroy_atmosphere(Atmosphere_t * const atmos)
+{
+    gfree(atmos->solar_flux, atmos->device);
+    gfree(atmos->flux_up, atmos->device);
+    gfree(atmos->flux_down, atmos->device);
+    return RS_SUCCESS;
+}
+
+
+static int setup(SpectralGrid_t * const grid, Optics_t * const optics,
+                 Atmosphere_t * const atmos)
+{
+    Device_t const device = HOST_ONLY;
+    double const w0 = MIN_WAVENUMBER;
+    double const wn = MAX_WAVENUMBER;
+    double const dw = MAX_RESOLUTION;
+    int const num_levels = MIN_NUM_LEVELS;
+    int const num_layers = num_levels - 1;
+    catch(create_spectral_grid(grid, w0, wn, dw));
+    catch(create_optics(optics, num_layers, grid, &device));
+    int i;
+    uint64_t j;
+    for (i=0; i<num_layers; ++i)
+    {
+        for (j=0; j<grid->n; ++j)
+        {
+            optics->g[i*grid->n+j] = 0.85*(rand()/((double)RAND_MAX));
+            optics->omega[i*grid->n+j] = 0.85*(rand()/((double)RAND_MAX));
+            optics->tau[i*grid->n+j] = rand()/((double)RAND_MAX);
+        }
+    }
+    catch(create_atmosphere(atmos, grid, num_levels, device));
+    for (j=0; j<grid->n; ++j)
+    {
+        atmos->solar_flux[j] = 0.99*rand()/((double)RAND_MAX);
+    }
+    atmos->mu_dir = 0.8;
+    atmos->mu_dif = 0.5;
+    atmos->surface_albedo_dir = 0.35;
+    atmos->surface_albedo_dif = 0.35;
+    atmos->total_solar_irradiance = 1350.;
+    return RS_SUCCESS;
+}
+
+
+static int breakdown(Optics_t * const optics, Atmosphere_t * const atmos)
+{
+    catch(destroy_atmosphere(atmos));
+    catch(destroy_optics(optics));
+    return RS_SUCCESS;
+}
+
+
+/*Do a simple run.*/
+static int simple_test(void)
+{
+    SpectralGrid_t grid;
+    Optics_t optics;
+    Atmosphere_t atmos;
+    catch(setup(&grid, &optics, &atmos));
+    Shortwave_t sw;
+    catch(create_shortwave(&sw, atmos.num_levels, &grid, &atmos.device));
+    catch(calculate_sw_fluxes(&sw, &optics, atmos.mu_dir, atmos.mu_dif,
+                              atmos.surface_albedo_dir, atmos.surface_albedo_dif,
+                              atmos.total_solar_irradiance, atmos.solar_flux, atmos.flux_up,
+                              atmos.flux_down));
+    catch(destroy_shortwave(&sw));
+    catch(breakdown(&optics, &atmos));
+    return RS_SUCCESS;
+}
+
+
+/*Very optically thick layers.*/
+static int optically_thick(void)
+{
+    SpectralGrid_t grid;
+    Optics_t optics;
+    Atmosphere_t atmos;
+    catch(setup(&grid, &optics, &atmos));
+    int i;
+    uint64_t j;
+    for (i=0; i<(atmos.num_levels-1); ++i)
+    {
+        for (j=0; j<grid.n; ++j)
+        {
+            /*Big enough to overflow exp(l.tau).*/
+            optics.tau[i*grid.n+j] = 1.e12;
+        }
+    }
+    Shortwave_t sw;
+    catch(create_shortwave(&sw, atmos.num_levels, &grid, &atmos.device));
+    catch(calculate_sw_fluxes(&sw, &optics, atmos.mu_dir, atmos.mu_dif,
+                              atmos.surface_albedo_dir, atmos.surface_albedo_dif,
+                              atmos.total_solar_irradiance, atmos.solar_flux, atmos.flux_up,
+                              atmos.flux_down));
+    catch(destroy_shortwave(&sw));
+    catch(breakdown(&optics, &atmos));
+    return RS_SUCCESS;
+}
+
+
+/*Very optically thin layers.*/
+static int optically_thin(void)
+{
+    SpectralGrid_t grid;
+    Optics_t optics;
+    Atmosphere_t atmos;
+    catch(setup(&grid, &optics, &atmos));
+    int i;
+    uint64_t j;
+    for (i=0; i<(atmos.num_levels-1); ++i)
+    {
+        for (j=0; j<grid.n; ++j)
+        {
+            /*Small enough to underflow exp(l.tau).*/
+            optics.tau[i*grid.n+j] = 1.e-12;
+        }
+    }
+    Shortwave_t sw;
+    catch(create_shortwave(&sw, atmos.num_levels, &grid, &atmos.device));
+    catch(calculate_sw_fluxes(&sw, &optics, atmos.mu_dir, atmos.mu_dif,
+                              atmos.surface_albedo_dir, atmos.surface_albedo_dif,
+                              atmos.total_solar_irradiance, atmos.solar_flux, atmos.flux_up,
+                              atmos.flux_down));
+    catch(destroy_shortwave(&sw));
+    catch(breakdown(&optics, &atmos));
+    return RS_SUCCESS;
+}
+
+
+/*Strong absorption.*/
+static int strong_absorption(void)
+{
+    SpectralGrid_t grid;
+    Optics_t optics;
+    Atmosphere_t atmos;
+    catch(setup(&grid, &optics, &atmos));
+    int nbytes = sizeof(*optics.tau);
+    fp_t val = 0.;
+    if (nbytes == sizeof(float))
+    {
+        val = log(FLT_MAX) - 12.;
+    }
+    else if (nbytes == sizeof(double))
+    {
+        val = log(DBL_MAX) - 12.;
+    }
+    int i;
+    uint64_t j;
+    for (i=0; i<(atmos.num_levels-1); ++i)
+    {
+        for (j=0; j<grid.n; ++j)
+        {
+            optics.tau[i*grid.n+j] = val;
+        }
+    }
+    Shortwave_t sw;
+    catch(create_shortwave(&sw, atmos.num_levels, &grid, &atmos.device));
+    catch(calculate_sw_fluxes(&sw, &optics, atmos.mu_dir, atmos.mu_dif,
+                              atmos.surface_albedo_dir, atmos.surface_albedo_dif,
+                              atmos.total_solar_irradiance, atmos.solar_flux, atmos.flux_up,
+                              atmos.flux_down));
+    catch(destroy_shortwave(&sw));
+    catch(breakdown(&optics, &atmos));
+    return RS_SUCCESS;
+}
+
+
+typedef struct Test
+{
+    int (*f)(void);
+    char *name;
+    int returncode;
+} Test_t;
+
+
+int main(void)
+{
+    printf("Running shortwave tests.\n");
+    int num_tests = 4;
+    Test_t tests[32] = {
+        {simple_test, "simple_test", RS_SUCCESS},
+        {optically_thick, "optically_thick", RS_SUCCESS},
+        {optically_thin, "optically_thin", RS_SUCCESS},
+        {strong_absorption, "strong_absorption", RS_SUCCESS}};
+    int passed = 0;
+    int i;
+    for (i=0; i<num_tests; ++i)
+    {
+        printf("Running test %s:", tests[i].name);
+        if (tests[i].f() == tests[i].returncode)
+        {
+            printf(" passed.\n");
+            passed++;
+        }
+        else
+        {
+            printf(" failed.\n");
+        }
+    }
+    printf("%d/%d tests passed.\n", passed, num_tests);
+    if (passed == num_tests)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}

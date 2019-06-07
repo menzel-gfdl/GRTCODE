@@ -1,0 +1,72 @@
+build:gfdl-ws:
+  stage: build
+  tags:
+    - gfdl-ws
+  script:
+    - autoreconf --install
+    - ./configure --prefix /home/fms/opt/gfdl-grtcode CFLAGS="-g -O2 -Wall -Wextra -pedantic -std=c99 -fopenmp" CPPFLAGS="-I/home/Raymond.Menzel/local/include" LDFLAGS="-L/home/Raymond.Menzel/local/lib"
+    - make
+  artifacts:
+    untracked: true
+    expire_in: 1 days
+
+
+test:gfdl-ws:
+  stage: test
+  tags:
+    - gfdl-ws
+  script:
+    - make check
+  dependencies:
+    - build:gfdl-ws
+
+
+deploy:gfdl-ws:
+  stage: deploy
+  environment: gfdl-ws
+  tags:
+    - gfdl-ws_deploy
+  script:
+    - make install
+  dependencies:
+    - build:gfdl-ws
+
+
+build:lscsky50-d:
+  stage: build
+  tags:
+    - skylake
+  script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
+    - autoreconf --install
+    - ./configure --prefix /opt/gfdl-grtcode CC="icc" CFLAGS="-g -O2 -qopenmp" CPPFLAGS="-I/opt/hdf5/1.10.1/INTEL/include -I/opt/netcdf/4.6.1/INTEL/include" LDFLAGS="-L/opt/hdf5/1.10.1/INTEL/lib -L/opt/netcdf/4.6.1/INTEL/lib64"
+    - make
+  artifacts:
+    untracked: true
+    expire_in: 1 days
+
+
+test:lscsky50-d:
+  stage: test
+  tags:
+    - skylake
+  script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
+    - make check
+  dependencies:
+    - build:lscsky50-d
+
+
+deploy:lscsky50-d:
+  stage: deploy
+  environment: skylake
+  tags:
+    - skylake
+  script:
+    - source /opt/lmod/lmod/init/bash
+    - module load intel/2019_up2
+    - make install
+  dependencies:
+    - build:lscsky50-d
