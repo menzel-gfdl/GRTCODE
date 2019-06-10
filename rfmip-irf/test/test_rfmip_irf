@@ -3,7 +3,7 @@ export OMP_NUM_THREADS="4"
 declare datadir="../../data"
 
 
-#Physics index = 1
+#Forcing index = 1
 ../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
   0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
   -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
@@ -20,10 +20,10 @@ declare datadir="../../data"
   -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
   -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
   -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
-  -x 0 -X 0 -o output.physics_index1.nc
+  -x 0 -X 0 -o output.forcing_index1.nc
 
 
-#Physics index = 2
+#Forcing index = 2
 ../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
   0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
   -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
@@ -33,11 +33,11 @@ declare datadir="../../data"
   -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
   -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
   -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
-  -x 0 -X 0 -o output.physics_index2.nc
-./check_results output.physics_index2.nc
+  -x 0 -X 0 -o output.forcing_index2.nc
+./check_results output.forcing_index2.nc
 
 
-#Physics index = 3
+#Forcing index = 3
 ../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
   0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
   -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
@@ -47,7 +47,4 @@ declare datadir="../../data"
   -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
   -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
   -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
-  -x 0 -X 0 -o output.physics_index3.nc
-
-
-#rm output.nc
+  -x 0 -X 0 -o output.forcing_index3.nc
