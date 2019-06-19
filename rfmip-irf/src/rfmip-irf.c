@@ -26,7 +26,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 #define MAX_NUM_MOLECULES 7
-#define MAX_NUM_CFCS 9
+#define MAX_NUM_CFCS 21
 #define MAX_NUM_CIAS 3
 
 
@@ -172,14 +172,20 @@ int main(int argc, char **argv)
     add_argument(&parser, "hitran_file", NULL, "HITRAN database file.", NULL);
     add_argument(&parser, "solar_flux", NULL, "Solar flux CSV file.", NULL);
     int one = 1;
-    add_argument(&parser, "-CH4", NULL, "Include CH4.", NULL);
-    add_argument(&parser, "-CO", NULL, "Include CO.", NULL);
-    add_argument(&parser, "-CO2", NULL, "Include CO2.", NULL);
+    add_argument(&parser, "-CCl4", NULL, "CSV file with CCl4 cross sections.", &one);
+    add_argument(&parser, "-C2F6", NULL, "CSV file with C2F6 cross sections.", &one);
+    add_argument(&parser, "-CF4", NULL, "CSV file with CF4 cross sections.", &one);
     add_argument(&parser, "-CFC-11", NULL, "CSV file with CFC-11 cross sections.", &one);
     add_argument(&parser, "-CFC-11-eq", NULL, "CSV file with CFC-11 cross sections.", &one);
     add_argument(&parser, "-CFC-12", NULL, "CSV file with CFC-12 cross sections.", &one);
     add_argument(&parser, "-CFC-12-eq", NULL, "CSV file with CFC-12 cross sections.", &one);
     add_argument(&parser, "-CFC-113", NULL, "CSV file with CFC-113 cross sections.", &one);
+    add_argument(&parser, "-CFC-114", NULL, "CSV file with CFC-114 cross sections.", &one);
+    add_argument(&parser, "-CFC-115", NULL, "CSV file with CFC-115 cross sections.", &one);
+    add_argument(&parser, "-CH2Cl2", NULL, "CSV file with CH2Cl2 cross sections.", &one);
+    add_argument(&parser, "-CH4", NULL, "Include CH4.", NULL);
+    add_argument(&parser, "-CO", NULL, "Include CO.", NULL);
+    add_argument(&parser, "-CO2", NULL, "Include CO2.", NULL);
     add_argument(&parser, "-H2O", NULL, "Include H2O.", NULL);
     add_argument(&parser, "-HCFC-22", NULL, "CSV file with HCFC-22 cross sections.", &one);
     add_argument(&parser, "-HCFC-141b", NULL, "CSV file with HCFC-141b cross sections.", &one);
@@ -188,12 +194,18 @@ int main(int argc, char **argv)
     add_argument(&parser, "-HFC-125", NULL, "CSV file with HFC-125 cross sections.", &one);
     add_argument(&parser, "-HFC-134a", NULL, "CSV file with HFC-134a cross sections.", &one);
     add_argument(&parser, "-HFC-134a-eq", NULL, "CSV file with HFC-134a cross sections.", &one);
+    add_argument(&parser, "-HFC-143a", NULL, "CSV file with HFC-143a cross sections.", &one);
+    add_argument(&parser, "-HFC-152a", NULL, "CSV file with HFC-152a cross sections.", &one);
+    add_argument(&parser, "-HFC-227ea", NULL, "CSV file with HFC-227ea cross sections.", &one);
+    add_argument(&parser, "-HFC-245fa", NULL, "CSV file with HFC-245fa cross sections.", &one);
     add_argument(&parser, "-N2-N2", NULL, "CSV file with N2-N2 collison cross sections", &one);
     add_argument(&parser, "-N2O", NULL, "Include N2O.", NULL);
+    add_argument(&parser, "-NF3", NULL, "CSV file with NF3 cross sections.", &one);
     add_argument(&parser, "-O2", NULL, "Include O2.", NULL);
     add_argument(&parser, "-O2-N2", NULL, "CSV file with O2-N2 collison cross sections", &one);
     add_argument(&parser, "-O2-O2", NULL, "CSV file with O2-O2 collison cross sections", &one);
     add_argument(&parser, "-O3", NULL, "Include O3.", NULL);
+    add_argument(&parser, "-SF6", NULL, "CSV file with SF6 cross sections.", &one);
     add_argument(&parser, "-c", "--line-cutoff", "Cutoff [1/cm] from line center.", &one);
     add_argument(&parser, "-h2o-ctm", NULL, "Directory containing H2O continuum files", &one);
     add_argument(&parser, "-o", NULL, "Name of output file.", &one);
@@ -262,15 +274,27 @@ int main(int argc, char **argv)
         cfc[i].path = malloc(sizeof(*(cfc[i].path))*valuelen);
     }
     int num_cfcs = 0;
+    activate_cfc(parser, "-CCl4", NULL, cfc, CCl4, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-C2F6", NULL, cfc, C2F6, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CF4", NULL, cfc, CF4, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CH2Cl2", NULL, cfc, CH2Cl2, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-CFC-11", "-CFC-11-eq", cfc, CFC11, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-CFC-12", "-CFC-12-eq", cfc, CFC12, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-CFC-113", NULL, cfc, CFC113, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CFC-114", NULL, cfc, CFC114, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-CFC-115", NULL, cfc, CFC115, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HCFC-22", NULL, cfc, HCFC22, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HCFC-141b", NULL, cfc, HCFC141b, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HCFC-142b", NULL, cfc, HCFC142b, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HFC-23", NULL, cfc, HFC23, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HFC-125", NULL, cfc, HFC125, &num_cfcs, MAX_NUM_CFCS);
     activate_cfc(parser, "-HFC-134a", "-HFC-134a-eq", cfc, HFC134a, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-143a", NULL, cfc, HFC143a, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-152a", NULL, cfc, HFC152a, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-227ea", NULL, cfc, HFC227ea, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-HFC-245fa", NULL, cfc, HFC245fa, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-NF3", NULL, cfc, NF3, &num_cfcs, MAX_NUM_CFCS);
+    activate_cfc(parser, "-SF6", NULL, cfc, SF6, &num_cfcs, MAX_NUM_CFCS);
 
     /*Determine which collision-induced absorption spectra to include.*/
     int cia_species[MAX_NUM_CIAS];

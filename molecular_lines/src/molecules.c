@@ -169,7 +169,7 @@ int molecule(Molecule_t * const mol, /**< Molecule object.*/
             mol->mass = 65.991722f;
             mol->num_isotopologues = 2;
             break;
-        case SF6:
+        case SF6_MOL:
             snprintf(mol->name, MOL_NAME_LEN, "SF6");
             mol->mass = 145.962492f;
             mol->num_isotopologues = 1;
@@ -229,7 +229,7 @@ int molecule(Molecule_t * const mol, /**< Molecule object.*/
             mol->mass = 41.026549f;
             mol->num_isotopologues = 4;
             break;
-        case CF4:
+        case CF4_MOL:
             snprintf(mol->name, MOL_NAME_LEN, "CF4");
             mol->mass = 87.993616f;
             mol->num_isotopologues = 1;

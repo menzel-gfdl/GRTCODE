@@ -303,6 +303,12 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
             case CFC113:
                 cfc_name = "cfc113_GM";
                 break;
+            case CFC114:
+                cfc_name = "cfc114_GM";
+                break;
+            case CFC115:
+                cfc_name = "cfc115_GM";
+                break;
             case HCFC22:
                 cfc_name = "hcfc22_GM";
                 break;
@@ -327,6 +333,36 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
                 {
                     cfc_name = "hfc134a_GM";
                 }
+                break;
+            case HFC143a:
+                cfc_name = "hfc143a_GM";
+                break;
+            case HFC152a:
+                cfc_name = "hfc152a_GM";
+                break;
+            case HFC227ea:
+                cfc_name = "hfc227ea_GM";
+                break;
+            case HFC245fa:
+                cfc_name = "hfc245fa_GM";
+                break;
+            case CCl4:
+                cfc_name = "carbon_tetrachloride_GM";
+                break;
+            case C2F6:
+                cfc_name = "c2f6_GM";
+                break;
+            case CF4:
+                cfc_name = "cf4_GM";
+                break;
+            case CH2Cl2:
+                cfc_name = "ch2cl2_GM";
+                break;
+            case NF3:
+                cfc_name = "nf3_GM";
+                break;
+            case SF6:
+                cfc_name = "sf6_GM";
                 break;
             default:
                 fprintf(stderr, "[%s: %d] unknown CFC id.\n", __FILE__, __LINE__);

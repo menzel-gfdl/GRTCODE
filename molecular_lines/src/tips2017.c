@@ -127924,7 +127924,7 @@ fp_t Q(int const mol_id,
         case COF2:
             QT_COF2(T,i,&Qt);
             break;
-        case SF6:
+        case SF6_MOL:
             QT_SF6(T,i,&Qt);
             break;
         case H2S:
@@ -127957,7 +127957,7 @@ fp_t Q(int const mol_id,
         case CH3CN:
             QT_CH3CN(T,i,&Qt);
             break;
-        case CF4:
+        case CF4_MOL:
             QT_CF4(T,i,&Qt);
             break;
         case C4H2:
