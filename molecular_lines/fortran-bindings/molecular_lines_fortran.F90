@@ -1,0 +1,412 @@
+module molecular_lines
+use, intrinsic :: iso_c_binding, only: c_char, c_double, c_int, c_int64_t, c_null_char, &
+                                       c_null_ptr, c_ptr
+use rs_utils, only: Device_t, free_struct, Grid_t, grtcode_success, malloc_struct, Optics_t
+
+
+#ifdef SINGLE_PRECISION
+integer, parameter :: fp = c_float
+#else
+integer, parameter :: fp = c_double
+#endif
+integer, parameter :: molecular_lines_struct = 2
+
+
+type, public :: MolecularLines_t
+  type(c_ptr) :: ml !< Pointer to molecular lines object.
+end type MolecularLines_t
+
+
+interface create_molecular_lines
+  !> @brief Reserve memory for molecular lines.
+  !! @return RS_SUCCESS or an error code.
+  function c_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o_ctm_dir, &
+                                    o3_ctm_dir, wcutoff, optical_depth_method) &
+    result(return_code) &
+    bind(c, name="create_molecular_lines")
+    import c_char, c_double, c_int, c_ptr
+    type(c_ptr), value :: ml !< Molecular lines object.
+    integer(kind=c_int), intent(in), value :: num_levels !< Number of atmospheric levels.
+    type(c_ptr), intent(in), value :: grid !< Spectral grid.
+    integer(kind=c_int), intent(in) :: device !< Device.
+    character(kind=c_char, len=1), dimension(*), intent(in) :: hitran_path !< Path to HITRAN database file.
+    character(kind=c_char, len=1), dimension(*), intent(in) :: h2o_ctm_dir !< Path to water vapor continuum directory.
+    character(kind=c_char, len=1), dimension(*), intent(in) :: o3_ctm_dir !< Path to ozone continuum directory.
+    real(kind=c_double), intent(in), optional :: wcutoff !< Cutoff from line center [1/cm].
+    integer(kind=c_int), intent(in), optional :: optical_depth_method !< Method used to calculate the optical depths.
+    integer(kind=c_int) :: return_code
+  end function c_create_molecular_lines
+  module procedure f_create_molecular_lines
+end interface create_molecular_lines
+public :: create_molecular_lines
+
+
+interface destroy_molecular_lines
+  !> @brief Free memory for the molecular lines.
+  !! @return RS_SUCCESS or an error code.
+  function c_destroy_molecular_lines(ml) &
+    result(return_code) &
+    bind(c, name="destroy_molecular_lines")
+    import c_int, c_ptr
+    type(c_ptr), value :: ml !< Molecular lines object.
+    integer(kind=c_int) :: return_code
+  end function c_destroy_molecular_lines
+  module procedure f_destroy_molecular_lines
+end interface destroy_molecular_lines
+public :: destroy_molecular_lines
+
+
+interface add_molecule
+  !> @brief Add a molecule.
+  !! @return RS_SUCCESS or an error code.
+  function grt_add_molecule(ml, molecule_id, min_line_center, max_line_center) &
+    result(return_code) &
+    bind(c)
+    import c_double, c_int, c_ptr
+    type(c_ptr), value :: ml !< Molecular lines object.
+    integer(kind=c_int), intent(in), value :: molecule_id !< Molecule id.
+    real(kind=c_double), intent(in), optional :: min_line_center !< Lower bound [1/cm] for spectral line centers.
+    real(kind=c_double), intent(in), optional :: max_line_center !< Upper bound [1/cm] for spectral line centers.
+    integer(kind=c_int) :: return_code
+  end function grt_add_molecule
+  module procedure f_add_molecule
+end interface add_molecule
+public :: add_molecule
+
+
+interface set_molecule_ppmv
+  !> @brief Update a molecule's ppmv.
+  !! @return RS_SUCCESS or an error code.
+  function grt_set_molecule_ppmv(ml, molecule_id, ppmv) &
+    result(return_code) &
+    bind(c)
+    import c_int, c_ptr, fp
+    type(c_ptr), value :: ml !< Molecular lines object.
+    integer(kind=c_int), intent(in), value :: molecule_id  !< Molecule id.
+    real(kind=fp), dimension(*), intent(in) :: ppmv !< Abundance [ppmv] (level).
+    integer(kind=c_int) :: return_code
+  end function grt_set_molecule_ppmv
+  module procedure f_set_molecule_ppmv
+end interface set_molecule_ppmv
+public :: set_molecule_ppmv
+
+
+interface add_cfc
+  !> @brief Add a CFC.
+  !! @return RS_SUCCESS or an error code.
+  function grt_add_cfc(ml, cfc_id, filepath) &
+    result(return_code) &
+    bind(c)
+    import c_char, c_int, c_ptr
+    type(c_ptr), value :: ml !< Molecular lines object.
+    integer(kind=c_int), intent(in), value :: cfc_id !< CFC id.
+    character(kind=c_char, len=1), dimension(*), intent(in) :: filepath !< Path to CFC cross section csv file.
+    integer(kind=c_int) :: return_code
+  end function grt_add_cfc
+  module procedure f_add_cfc
+end interface add_cfc
+public :: add_cfc
+
+
+interface set_cfc_ppmv
+  !> @brief Update a CFC's ppmv.
+  !! @return RS_SUCCESS or an error code.
+  function grt_set_cfc_ppmv(ml, cfc_id, ppmv) &
+    result(return_code) &
+    bind(c)
+    import c_int, c_ptr, fp
+    type(c_ptr), value :: ml !< Molecular lines object.
+    integer(kind=c_int), intent(in), value :: cfc_id !< CFC id.
+    real(kind=fp), dimension(*), intent(in) :: ppmv !< Abundance [ppmv] (level).
+    integer(kind=c_int) :: return_code
+  end function grt_set_cfc_ppmv
+  module procedure f_set_cfc_ppmv
+end interface set_cfc_ppmv
+public :: set_cfc_ppmv
+
+
+interface add_cia
+  !> @brief Activate collision-induced absorption between two species.
+  !! @return RS_SUCCESS or an error code.
+  function grt_add_cia(ml, species1, species2, filepath) &
+    result(return_code) &
+    bind(c)
+    import c_char, c_int, c_ptr
+    type(c_ptr), value :: ml !< Molecular lines object.
+    integer(kind=c_int), intent(in), value :: species1 !< Id of species.
+    integer(kind=c_int), intent(in), value :: species2 !< Id of species.
+    character(kind=c_char, len=1), dimension(*), intent(in) :: filepath !< Path to cross section csv file.
+    integer(kind=c_int) :: return_code
+  end function grt_add_cia
+  module procedure f_add_cia
+end interface add_cia
+public :: add_cia
+
+
+interface set_cia_ppmv
+  !> @brief Update a CIA species' ppmv.
+  !! @return RS_SUCCESS or an error code.
+  function grt_set_cia_ppmv(ml, cia_id, ppmv) &
+    result(return_code) &
+    bind(c)
+    import c_int, c_ptr, fp
+    type(c_ptr), value :: ml !< Molecularlines object.
+    integer(kind=c_int), intent(in), value :: cia_id !< CIA species id.
+    real(kind=fp), dimension(*), intent(in) :: ppmv !< Abundance [ppmv] (level).
+    integer(kind=c_int) :: return_code
+  end function grt_set_cia_ppmv
+  module procedure f_set_cia_ppmv
+end interface set_cia_ppmv
+public :: set_cia_ppmv
+
+
+interface calculate_optics
+  !> @brief Calcluate the total optical depth in each layer at each spectral grid point.
+  !! @return RS_SUCCESS or an error code.
+  function grt_calculate_optical_depth(ml, pressure, temperature, optics) &
+    result(return_code) &
+    bind(c)
+    import c_int, c_ptr, fp
+    type(c_ptr), value :: ml !< Molecular lines object.
+    real(kind=fp), dimension(*), intent(in) :: pressure !< Pressure [mb] (level).
+    real(kind=fp), dimension(*), intent(in) :: temperature !< Temperature [K] (level).
+    type(c_ptr), value :: optics !< Optics object.
+    integer(kind=c_int) :: return_code
+  end function grt_calculate_optical_depth
+  module procedure f_calculate_optics
+end interface calculate_optics
+public :: calculate_optics
+
+
+interface num_molecules
+  !> @brief Get the number of molecules.
+  !! @return RS_SUCCESS or an error code.
+  function grt_get_num_molecules(ml, n) &
+    result(return_code) &
+    bind(c)
+    import c_int, c_ptr
+    type(c_ptr), intent(in), value :: ml !< Molecular lines object.
+    integer(kind=c_int), intent(out) :: n !< Number of molecules.
+    integer(kind=c_int) :: return_code
+  end function grt_get_num_molecules
+  module procedure f_num_molecules
+end interface num_molecules
+public :: num_molecules
+
+
+interface spectral_grid_size
+  !> @brief Get the number of spectral grid points.
+  !! @return RS_SUCCESS or an error code.
+  function grt_get_spectral_grid_size(ml, n) &
+    result(return_code) &
+    bind(c)
+    import c_int, c_int64_t, c_ptr
+    type(c_ptr), intent(in), value :: ml !< Molecular lines object.
+    integer(kind=c_int64_t), intent(out) :: n !< Spectral grid size.
+    integer(kind=c_int) :: return_code
+  end function grt_get_spectral_grid_size
+  module procedure f_spectral_grid_size
+end interface spectral_grid_size
+public :: spectral_grid_size
+
+
+interface grt_errstr
+  !> @brief Return a message for an input return code.
+  !! @return RS_SUCCESS or an error code.
+  function c_grt_errstr(code, buf, buf_size) &
+    result(return_code) &
+    bind(c, name="grt_errstr")
+    import c_char, c_int
+    integer(kind=c_int), intent(in), value :: code !< Error code.
+    character(kind=c_char, len=1), dimension(*) :: buf !< Buffer to hold error message.
+    integer(kind=c_int), intent(in), value :: buf_size !< Size of input buffer.
+    integer(kind=c_int) :: return_code
+  end function c_grt_errstr
+  module procedure f_grt_errstr
+end interface grt_errstr
+public :: grt_errstr
+
+
+contains
+
+
+subroutine append_null_char(str_in, array_out)
+  character(kind=c_char, len=*), intent(in) :: str_in
+  character(kind=c_char, len=1), dimension(:), allocatable, intent(inout) :: array_out
+  integer :: i
+  if (allocated(array_out)) then
+    deallocate(array_out)
+  endif
+  allocate(array_out(len(str_in)+1))
+  do i = 1, len(str_in)
+    array_out(i) = str_in(i:i)
+  enddo
+  array_out(i) = c_null_char
+end subroutine append_null_char
+
+
+function f_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o_ctm_dir, &
+                                  o3_ctm_dir, wcutoff, optical_depth_method) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  integer(kind=c_int), intent(in) :: num_levels !< Number of atmospheric levels.
+  type(Grid_t), intent(in) :: grid !< Spectral grid.
+  type(Device_t), intent(in) :: device !< Device.
+  character(kind=c_char, len=*), intent(in) :: hitran_path !< Path to HITRAN database file.
+  character(kind=c_char, len=*), intent(in), optional :: h2o_ctm_dir !< Path to water vapor continuum directory.
+  character(kind=c_char, len=*), intent(in), optional :: o3_ctm_dir !< Path to ozone continuum directory.
+  real(kind=c_double), intent(in), optional :: wcutoff !< Cutoff from line center [1/cm].
+  integer(kind=c_int), intent(in), optional :: optical_depth_method !< Method used to calculate the optical depths.
+  integer(kind=c_int) :: return_code
+  character(kind=c_char, len=1), dimension(:), allocatable :: hitran
+  character(kind=c_char, len=1), dimension(:), allocatable :: h2o
+  character(kind=c_char, len=1), dimension(:), allocatable :: o3
+  call append_null_char(hitran_path, hitran)
+  if (present(h2o_ctm_dir)) then
+    call append_null_char(h2o_ctm_dir, h2o)
+  else
+    call append_null_char("none", h2o)
+  endif
+  if (present(o3_ctm_dir)) then
+    call append_null_char(o3_ctm_dir, o3)
+  else
+    call append_null_char("none", o3)
+  endif
+  ml%ml = c_null_ptr
+  return_code = malloc_struct(ml%ml, molecular_lines_struct)
+  if (return_code .ne. grtcode_success) then
+    return
+  endif
+  return_code = c_create_molecular_lines(ml%ml, num_levels, grid%grid, device%device, &
+                                         hitran, h2o, o3, wcutoff, optical_depth_method)
+  deallocate(hitran)
+  deallocate(h2o)
+  deallocate(o3)
+end function f_create_molecular_lines
+
+
+function f_destroy_molecular_lines(ml) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  integer(kind=c_int) :: return_code
+  return_code = c_destroy_molecular_lines(ml%ml)
+  if (return_code .ne. grtcode_success) then
+    return
+  endif
+  return_code = free_struct(ml%ml)
+end function f_destroy_molecular_lines
+
+
+function f_add_molecule(ml, molecule_id, min_line_center, max_line_center) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  integer(kind=c_int), intent(in) :: molecule_id !< Molecule id.
+  real(kind=c_double), intent(in), optional :: min_line_center !< Lower bound [1/cm] for spectral line centers.
+  real(kind=c_double), intent(in), optional :: max_line_center !< Upper bound [1/cm] for spectral line centers.
+  integer(kind=c_int) :: return_code
+  return_code = grt_add_molecule(ml%ml, molecule_id, min_line_center, max_line_center)
+end function f_add_molecule
+
+
+function f_set_molecule_ppmv(ml, molecule_id, ppmv) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  integer(kind=c_int), intent(in) :: molecule_id  !< Molecule id.
+  real(kind=fp), dimension(:), intent(in) :: ppmv !< Abundance [ppmv] (level).
+  integer(kind=c_int) :: return_code
+  return_code = grt_set_molecule_ppmv(ml%ml, molecule_id, ppmv)
+end function f_set_molecule_ppmv
+
+
+function f_add_cfc(ml, cfc_id, filepath) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  integer(kind=c_int), intent(in) :: cfc_id !< CFC id.
+  character(kind=c_char, len=*), intent(in) :: filepath !< Path to CFC cross section csv file.
+  integer(kind=c_int) :: return_code
+  character(kind=c_char, len=1), dimension(:), allocatable :: buf
+  call append_null_char(filepath, buf)
+  return_code = grt_add_cfc(ml%ml, cfc_id, buf)
+  deallocate(buf)
+end function f_add_cfc
+
+
+function f_set_cfc_ppmv(ml, cfc_id, ppmv) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  integer(kind=c_int), intent(in) :: cfc_id !< CFC id.
+  real(kind=fp), dimension(:), intent(in) :: ppmv !< Abundance [ppmv] (level).
+  integer(kind=c_int) :: return_code
+  return_code = grt_set_cfc_ppmv(ml%ml, cfc_id, ppmv)
+end function f_set_cfc_ppmv
+
+
+function f_add_cia(ml, species1, species2, filepath) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  integer(kind=c_int), intent(in) :: species1 !< Id of species.
+  integer(kind=c_int), intent(in) :: species2 !< Id of species.
+  character(kind=c_char, len=*), intent(in) :: filepath !< Path to cross section csv file.
+  integer(kind=c_int) :: return_code
+  character(kind=c_char, len=1), dimension(:), allocatable :: buf
+  call append_null_char(filepath, buf)
+  return_code = grt_add_cia(ml%ml, species1, species2, buf)
+  deallocate(buf)
+end function f_add_cia
+
+
+function f_set_cia_ppmv(ml, cia_id, ppmv) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecularlines object.
+  integer(kind=c_int), intent(in) :: cia_id !< CIA species id.
+  real(kind=fp), dimension(:), intent(in) :: ppmv !< Abundance [ppmv] (level).
+  integer(kind=c_int) :: return_code
+  return_code = grt_set_cia_ppmv(ml%ml, cia_id, ppmv)
+end function f_set_cia_ppmv
+
+
+function f_calculate_optics(ml, pressure, temperature, optics) &
+  result(return_code)
+  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  real(kind=fp), dimension(:), intent(in) :: pressure !< Pressure [mb] (level).
+  real(kind=fp), dimension(:), intent(in) :: temperature !< Temperature [K] (level).
+  type(Optics_t), intent(inout) :: optics !< Optics object.
+  integer(kind=c_int) :: return_code
+  return_code = grt_calculate_optical_depth(ml%ml, pressure, temperature, optics%optics)
+end function f_calculate_optics
+
+
+function f_num_molecules(ml, n) &
+  result(return_code)
+  type(MolecularLines_t), intent(in) :: ml !< Molecular lines object.
+  integer(kind=c_int), intent(out) :: n !< Number of molecules.
+  integer(kind=c_int) :: return_code
+  return_code = grt_get_num_molecules(ml%ml, n)
+end function f_num_molecules
+
+
+function f_spectral_grid_size(ml, n) &
+  result(return_code)
+  type(MolecularLines_t), intent(in) :: ml !< Molecular lines object.
+  integer(kind=c_int64_t), intent(out) :: n !< Spectral grid size.
+  integer(kind=c_int) :: return_code
+  return_code = grt_get_spectral_grid_size(ml%ml, n)
+end function f_spectral_grid_size
+
+
+function f_grt_errstr(code, buf) &
+  result(return_code)
+  integer(kind=c_int), intent(in) :: code !< Error code.
+  character(kind=c_char, len=*), intent(inout) :: buf !< Buffer to hold error message.
+  integer(kind=c_int) :: return_code
+  integer :: i
+  return_code = c_grt_errstr(code, buf, len(buf))
+  do i = 1, len(buf)
+    if (buf(i:i) .eq. c_null_char) then
+      buf(i:i) = " "
+    endif
+  enddo
+end function f_grt_errstr
+
+
+end module molecular_lines

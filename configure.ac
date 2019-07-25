@@ -12,6 +12,7 @@ LT_PREREQ([2.4])
 LT_INIT()
 AC_PROG_INSTALL
 AC_SYS_LARGEFILE
+
 AC_ARG_ENABLE([single_precision],
 [--enable-single-precision Use single precision],
 [case "${enableval}" in
@@ -20,11 +21,23 @@ AC_ARG_ENABLE([single_precision],
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-single-precision]) ;;
 esac],[single_precision=false])
 AM_CONDITIONAL([USE_SINGLE_PRECISION], [test x$single_precision = xtrue])
+
+AC_ARG_ENABLE([fortran],
+[--enable-fortran Build fortran bindings],
+[case "${enableval}" in
+  yes) fortran=true ;;
+  no)  fortran=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-fortran]) ;;
+esac],[fortran=false])
+AM_CONDITIONAL([FORTRAN_BINDINGS], [test x$fortran = xtrue])
+AC_PROG_FC
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
                  rs_utils/Makefile rs_utils/src/Makefile
                  molecular_lines/Makefile molecular_lines/src/Makefile
                  shortwave/Makefile shortwave/src/Makefile shortwave/test/Makefile
                  longwave/Makefile longwave/src/Makefile longwave/test/Makefile
-                 rfmip-irf/Makefile rfmip-irf/src/Makefile rfmip-irf/test/Makefile])
+                 rfmip-irf/Makefile rfmip-irf/src/Makefile rfmip-irf/test/Makefile
+                 rs_utils/fortran-bindings/Makefile molecular_lines/fortran-bindings/Makefile])
 AC_OUTPUT
