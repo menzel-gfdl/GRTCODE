@@ -114,6 +114,16 @@ end interface
 public :: free_struct
 
 
+interface
+  subroutine rs_set_verbosity(level) &
+    bind(c)
+    import c_int
+    integer(kind=c_int), intent(in), value :: level
+  end subroutine rs_set_verbosity
+end interface
+public :: rs_set_verbosity
+
+
 contains
 
 

@@ -193,7 +193,7 @@ int parse_hitran_file(LineParams_t * const line_params,
     char *mesg = "Opening and reading HITRAN line parameters from file %s.";
     log_info(mesg, filename);
     FILE *fp = NULL;
-    open_file(&fp, filename, "r");
+    catch(open_file(&fp, filename, "r"));
 
     /*Count the number of lines in the file.*/
     size_t const max_line = 163;

@@ -10,6 +10,59 @@ integer, parameter :: fp = c_float
 integer, parameter :: fp = c_double
 #endif
 integer, parameter :: molecular_lines_struct = 2
+integer(kind=c_int), parameter, public :: H2O = 1
+integer(kind=c_int), parameter, public :: CO2 = 2
+integer(kind=c_int), parameter, public :: O3 = 3
+integer(kind=c_int), parameter, public :: N2O = 4
+integer(kind=c_int), parameter, public :: CO = 5
+integer(kind=c_int), parameter, public :: CH4 = 6
+integer(kind=c_int), parameter, public :: O2 = 7
+integer(kind=c_int), parameter, public :: NO = 8
+integer(kind=c_int), parameter, public :: SO2 = 9
+integer(kind=c_int), parameter, public :: NO2 = 10
+integer(kind=c_int), parameter, public :: NH3 = 11
+integer(kind=c_int), parameter, public :: HNO3 = 12
+integer(kind=c_int), parameter, public :: OH = 13
+integer(kind=c_int), parameter, public :: HF = 14
+integer(kind=c_int), parameter, public :: HCl = 15
+integer(kind=c_int), parameter, public :: HBr = 16
+integer(kind=c_int), parameter, public :: HI = 17
+integer(kind=c_int), parameter, public :: ClO = 18
+integer(kind=c_int), parameter, public :: OCS = 19
+integer(kind=c_int), parameter, public :: H2CO = 20
+integer(kind=c_int), parameter, public :: HOCl = 21
+integer(kind=c_int), parameter, public :: N2 = 22
+integer(kind=c_int), parameter, public :: HCN = 23
+integer(kind=c_int), parameter, public :: CH3Cl = 24
+integer(kind=c_int), parameter, public :: H2O2 = 25
+integer(kind=c_int), parameter, public :: C2H2 = 26
+integer(kind=c_int), parameter, public :: C2H6 = 27
+integer(kind=c_int), parameter, public :: PH3 = 28
+integer(kind=c_int), parameter, public :: COF2 = 29
+integer(kind=c_int), parameter, public :: SF6_MOL = 30
+integer(kind=c_int), parameter, public :: H2S = 31
+integer(kind=c_int), parameter, public :: HCOOH = 32
+integer(kind=c_int), parameter, public :: HO2 = 33
+integer(kind=c_int), parameter, public :: O = 34
+integer(kind=c_int), parameter, public :: ClONO2 = 35
+integer(kind=c_int), parameter, public :: NOp = 36
+integer(kind=c_int), parameter, public :: HOBr = 37
+integer(kind=c_int), parameter, public :: C2H4 = 38
+integer(kind=c_int), parameter, public :: CH3OH = 39
+integer(kind=c_int), parameter, public :: CH3Br = 40
+integer(kind=c_int), parameter, public :: CH3CN = 41
+integer(kind=c_int), parameter, public :: CF4_MOL = 42
+integer(kind=c_int), parameter, public :: C4H2 = 43
+integer(kind=c_int), parameter, public :: HC3N = 44
+integer(kind=c_int), parameter, public :: H2 = 45
+integer(kind=c_int), parameter, public :: CS = 46
+integer(kind=c_int), parameter, public :: SO3 = 47
+integer(kind=c_int), parameter, public :: C2N2 = 48
+integer(kind=c_int), parameter, public :: COCl2 = 49
+integer(kind=c_int), parameter, public :: SO = 50
+integer(kind=c_int), parameter, public :: C3H4 = 51
+integer(kind=c_int), parameter, public :: CH3 = 52
+integer(kind=c_int), parameter, public :: CS2 = 53
 
 
 type, public :: MolecularLines_t
@@ -234,11 +287,13 @@ subroutine append_null_char(str_in, array_out)
   character(kind=c_char, len=*), intent(in) :: str_in
   character(kind=c_char, len=1), dimension(:), allocatable, intent(inout) :: array_out
   integer :: i
+  integer :: s
   if (allocated(array_out)) then
     deallocate(array_out)
   endif
-  allocate(array_out(len(str_in)+1))
-  do i = 1, len(str_in)
+  s = len_trim(str_in)
+  allocate(array_out(s+1))
+  do i = 1, s
     array_out(i) = str_in(i:i)
   enddo
   array_out(i) = c_null_char
@@ -259,18 +314,18 @@ function f_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o
   integer(kind=c_int), intent(in), optional :: optical_depth_method !< Method used to calculate the optical depths.
   integer(kind=c_int) :: return_code
   character(kind=c_char, len=1), dimension(:), allocatable :: hitran
-  character(kind=c_char, len=1), dimension(:), allocatable :: h2o
-  character(kind=c_char, len=1), dimension(:), allocatable :: o3
+  character(kind=c_char, len=1), dimension(:), allocatable :: h2ob
+  character(kind=c_char, len=1), dimension(:), allocatable :: o3b
   call append_null_char(hitran_path, hitran)
   if (present(h2o_ctm_dir)) then
-    call append_null_char(h2o_ctm_dir, h2o)
+    call append_null_char(h2o_ctm_dir, h2ob)
   else
-    call append_null_char("none", h2o)
+    call append_null_char("none", h2ob)
   endif
   if (present(o3_ctm_dir)) then
-    call append_null_char(o3_ctm_dir, o3)
+    call append_null_char(o3_ctm_dir, o3b)
   else
-    call append_null_char("none", o3)
+    call append_null_char("none", o3b)
   endif
   ml%ml = c_null_ptr
   return_code = malloc_struct(ml%ml, molecular_lines_struct)
@@ -278,10 +333,10 @@ function f_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o
     return
   endif
   return_code = c_create_molecular_lines(ml%ml, num_levels, grid%grid, device%device, &
-                                         hitran, h2o, o3, wcutoff, optical_depth_method)
+                                         hitran, h2ob, o3b, wcutoff, optical_depth_method)
   deallocate(hitran)
-  deallocate(h2o)
-  deallocate(o3)
+  deallocate(h2ob)
+  deallocate(o3b)
 end function f_create_molecular_lines
 
 
