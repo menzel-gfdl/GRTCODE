@@ -475,19 +475,6 @@ EXTERN int grt_get_num_molecules(MolecularLines_t const * const ml, /**< Molecul
 }
 
 
-/** @brief Get the number of spectral grid points.
-    @return RS_SUCCESS or an error code.*/
-EXTERN int grt_get_spectral_grid_size(MolecularLines_t const * const ml, /**< Molecular lines object.*/
-                                      uint64_t * const n /**< Spectral grid size.*/
-                                     )
-{
-    not_null(ml);
-    not_null(n);
-    *n = ml->grid.n;
-    return RS_SUCCESS;
-}
-
-
 /*Return a message for an input return code.*/
 EXTERN int grt_errstr(int const code, char * const buf, int const buf_size)
 {

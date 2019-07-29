@@ -1,11 +1,16 @@
 !> @file
 !! @brief Fortran bindings for utilities.
 module rs_utils
-use, intrinsic :: iso_c_binding, only: c_double, c_int, c_null_ptr, c_ptr
+use, intrinsic :: iso_c_binding, only: c_double, c_float, c_int, c_int64_t, c_null_ptr, c_ptr
 implicit none
 private
 
 
+#ifdef SINGLE_PRECISION
+integer, parameter :: fp = c_float
+#else
+integer, parameter :: fp = c_double
+#endif
 integer, parameter, public :: grtcode_success = 0
 integer, parameter :: grid_struct = 0
 integer, parameter :: optics_struct = 1
@@ -124,6 +129,40 @@ end interface
 public :: rs_set_verbosity
 
 
+interface optical_properties
+  function c_optical_properties(optics, tau, omega, g) &
+    result(error_code) &
+    bind(c, name="optical_properties")
+    import c_int, c_ptr, fp
+    type(c_ptr), intent(in), value :: optics
+    real(kind=fp), dimension(*), intent(inout), optional :: tau
+    real(kind=fp), dimension(*), intent(inout), optional :: omega
+    real(kind=fp), dimension(*), intent(inout), optional :: g
+    integer(kind=c_int) :: error_code
+  end function c_optical_properties
+  module procedure f_optical_properties
+end interface optical_properties
+public :: optical_properties
+
+
+interface spectral_grid_properties
+  !> @brief Get the spectral grid properties.
+  !! @return RS_SUCCESS or an error code.
+  function c_spectral_grid_properties(grid, w0, n, dw) &
+    result(return_code) &
+    bind(c, name="spectral_grid_properties")
+    import c_double, c_int, c_int64_t, c_ptr
+    type(c_ptr), intent(in), value :: grid !< Spectral grid.
+    real(kind=c_double), intent(out), optional :: w0 !< Grid lower bound.
+    integer(kind=c_int64_t), intent(out), optional :: n !< Grid size.
+    real(kind=c_double), intent(out), optional :: dw !< Grid spacing.
+    integer(kind=c_int) :: return_code
+  end function c_spectral_grid_properties
+  module procedure f_spectral_grid_properties
+end interface spectral_grid_properties
+public :: spectral_grid_properties
+
+
 contains
 
 
@@ -186,6 +225,28 @@ function f_destroy_optics(optics) &
   endif
   error_code = free_struct(optics%optics)
 end function f_destroy_optics
+
+
+function f_optical_properties(optics, tau, omega, g) &
+  result(error_code)
+  type(Optics_t), intent(in) :: optics
+  real(kind=fp), dimension(:,:), intent(inout), optional :: tau
+  real(kind=fp), dimension(:,:), intent(inout), optional :: omega
+  real(kind=fp), dimension(:,:), intent(inout), optional :: g
+  integer(kind=c_int) :: error_code
+  error_code = c_optical_properties(optics%optics, tau, omega, g)
+end function f_optical_properties
+
+
+function f_spectral_grid_properties(grid, w0, n, dw) &
+  result(return_code)
+  type(Grid_t), intent(in) :: grid !< Molecular lines object.
+  real(kind=c_double), intent(out), optional :: w0 !< Grid lower bound.
+  integer(kind=c_int64_t), intent(out), optional :: n !< Grid size.
+  real(kind=c_double), intent(out), optional :: dw !< Grid spacing.
+  integer(kind=c_int) :: return_code
+  return_code = c_spectral_grid_properties(grid%grid, w0, n, dw)
+end function f_spectral_grid_properties
 
 
 end module rs_utils

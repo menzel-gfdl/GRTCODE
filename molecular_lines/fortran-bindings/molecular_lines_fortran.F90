@@ -1,5 +1,5 @@
 module molecular_lines
-use, intrinsic :: iso_c_binding, only: c_char, c_double, c_int, c_int64_t, c_null_char, &
+use, intrinsic :: iso_c_binding, only: c_char, c_double, c_int, c_null_char, &
                                        c_null_ptr, c_ptr
 use rs_utils, only: Device_t, free_struct, Grid_t, grtcode_success, malloc_struct, Optics_t
 
@@ -247,22 +247,6 @@ end interface num_molecules
 public :: num_molecules
 
 
-interface spectral_grid_size
-  !> @brief Get the number of spectral grid points.
-  !! @return RS_SUCCESS or an error code.
-  function grt_get_spectral_grid_size(ml, n) &
-    result(return_code) &
-    bind(c)
-    import c_int, c_int64_t, c_ptr
-    type(c_ptr), intent(in), value :: ml !< Molecular lines object.
-    integer(kind=c_int64_t), intent(out) :: n !< Spectral grid size.
-    integer(kind=c_int) :: return_code
-  end function grt_get_spectral_grid_size
-  module procedure f_spectral_grid_size
-end interface spectral_grid_size
-public :: spectral_grid_size
-
-
 interface grt_errstr
   !> @brief Return a message for an input return code.
   !! @return RS_SUCCESS or an error code.
@@ -365,7 +349,7 @@ end function f_add_molecule
 
 function f_set_molecule_ppmv(ml, molecule_id, ppmv) &
   result(return_code)
-  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  type(MolecularLines_t), intent(in) :: ml !< Molecular lines object.
   integer(kind=c_int), intent(in) :: molecule_id  !< Molecule id.
   real(kind=fp), dimension(:), intent(in) :: ppmv !< Abundance [ppmv] (level).
   integer(kind=c_int) :: return_code
@@ -422,7 +406,7 @@ end function f_set_cia_ppmv
 
 function f_calculate_optics(ml, pressure, temperature, optics) &
   result(return_code)
-  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  type(MolecularLines_t), intent(in) :: ml !< Molecular lines object.
   real(kind=fp), dimension(:), intent(in) :: pressure !< Pressure [mb] (level).
   real(kind=fp), dimension(:), intent(in) :: temperature !< Temperature [K] (level).
   type(Optics_t), intent(inout) :: optics !< Optics object.
@@ -438,15 +422,6 @@ function f_num_molecules(ml, n) &
   integer(kind=c_int) :: return_code
   return_code = grt_get_num_molecules(ml%ml, n)
 end function f_num_molecules
-
-
-function f_spectral_grid_size(ml, n) &
-  result(return_code)
-  type(MolecularLines_t), intent(in) :: ml !< Molecular lines object.
-  integer(kind=c_int64_t), intent(out) :: n !< Spectral grid size.
-  integer(kind=c_int) :: return_code
-  return_code = grt_get_spectral_grid_size(ml%ml, n)
-end function f_spectral_grid_size
 
 
 function f_grt_errstr(code, buf) &
