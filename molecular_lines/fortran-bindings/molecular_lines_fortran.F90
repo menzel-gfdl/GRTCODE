@@ -63,6 +63,29 @@ integer(kind=c_int), parameter, public :: SO = 50
 integer(kind=c_int), parameter, public :: C3H4 = 51
 integer(kind=c_int), parameter, public :: CH3 = 52
 integer(kind=c_int), parameter, public :: CS2 = 53
+integer(kind=c_int), parameter, public :: CFC11 = 0
+integer(kind=c_int), parameter, public :: CFC12 = 1
+integer(kind=c_int), parameter, public :: CFC113 = 2
+integer(kind=c_int), parameter, public :: CFC114 = 3
+integer(kind=c_int), parameter, public :: CFC115 = 4
+integer(kind=c_int), parameter, public :: HCFC22 = 5
+integer(kind=c_int), parameter, public :: HCFC141b = 6
+integer(kind=c_int), parameter, public :: HCFC142b = 7
+integer(kind=c_int), parameter, public :: HFC23 = 8
+integer(kind=c_int), parameter, public :: HFC125 = 9
+integer(kind=c_int), parameter, public :: HFC134a = 10
+integer(kind=c_int), parameter, public :: HFC143a = 11
+integer(kind=c_int), parameter, public :: HFC152a = 12
+integer(kind=c_int), parameter, public :: HFC227ea = 13
+integer(kind=c_int), parameter, public :: HFC245fa = 14
+integer(kind=c_int), parameter, public :: CCl4 = 15
+integer(kind=c_int), parameter, public :: C2F6 = 16
+integer(kind=c_int), parameter, public :: CF4 = 17
+integer(kind=c_int), parameter, public :: CH2Cl2 = 18
+integer(kind=c_int), parameter, public :: NF3 = 19
+integer(kind=c_int), parameter, public :: SF6 = 20
+integer(kind=c_int), parameter, public :: CIA_N2 = 0
+integer(kind=c_int), parameter, public :: CIA_O2 = 1
 
 
 type, public :: MolecularLines_t
@@ -372,7 +395,7 @@ end function f_add_cfc
 
 function f_set_cfc_ppmv(ml, cfc_id, ppmv) &
   result(return_code)
-  type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
+  type(MolecularLines_t), intent(in) :: ml !< Molecular lines object.
   integer(kind=c_int), intent(in) :: cfc_id !< CFC id.
   real(kind=fp), dimension(:), intent(in) :: ppmv !< Abundance [ppmv] (level).
   integer(kind=c_int) :: return_code
@@ -396,7 +419,7 @@ end function f_add_cia
 
 function f_set_cia_ppmv(ml, cia_id, ppmv) &
   result(return_code)
-  type(MolecularLines_t), intent(inout) :: ml !< Molecularlines object.
+  type(MolecularLines_t), intent(in) :: ml !< Molecularlines object.
   integer(kind=c_int), intent(in) :: cia_id !< CIA species id.
   real(kind=fp), dimension(:), intent(in) :: ppmv !< Abundance [ppmv] (level).
   integer(kind=c_int) :: return_code
@@ -430,9 +453,12 @@ function f_grt_errstr(code, buf) &
   character(kind=c_char, len=*), intent(inout) :: buf !< Buffer to hold error message.
   integer(kind=c_int) :: return_code
   integer :: i
+  logical :: eos
   return_code = c_grt_errstr(code, buf, len(buf))
+  eos = .false.
   do i = 1, len(buf)
-    if (buf(i:i) .eq. c_null_char) then
+    eos = eos .or. buf(i:i) .eq. c_null_char
+    if (eos) then
       buf(i:i) = " "
     endif
   enddo
