@@ -287,6 +287,22 @@ end interface grt_errstr
 public :: grt_errstr
 
 
+interface rayleigh_scattering
+  !> @brief Calculate the optical properties due to Rayleigh scattering.
+  !! @return RS_SUCCESS or an error code.
+  function c_rayleigh_scattering(optics, pressure) &
+    result(return_code) &
+    bind(c, name="rayleigh_scattering")
+    import c_int, c_ptr, fp
+    type(c_ptr), value :: optics !< Optics object.
+    real(kind=fp), dimension(*), intent(in) :: pressure !< Pressure [mb] (level).
+    integer(kind=c_int) :: return_code
+  end function c_rayleigh_scattering
+  module procedure f_rayleigh_scattering
+end interface rayleigh_scattering
+public :: rayleigh_scattering
+
+
 contains
 
 
@@ -463,6 +479,15 @@ function f_grt_errstr(code, buf) &
     endif
   enddo
 end function f_grt_errstr
+
+
+function f_rayleigh_scattering(optics, pressure) &
+  result(return_code)
+  type(Optics_t), intent(inout) :: optics !< Optics object.
+  real(kind=fp), dimension(:), intent(in) :: pressure !< Pressure [mb] (level).
+  integer(kind=c_int) :: return_code
+  return_code = c_rayleigh_scattering(optics%optics, pressure)
+end function f_rayleigh_scattering
 
 
 end module molecular_lines
