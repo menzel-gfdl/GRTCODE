@@ -163,6 +163,23 @@ end interface spectral_grid_properties
 public :: spectral_grid_properties
 
 
+interface add_optics
+  !> @brief Add optical properties together.
+  !! @return RS_SUCCESS or an error code.
+  function c_add_optics(optics, num_optics, res) &
+    result(return_code) &
+    bind(c, name="add_optics")
+    import c_int, c_ptr
+    type(c_ptr), dimension(*) :: optics
+    integer(kind=c_int), intent(in), value :: num_optics
+    type(c_ptr), value :: res
+    integer(kind=c_int) :: return_code
+  end function c_add_optics
+  module procedure f_add_optics
+end interface add_optics
+public :: add_optics
+
+
 contains
 
 
@@ -247,6 +264,24 @@ function f_spectral_grid_properties(grid, w0, n, dw) &
   integer(kind=c_int) :: return_code
   return_code = c_spectral_grid_properties(grid%grid, w0, n, dw)
 end function f_spectral_grid_properties
+
+
+function f_add_optics(optics, res) &
+  result(return_code)
+  type(Optics_t), dimension(:), intent(in) :: optics
+  type(Optics_t), intent(inout) :: res
+  integer(kind=c_int) :: return_code
+  type(c_ptr), dimension(:), allocatable :: p
+  integer(kind=c_int) :: num_optics
+  integer :: i
+  num_optics = size(optics)
+  allocate(p(num_optics))
+  do i = 1, num_optics
+    p(i) = optics(i)%optics
+  enddo
+  return_code = c_add_optics(p, num_optics, res%optics)
+  deallocate(p)
+end function f_add_optics
 
 
 end module rs_utils
