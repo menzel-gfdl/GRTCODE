@@ -1,7 +1,8 @@
 !> @file
 !! @brief Fortran bindings for utilities.
 module rs_utils
-use, intrinsic :: iso_c_binding, only: c_double, c_float, c_int, c_int64_t, c_null_ptr, c_ptr
+use, intrinsic :: iso_c_binding, only: c_char, c_double, c_float, c_int, c_int64_t, &
+                                       c_null_char, c_null_ptr, c_ptr
 implicit none
 private
 
@@ -14,6 +15,8 @@ integer, parameter :: fp = c_double
 integer, parameter, public :: grtcode_success = 0
 integer, parameter :: grid_struct = 0
 integer, parameter :: optics_struct = 1
+integer, parameter :: solar_flux_struct = 3
+public :: append_null_char
 
 
 !> @brief Device object.
@@ -180,7 +183,77 @@ end interface add_optics
 public :: add_optics
 
 
+type, public :: SolarFlux_t
+  type(c_ptr) :: solar_flux !< Pointer to solar flux object.
+end type SolarFlux_t
+
+
+interface create_solar_flux
+  !> @brief Read in data for the solar flux.
+  !! @return RS_SUCCESS or an error code.
+  function c_create_solar_flux(solar_flux, grid, path) &
+    result(return_code) &
+    bind(c, name="create_solar_flux")
+    import c_char, c_int, c_ptr
+    type(c_ptr), value :: solar_flux !< Solar flux object.
+    type(c_ptr), value :: grid !< Spectral grid.
+    character(kind=c_char, len=1), dimension(*), intent(in) :: path !< Solar flux csv file.
+    integer(kind=c_int) :: return_code
+  end function c_create_solar_flux
+  module procedure f_create_solar_flux
+end interface create_solar_flux
+public :: create_solar_flux
+
+
+interface destroy_solar_flux
+  !> @brief Free memory for the solar flux.
+  !! @return RS_SUCCESS or an error code.
+  function c_destroy_solar_flux(solar_flux) &
+    result(return_code) &
+    bind(c, name="destroy_solar_flux")
+    import c_int, c_ptr
+    type(c_ptr), value :: solar_flux !< Solar flux object.
+    integer(kind=c_int) :: return_code
+  end function c_destroy_solar_flux
+  module procedure f_destroy_solar_flux
+end interface destroy_solar_flux
+public :: destroy_solar_flux
+
+
+interface solar_flux_properties
+  !> @brief Get the solar flux properties.
+  !! @return RS_SUCCESS or an error code.
+  function c_solar_flux_properties(solar, flux) &
+    result(return_code) &
+    bind(c, name="solar_flux_properties")
+    import c_int, c_ptr, fp
+    type(c_ptr), intent(in), value :: solar !< Solar flux.
+    real(kind=fp), dimension(*), intent(inout) :: flux !< Flux.
+    integer(kind=c_int) :: return_code
+  end function c_solar_flux_properties
+  module procedure f_solar_flux_properties
+end interface solar_flux_properties
+public :: solar_flux_properties
+
+
 contains
+
+
+subroutine append_null_char(str_in, array_out)
+  character(kind=c_char, len=*), intent(in) :: str_in
+  character(kind=c_char, len=1), dimension(:), allocatable, intent(inout) :: array_out
+  integer :: i
+  integer :: s
+  if (allocated(array_out)) then
+    deallocate(array_out)
+  endif
+  s = len_trim(str_in)
+  allocate(array_out(s+1))
+  do i = 1, s
+    array_out(i) = str_in(i:i)
+  enddo
+  array_out(i) = c_null_char
+end subroutine append_null_char
 
 
 function f_create_device(device, id) &
@@ -282,6 +355,45 @@ function f_add_optics(optics, res) &
   return_code = c_add_optics(p, num_optics, res%optics)
   deallocate(p)
 end function f_add_optics
+
+
+function f_create_solar_flux(solar_flux, grid, path) &
+  result(return_code)
+  type(SolarFlux_t), intent(inout) :: solar_flux !< Solar flux object.
+  type(Grid_t), intent(in) :: grid !< Spectral grid.
+  character(kind=c_char, len=*), intent(in) :: path !< Solar flux csv file.
+  integer(kind=c_int) :: return_code
+  character(kind=c_char, len=1), dimension(:), allocatable :: buf
+  call append_null_char(path, buf)
+  solar_flux%solar_flux = c_null_ptr
+  return_code = malloc_struct(solar_flux%solar_flux, solar_flux_struct)
+  if (return_code .ne. grtcode_success) then
+    return
+  endif
+  return_code = c_create_solar_flux(solar_flux%solar_flux, grid%grid, buf)
+  deallocate(buf)
+end function f_create_solar_flux
+
+
+function f_destroy_solar_flux(solar_flux) &
+  result(return_code)
+  type(SolarFlux_t), intent(inout) :: solar_flux !< Solar flux object.
+  integer(kind=c_int) :: return_code
+  return_code = c_destroy_solar_flux(solar_flux%solar_flux)
+  if (return_code .ne. grtcode_success) then
+    return
+  endif
+  return_code = free_struct(solar_flux%solar_flux)
+end function f_destroy_solar_flux
+
+
+function f_solar_flux_properties(solar, flux) &
+  result(return_code)
+  type(SolarFlux_t), intent(in) :: solar !< Solar flux.
+  real(kind=fp), dimension(:), intent(inout) :: flux !< Flux.
+  integer(kind=c_int) :: return_code
+  return_code = c_solar_flux_properties(solar%solar_flux, flux)
+end function f_solar_flux_properties
 
 
 end module rs_utils

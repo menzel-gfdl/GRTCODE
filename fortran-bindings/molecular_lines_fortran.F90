@@ -1,7 +1,7 @@
 module molecular_lines
 use, intrinsic :: iso_c_binding, only: c_char, c_double, c_int, c_null_char, &
                                        c_null_ptr, c_ptr
-use rs_utils, only: Device_t, free_struct, Grid_t, grtcode_success, malloc_struct, Optics_t
+use rs_utils
 
 
 #ifdef SINGLE_PRECISION
@@ -304,23 +304,6 @@ public :: rayleigh_scattering
 
 
 contains
-
-
-subroutine append_null_char(str_in, array_out)
-  character(kind=c_char, len=*), intent(in) :: str_in
-  character(kind=c_char, len=1), dimension(:), allocatable, intent(inout) :: array_out
-  integer :: i
-  integer :: s
-  if (allocated(array_out)) then
-    deallocate(array_out)
-  endif
-  s = len_trim(str_in)
-  allocate(array_out(s+1))
-  do i = 1, s
-    array_out(i) = str_in(i:i)
-  enddo
-  array_out(i) = c_null_char
-end subroutine append_null_char
 
 
 function f_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o_ctm_dir, &

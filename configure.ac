@@ -39,5 +39,5 @@ AC_CONFIG_FILES([Makefile
                  shortwave/Makefile shortwave/src/Makefile shortwave/test/Makefile
                  longwave/Makefile longwave/src/Makefile longwave/test/Makefile
                  rfmip-irf/Makefile rfmip-irf/src/Makefile rfmip-irf/test/Makefile
-                 rs_utils/fortran-bindings/Makefile molecular_lines/fortran-bindings/Makefile])
+                 fortran-bindings/Makefile])
 AC_OUTPUT

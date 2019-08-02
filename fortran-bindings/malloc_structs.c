@@ -3,13 +3,15 @@
 #include "debug.h"
 #include "molecular_lines.h"
 #include "optics.h"
+#include "solar_flux.h"
 #include "spectral_grid.h"
 
 
 enum StructTypes_t {
     GRID = 0,
     OPTICS,
-    MOLECULAR_LINES
+    MOLECULAR_LINES,
+    SOLAR_FLUX
 };
 
 
@@ -28,6 +30,9 @@ int malloc_struct(void **p, int type)
             break;
         case MOLECULAR_LINES:
             s = sizeof(MolecularLines_t);
+            break;
+        case SOLAR_FLUX:
+            s = sizeof(SolarFlux_t);
             break;
         default:
             {char *mesg = "unrecognized structure type %d.";
@@ -95,5 +100,18 @@ int spectral_grid_properties(SpectralGrid_t const * const grid, /**< Spectral gr
     {
         *dw = grid->dw;
     }
+    return RS_SUCCESS;
+}
+
+
+/** @brief Get the solar flux properties.
+    @return RS_SUCCESS or an error code.*/
+int solar_flux_properties(SolarFlux_t const * const solar, /**< Solar flux.*/
+                          fp_t * const flux /**< Flux.*/
+                         )
+{
+    not_null(solar);
+    not_null(flux);
+    memcpy(flux, solar->incident_flux, sizeof(*(solar->incident_flux))*solar->n);
     return RS_SUCCESS;
 }

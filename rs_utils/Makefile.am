@@ -1,1 +1,1 @@
-SUBDIRS = src fortran-bindings
+SUBDIRS = src
