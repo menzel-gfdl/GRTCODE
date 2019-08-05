@@ -63,6 +63,7 @@ integer(kind=c_int), parameter, public :: SO = 50
 integer(kind=c_int), parameter, public :: C3H4 = 51
 integer(kind=c_int), parameter, public :: CH3 = 52
 integer(kind=c_int), parameter, public :: CS2 = 53
+integer(kind=c_int), parameter, public :: MAX_NUM_MOLECULES = 53
 integer(kind=c_int), parameter, public :: CFC11 = 0
 integer(kind=c_int), parameter, public :: CFC12 = 1
 integer(kind=c_int), parameter, public :: CFC113 = 2
@@ -84,8 +85,10 @@ integer(kind=c_int), parameter, public :: CF4 = 17
 integer(kind=c_int), parameter, public :: CH2Cl2 = 18
 integer(kind=c_int), parameter, public :: NF3 = 19
 integer(kind=c_int), parameter, public :: SF6 = 20
+integer(kind=c_int), parameter, public :: MAX_NUM_CFCS = 21
 integer(kind=c_int), parameter, public :: CIA_N2 = 0
 integer(kind=c_int), parameter, public :: CIA_O2 = 1
+integer(kind=c_int), parameter, public :: MAX_NUM_CIAS = 2
 
 
 type, public :: MolecularLines_t
