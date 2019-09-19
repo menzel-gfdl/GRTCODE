@@ -11,5 +11,6 @@ test_longwave_LDADD = ${top_builddir}/longwave/src/liblongwave.a \
                       -lm
 if ENABLE_CUDA
 test_longwave_LDADD += -lcudart
+nodist_EXTRA_test_longwave_SOURCES = dummy.cpp
 endif
 TESTS = test_longwave

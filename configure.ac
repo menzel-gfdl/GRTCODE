@@ -2,8 +2,7 @@ AC_PREREQ([2.59])
 AC_INIT([gfdl-grtcode], [0.0], [gfdl.climate.model.info@noaa.gov])
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-#AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-zip subdir-objects])
-AM_INIT_AUTOMAKE([-Wall foreign dist-zip subdir-objects])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign dist-zip subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CC
 AC_C_CONST
@@ -37,6 +36,7 @@ esac],[cuda=false])
 AM_CONDITIONAL([ENABLE_CUDA], [test x$cuda = xtrue])
 if test x$cuda = xtrue
 then
+  AC_PROG_CXX
   AC_PATH_PROG([NVCC], [nvcc], [no])
   if test x$NVCC != xno
   then

@@ -27,8 +27,7 @@ autom4te.cache
 .deps
 libtool
 /ltmain.sh
-*.lo
-*.la
+*.a
 .libs
 /texinfo.tex
 m4/libtool.m4

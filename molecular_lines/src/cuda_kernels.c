@@ -10,8 +10,7 @@
 #include "tips2017.h"
 
 
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
-#else
+#if __CUDA_ARCH__ < 600
 __device__ static double atomicAdd(double *address,
                                    double val)
 {

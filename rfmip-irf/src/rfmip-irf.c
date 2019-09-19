@@ -437,8 +437,8 @@ int main(int argc, char **argv)
         fp_t surface_temperature = atm.surface_temperature[i];
         fp_t *layer_temperature = &(atm.layer_temperature[i*atm.num_layers]);
         fp_t *surface_emissivity = &(atm.surface_emissivity[i*atm.num_wavenumber]);
-        double lw_solver_w0 = 1.;
-        double lw_solver_wn = 3250.;
+        double lw_solver_w0 = 1. < grid.w0 ? grid.w0 : 1.;
+        double lw_solver_wn = 3250. > grid.wn ? grid.wn : 3250.;
         SpectralGrid_t lw_solver_grid;
         catch(create_spectral_grid(&lw_solver_grid, lw_solver_w0, lw_solver_wn, grid.dw));
         catch(calculate_lw_fluxes(&longwave, &optics_ml, surface_temperature,

@@ -14,4 +14,5 @@ rfmip_irf_LDADD = ${top_builddir}/shortwave/src/libshortwave.a \
                   -lnetcdf -lm
 if ENABLE_CUDA
 rfmip_irf_LDADD += -lcudart
+nodist_EXTRA_rfmip_irf_SOURCES = dummy.cpp
 endif

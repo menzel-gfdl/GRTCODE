@@ -27,8 +27,8 @@ static double const MIN_CUTOFF = 1.; /**< Smallest cut-off [1/cm]
                                           from a line center allowed.*/
 static double const MAX_CUTOFF = 50.; /**< Larget cut-off [1/cm]
                                            from a line center allowed.*/
-static int const MAX_NUM_LINES = 1048576; /**< Largest number of spectral
-                                               lines per molecule allowed.*/
+static int const MAX_NUM_LINES = 524288; /**< Largest number of spectral
+                                              lines per molecule allowed.*/
 static double const DEFAULT_CUTOFF = 25.; /**< Default cut-off [1/cm] from
                                                a line center.*/
 

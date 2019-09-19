@@ -11,5 +11,6 @@ test_shortwave_LDADD = ${top_builddir}/shortwave/src/libshortwave.a \
                        -lm
 if ENABLE_CUDA
 test_shortwave_LDADD += -lcudart
+nodist_EXTRA_test_shortwave_SOURCES = dummy.cpp
 endif
 TESTS = test_shortwave
