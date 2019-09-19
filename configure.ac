@@ -7,6 +7,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_CPP
+AC_PROG_CXX
 AM_PROG_AR
 AC_PROG_RANLIB
 AC_PROG_INSTALL
@@ -36,7 +37,6 @@ esac],[cuda=false])
 AM_CONDITIONAL([ENABLE_CUDA], [test x$cuda = xtrue])
 if test x$cuda = xtrue
 then
-  AC_PROG_CXX
   AC_PATH_PROG([NVCC], [nvcc], [no])
   if test x$NVCC != xno
   then
