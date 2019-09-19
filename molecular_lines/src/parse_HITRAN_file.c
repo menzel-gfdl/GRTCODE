@@ -164,14 +164,14 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
                 }
                 else
                 {
-                    char *mesg = "value %e from column %d cannot be safely"
-                                 " cast as a float.";
+                    char const *mesg = "value %e from column %d cannot be safely"
+                                       " cast as a float.";
                     raise(RS_VALUE_ERR, mesg, val->d, col);
                 }
             }
             break;
         default:
-            {char *mesg = "cast failed on col %d, LookupCast_t %d, sval: %s.";
+            {char const *mesg = "cast failed on col %d, LookupCast_t %d, sval: %s.";
             raise(RS_VALUE_ERR, mesg, HITRAN2012_fmt[col][0], HITRAN2012_fmt[col][1],
                   sval);}
     }
@@ -190,7 +190,7 @@ int parse_hitran_file(LineParams_t * const line_params,
     not_null(filename);
 
     /*Open the file.*/
-    char *mesg = "Opening and reading HITRAN line parameters from file %s.";
+    char const *mesg = "Opening and reading HITRAN line parameters from file %s.";
     log_info(mesg, filename);
     FILE *fp = NULL;
     catch(open_file(&fp, filename, "r"));

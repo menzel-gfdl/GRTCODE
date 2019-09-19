@@ -50,8 +50,8 @@ EXTERN int create_molecular_lines(MolecularLines_t * const ml, /**< Molecular li
     in_range(num_levels, MIN_NUM_LEVELS, MAX_NUM_LEVELS);
     ml->num_levels = num_levels;
     ml->num_layers = num_levels - 1;
-    char *mesg = "Molecular lines properties:\n\tnumber of levels: %d\n\t"
-                 "number of layers: %d";
+    char const *mesg = "Molecular lines properties:\n\tnumber of levels: %d\n\t"
+                       "number of layers: %d";
     log_info(mesg, ml->num_levels, ml->num_layers);
     not_null(grid);
     ml->grid = *grid;
@@ -228,7 +228,7 @@ EXTERN int grt_add_molecule(MolecularLines_t * const ml, /**< Molecular lines ob
     catch(molecule_hash(molecule_id, &id));
     if (is_active(ml->molecule_bit_field, id))
     {
-        char *mesg = "molecule %d has already been added.";
+        char const *mesg = "molecule %d has already been added.";
         raise(RS_VALUE_ERR, mesg, molecule_id);
     }
     int index = ml->num_molecules;
@@ -258,7 +258,7 @@ EXTERN int grt_add_molecule(MolecularLines_t * const ml, /**< Molecular lines ob
     min_check(wn, w0);
     catch(molecule(&(ml->mols[index]), molecule_id, ml->hitran_path,
                    w0, wn, ml->num_layers, ml->device));
-    char *mesg = "Using %s (%zu lines in range %e - %e [1/cm]).";
+    char const *mesg = "Using %s (%zu lines in range %e - %e [1/cm]).";
     log_mesg(mesg, ml->mols[index].name, ml->mols[index].line_params.num_lines, w0, wn);
     max_check(ml->mols[index].line_params.num_lines, (MAX_NUM_LINES-1));
 
@@ -298,7 +298,7 @@ EXTERN int grt_set_molecule_ppmv(MolecularLines_t * const ml, /**< Molecular lin
     catch(molecule_hash(molecule_id, &index));
     if (!is_active(ml->molecule_bit_field, index))
     {
-        char *mesg = "molecule %d is not being used.";
+        char const *mesg = "molecule %d is not being used.";
         log_warn(mesg, molecule_id);
         return RS_SUCCESS;
     }
@@ -325,7 +325,7 @@ EXTERN int grt_add_cfc(MolecularLines_t * const ml, /**< Molecular lines object.
     in_range(cfc_id, 0, NUM_CFCS);
     if (is_active(ml->cfc_bit_field, cfc_id))
     {
-        char *mesg = "cfc %d has already been added.";
+        char const *mesg = "cfc %d has already been added.";
         raise(RS_VALUE_ERR, mesg, cfc_id);
     }
     int index = ml->num_cfcs;
@@ -337,7 +337,7 @@ EXTERN int grt_add_cfc(MolecularLines_t * const ml, /**< Molecular lines object.
     catch(get_cfc_cross_sections(&(ml->cfcs[index]), cfc_id, filepath,
                                  ml->grid.n, ml->grid.w0, ml->grid.dw,
                                  ml->device));
-    char *mesg = "Using CFC %s.";
+    char const *mesg = "Using CFC %s.";
     log_mesg(mesg, ml->cfcs[index].name);
     return RS_SUCCESS;
 }
@@ -355,7 +355,7 @@ EXTERN int grt_set_cfc_ppmv(MolecularLines_t * const ml, /**< Molecular lines ob
     in_range(cfc_id, 0, NUM_CFCS);
     if (!is_active(ml->cfc_bit_field, cfc_id))
     {
-        char *mesg = "CFC %d is not being used.";
+        char const *mesg = "CFC %d is not being used.";
         log_warn(mesg, cfc_id);
         return RS_SUCCESS;
     }
@@ -384,7 +384,7 @@ EXTERN int grt_add_cia(MolecularLines_t * const ml, int const species1, int cons
         CollisionInducedAbsorption_t *m = &(ml->cia[i]);
         if ((m->id[0] + m->id[1]) == (species1 + species2))
         {
-            char *mesg = "CIA with %s and %s is already active.";
+            char const *mesg = "CIA with %s and %s is already active.";
             raise(RS_VALUE_ERR, mesg, m->name[0], m->name[1]);
         }
     }
@@ -402,7 +402,7 @@ EXTERN int grt_add_cia(MolecularLines_t * const ml, int const species1, int cons
     catch(get_collision_induced_cross_sections(&(ml->cia[index]), id,
                                                filepath, ml->grid.n, ml->grid.w0,
                                                ml->grid.dw, ml->device));
-    char *mesg = "Using collision-induced absorption between %s and %s.";
+    char const *mesg = "Using collision-induced absorption between %s and %s.";
     log_info(mesg, ml->cia[index].name[0], ml->cia[index].name[1]);
     return RS_SUCCESS;
 }
@@ -417,7 +417,7 @@ EXTERN int grt_set_cia_ppmv(MolecularLines_t * const ml, int const cia_id,
     in_range(cia_id, 0, NUM_CIAS);
     if (!is_active(ml->cia_bit_field, cia_id))
     {
-        char *mesg = "CIA %d is not being used.";
+        char const *mesg = "CIA %d is not being used.";
         log_warn(mesg, cia_id);
         return RS_SUCCESS;
     }

@@ -1,6 +1,8 @@
 #ifndef DEVICE_H_
 #define DEVICE_H_
 
+#include "extern.h"
+
 
 /** @brief Device object.*/
 typedef int Device_t;
@@ -8,8 +10,8 @@ typedef int Device_t;
 
 /** @brief Set the device identifier.
     @return RS_SUCCESS or an error code.*/
-int create_device(Device_t * const device, /**< Device object.*/
-                  int const * const id /**< Device identifier.*/
-                 );
+EXTERN int create_device(Device_t * const device, /**< Device object.*/
+                         int const * const id /**< Device identifier.*/
+                        );
 
 #endif

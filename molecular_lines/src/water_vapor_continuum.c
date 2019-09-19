@@ -60,7 +60,7 @@ int get_water_vapor_continuum_coefs(WaterVaporContinuumCoefs_t *cc,
     for (i=0; i<NUM_COEFS; ++i)
     {
         /*Read in the data.*/
-        char *mesg = "Reading in water vapor continuum coefficients from file %s.";
+        char const *mesg = "Reading in water vapor continuum coefficients from file %s.";
         log_info(mesg, filepath[i]);
         int num_lines;
         int num_cols;

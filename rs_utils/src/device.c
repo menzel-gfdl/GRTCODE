@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "device.h"
+#include "extern.h"
 #include "rs_config.h"
 
 
@@ -9,12 +10,12 @@ static int get_num_gpus(int * num_devices, /**< Number of CUDA-enabled devices f
                         int const verbose /**< Verbosity flag.*/
                        )
 {
-#ifdef __NVCC__
     not_null(num_devices);
+#ifdef __NVCC__
     gpu_catch(cudaGetDeviceCount(num_devices));
     if (verbose)
     {
-        char *mesg = "Found %d GPU devices:";
+        char const *mesg = "Found %d GPU devices:";
         log_mesg(mesg, *num_devices);
         int i;
         for (i=0; i<(*num_devices); ++i)
@@ -33,7 +34,7 @@ static int get_num_gpus(int * num_devices, /**< Number of CUDA-enabled devices f
 
 
 /*Set the device identifier.*/
-int create_device(Device_t * const device, int const * const id)
+EXTERN int create_device(Device_t * const device, int const * const id)
 {
     not_null(device);
     int num_devices;

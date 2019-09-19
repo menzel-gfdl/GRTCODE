@@ -2,6 +2,7 @@
 #define OPTICS_H_
 
 #include "device.h"
+#include "extern.h"
 #include "floating_point_type.h"
 #include "spectral_grid.h"
 
@@ -20,33 +21,33 @@ typedef struct Optics
 
 /** @brief Reserve memory for the optics.
     @return RS_SUCCESS or an error code.*/
-int create_optics(Optics_t * const optics, /**< Optics object.*/
-                  int const num_layers, /**< Number of atmospheric layers.*/
-                  SpectralGrid_t const * const grid, /**< Spectral grid object.*/
-                  Device_t const * const device /**< Device object.*/
-                 );
+EXTERN int create_optics(Optics_t * const optics, /**< Optics object.*/
+                         int const num_layers, /**< Number of atmospheric layers.*/
+                         SpectralGrid_t const * const grid, /**< Spectral grid object.*/
+                         Device_t const * const device /**< Device object.*/
+                        );
 
 
 /** @brief Free memory for the optics.
     @return RS_SUCCESS or an error code.*/
-int destroy_optics(Optics_t * const optics /**< Optics object.*/
-                  );
+EXTERN int destroy_optics(Optics_t * const optics /**< Optics object.*/
+                         );
 
 
 /** @brief Determine if two optics objects are compatible.
     @return RS_SUCCESS or an error code.*/
-int optics_compatible(Optics_t const * const one, /**< Optics object.*/
-                      Optics_t const * const two, /**< Optics object.*/
-                      int * const result /**< 1 if compatable, 0 if not.*/
-                     );
+EXTERN int optics_compatible(Optics_t const * const one, /**< Optics object.*/
+                             Optics_t const * const two, /**< Optics object.*/
+                             int * const result /**< 1 if compatable, 0 if not.*/
+                            );
 
 
 /** @brief Add optical properties together.
     @return RS_SUCCESS or an error code.*/
-int add_optics(Optics_t const * const * const optics, /**< Array of optics objects.*/
-               int const num_optics, /**< Size of the input array of optics objects.*/
-               Optics_t * const result /**< Resulting optics objects.*/
-              );
+EXTERN int add_optics(Optics_t const * const * const optics, /**< Array of optics objects.*/
+                      int const num_optics, /**< Size of the input array of optics objects.*/
+                      Optics_t * const result /**< Resulting optics objects.*/
+                     );
 
 
 #endif

@@ -1,16 +1,17 @@
+#include "extern.h"
 #include "verbosity.h"
 
 
 static int verbosity = RS_NONE;
 
 
-void rs_set_verbosity(int const level)
+EXTERN void rs_set_verbosity(int const level)
 {
     verbosity = level;
 }
 
 
-int rs_get_verbosity()
+EXTERN int rs_get_verbosity()
 {
     return verbosity;
 }

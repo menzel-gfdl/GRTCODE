@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "argparse.h"
+#include "extern.h"
 
 
 /** @brief Check for whitespace and starting dashes in an argument name.*/
@@ -150,7 +151,7 @@ static void print_help(Parser_t const p /**< Parser object.*/
 
 
 /*Create a parser and add help option.*/
-Parser_t create_parser(int const argc, char **argv, char const * const description)
+EXTERN Parser_t create_parser(int const argc, char **argv, char const * const description)
 {
     Parser_t p;
     p.argc = argc;
@@ -172,11 +173,11 @@ Parser_t create_parser(int const argc, char **argv, char const * const descripti
 
 
 /*Add argument to parser.*/
-void add_argument(Parser_t * const parser, char const * const name,
-                  char const * const longname, char const * const description,
-                  int const * const requires_value)
+EXTERN void add_argument(Parser_t * const parser, char const * const name,
+                         char const * const longname, char const * const description,
+                         int const * const requires_value)
 {
-    Argument_t *arg = malloc(sizeof(*arg));
+    Argument_t *arg = (Argument_t *)malloc(sizeof(*arg));
     arg->head = NULL;
     arg->found = 0;
     int one_dash;
@@ -247,7 +248,7 @@ void add_argument(Parser_t * const parser, char const * const name,
 
 
 /*Parse arguments.*/
-void parse_args(Parser_t const p)
+EXTERN void parse_args(Parser_t const p)
 {
     int num_pos_args = 0;
     int i;
@@ -328,7 +329,7 @@ void parse_args(Parser_t const p)
 
 
 /*Get the value of an argument.*/
-int get_argument(Parser_t const p, char const * const name, char buffer[valuelen])
+EXTERN int get_argument(Parser_t const p, char const * const name, char buffer[valuelen])
 {
     int result = 0;
     Argument_t *a = p.args;
@@ -351,7 +352,7 @@ int get_argument(Parser_t const p, char const * const name, char buffer[valuelen
 
 
 /*Free memory reserved by parser.*/
-void destroy_parser(Parser_t * const p)
+EXTERN void destroy_parser(Parser_t * const p)
 {
     Argument_t *a = p->args;
     Argument_t *b ;

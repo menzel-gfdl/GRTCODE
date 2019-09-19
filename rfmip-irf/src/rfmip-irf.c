@@ -271,7 +271,7 @@ int main(int argc, char **argv)
     int i;
     for (i=0; i<MAX_NUM_CFCS; ++i)
     {
-        cfc[i].path = malloc(sizeof(*(cfc[i].path))*valuelen);
+        cfc[i].path = (char *)malloc(sizeof(*(cfc[i].path))*valuelen);
     }
     int num_cfcs = 0;
     activate_cfc(parser, "-CCl4", NULL, cfc, CCl4, &num_cfcs, MAX_NUM_CFCS);
@@ -302,7 +302,7 @@ int main(int argc, char **argv)
     int cia_combos[2*MAX_NUM_CIAS];
     for (i=0; i<MAX_NUM_CIAS; ++i)
     {
-        cia_path[i] = malloc(sizeof(*(cia_path[i]))*valuelen);
+        cia_path[i] = (char *)malloc(sizeof(*(cia_path[i]))*valuelen);
     }
     int num_cia_species = 0;
     int num_cias = 0;
@@ -404,8 +404,8 @@ int main(int argc, char **argv)
     Output_t output = create_flux_file(buffer, &atm);
 
     /*Loop through the columns.*/
-    fp_t *flux_up = malloc(sizeof(*flux_up)*atm.num_levels*grid.n);
-    fp_t *flux_down = malloc(sizeof(*flux_down)*atm.num_levels*grid.n);
+    fp_t *flux_up = (fp_t *)malloc(sizeof(*flux_up)*atm.num_levels*grid.n);
+    fp_t *flux_down = (fp_t *)malloc(sizeof(*flux_down)*atm.num_levels*grid.n);
     for (i=0; i<atm.num_columns; ++i)
     {
         /*Calculate molecular spectra.*/

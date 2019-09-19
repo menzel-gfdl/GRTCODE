@@ -36,8 +36,8 @@ int copy_str(char * const dest, char const * const src, size_t const len)
 {
     if (strlen(src) > len)
     {
-        char *mesg = "input string (%s) is larger than the input buffer"
-                     " and would be truncated.";
+        char const *mesg = "input string (%s) is larger than the input buffer"
+                           " and would be truncated.";
         raise(RS_VALUE_ERR, mesg, src);
     }
     snprintf(dest, len, "%s", src);
@@ -69,18 +69,18 @@ int to_int(char const * const s, int * const i)
     {
         if (errno == ERANGE)
         {
-            char *mesg = "the input string %s is out of range.";
+            char const *mesg = "the input string %s is out of range.";
             raise(RS_RANGE_ERR, mesg, s);
         }
         else if (end == s || errno == EINVAL)
         {
-            char *mesg = "invalid input string %s format, expecting the string to"
-                         " contain an integer.";
+            char const *mesg = "invalid input string %s format, expecting the string to"
+                               " contain an integer.";
             raise(RS_VALUE_ERR, mesg, s);
         }
         else
         {
-            char *mesg = "unknown errno code (%d) returned from strtol.";
+            char const *mesg = "unknown errno code (%d) returned from strtol.";
             raise(RS_VALUE_ERR, mesg, errno);
         }
     }
@@ -90,7 +90,7 @@ int to_int(char const * const s, int * const i)
     }
     else
     {
-        char *mesg = "input string %s cannot be represented as an int.";
+        char const *mesg = "input string %s cannot be represented as an int.";
         raise(RS_VALUE_ERR, mesg, s);
     }
     return RS_SUCCESS;
@@ -109,18 +109,18 @@ int to_double(char const * const s, double * const d)
     {
         if (errno == ERANGE)
         {
-            char *mesg = "the input string %s is out of range.";
+            char const *mesg = "the input string %s is out of range.";
             raise(RS_RANGE_ERR, mesg, s);
         }
         else if (end == s)
         {
-            char *mesg = "invalid input string %s format, expecting the string to"
-                         " contain a floating point number.";
+            char const *mesg = "invalid input string %s format, expecting the string to"
+                               " contain a floating point number.";
             raise(RS_VALUE_ERR, mesg, s);
         }
         else
         {
-            char *mesg = "unknown errno code (%d) returned from strtod.";
+            char const *mesg = "unknown errno code (%d) returned from strtod.";
             raise(RS_VALUE_ERR, mesg, errno);
         }
     }
@@ -144,13 +144,13 @@ int to_fp_t(double const d, fp_t * const f)
         }
         else
         {
-            char *mesg = "input double value %le cannot be represented as a float.";
+            char const *mesg = "input double value %le cannot be represented as a float.";
             raise(RS_RANGE_ERR, mesg, d);
         }
     }
     else
     {
-        char *mesg = "fp_t (size=%lu) must be represent either float or double.";
+        char const *mesg = "fp_t (size=%lu) must be represent either float or double.";
         raise(RS_VALUE_ERR, mesg, sizeof(fp_t));
     }
     return RS_SUCCESS;

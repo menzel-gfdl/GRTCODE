@@ -1,8 +1,8 @@
 #include <math.h>
 #include <stdint.h>
+#include "cuda_kernels.cuh"
 #include "debug.h"
 #include "floating_point_type.h"
-#include "kernels.cuh"
 #include "kernel_utils.h"
 #include "line_shape.h"
 #include "RFM_voigt.h"

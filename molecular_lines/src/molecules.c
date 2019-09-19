@@ -290,7 +290,7 @@ int molecule(Molecule_t * const mol, /**< Molecule object.*/
             mol->num_isotopologues = 4;
             break;
         default:
-            {char *mesg = "unrecognized molecule id %d.";
+            {char const *mesg = "unrecognized molecule id %d.";
             raise(RS_VALUE_ERR, mesg, mol->id);}
     }
     mol->mass /= 6.023E23;
@@ -319,7 +319,7 @@ int molecule_hash(int const mol_id, int * const hash)
     not_null(hash);
     if (mol_id < H2O || mol_id > NUM_MOLS)
     {
-        char *mesg = "unrecognized molecule id %d.";
+        char const *mesg = "unrecognized molecule id %d.";
         raise(RS_VALUE_ERR, mesg, mol_id);
     }
     *hash = mol_id - 1;

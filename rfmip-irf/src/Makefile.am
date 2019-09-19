@@ -1,16 +1,17 @@
+AM_CPPFLAGS = -I${top_builddir}/shortwave/src \
+              -I${top_builddir}/longwave/src \
+              -I${top_builddir}/molecular_lines/src \
+              -I${top_builddir}/rs_utils/src
 if USE_SINGLE_PRECISION
-PREC_FLAG = -DSINGLE_PRECISION
+AM_CPPFLAGS += -DSINGLE_PRECISION
 endif
-
 bin_PROGRAMS = rfmip_irf
 rfmip_irf_SOURCES = atmosphere.c rfmip-irf.c
-rfmip_irf_LDADD = ${top_builddir}/shortwave/src/libshortwave.la \
-                  ${top_builddir}/longwave/src/liblongwave.la \
-                  ${top_builddir}/molecular_lines/src/libmolecular_lines.la \
-                  ${top_builddir}/rs_utils/src/librs_utils.la \
+rfmip_irf_LDADD = ${top_builddir}/shortwave/src/libshortwave.a \
+                  ${top_builddir}/longwave/src/liblongwave.a \
+                  ${top_builddir}/molecular_lines/src/libmolecular_lines.a \
+                  ${top_builddir}/rs_utils/src/librs_utils.a \
                   -lnetcdf -lhdf5 -lhdf5_hl -lm
-rfmip_irf_CPPFLAGS = $(PREC_FLAG) \
-                     -I${top_builddir}/shortwave/src \
-                     -I${top_builddir}/longwave/src \
-                     -I${top_builddir}/molecular_lines/src \
-                     -I${top_builddir}/rs_utils/src
+if ENABLE_CUDA
+rfmip_irf_LDADD += -lcudart
+endif

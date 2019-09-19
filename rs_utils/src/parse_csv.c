@@ -42,7 +42,7 @@ int parse_csv(char const * const filepath, int * const num_lines, int * const nu
     not_null(out);
     FILE *f = NULL;
     catch(open_file(&f, filepath, "r"));
-    char *mesg = "Reading csv file %s.";
+    char const *mesg = "Reading csv file %s.";
     log_info(mesg, filepath);
 
     /*Count the number of lines/columns on a line.*/

@@ -31,7 +31,7 @@ int get_ozone_continuum_coefs(OzoneContinuumCoefs_t *cc,
     int num_vals = 1;
 
     /*Read in the data.*/
-    char *mesg = "Reading in ozone continuum coefficients from file %s.";
+    char const *mesg = "Reading in ozone continuum coefficients from file %s.";
     log_info(mesg, filepath);
     int num_lines;
     int num_cols;

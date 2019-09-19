@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "debug.h"
 #include "device.h"
+#include "extern.h"
 #include "floating_point_type.h"
 #include "optics.h"
 #include "rs_config.h"
@@ -8,16 +9,16 @@
 
 
 /*Reserve memory for the optics.*/
-int create_optics(Optics_t * const optics, int const num_layers, 
-                  SpectralGrid_t const * const grid, Device_t const * const device)
+EXTERN int create_optics(Optics_t * const optics, int const num_layers, 
+                         SpectralGrid_t const * const grid, Device_t const * const device)
 {
     not_null(optics);
     not_null(grid);
     not_null(device);
     in_range(num_layers, MIN_NUM_LAYERS, MAX_NUM_LAYERS);
     optics->num_layers = num_layers;
-    char *mesg = "Initializing optics object:\nAtmospheric column properties:\n\t"
-                     "number of levels: %d\n\tnumber of layers: %d";
+    char const *mesg = "Initializing optics object:\nAtmospheric column properties:\n\t"
+                       "number of levels: %d\n\tnumber of layers: %d";
     log_info(mesg, num_layers+1, num_layers);
     optics->grid = *grid;
     optics->device = *device;
@@ -33,7 +34,7 @@ int create_optics(Optics_t * const optics, int const num_layers,
 
 
 /*Free memory for the optics.*/
-int destroy_optics(Optics_t * const optics)
+EXTERN int destroy_optics(Optics_t * const optics)
 {
     not_null(optics);
     gfree(optics->g, optics->device);
@@ -44,8 +45,8 @@ int destroy_optics(Optics_t * const optics)
 
 
 /*Determine if two optics objects are compatible.*/
-int optics_compatible(Optics_t const * const one, Optics_t const * const two,
-                      int * const result)
+EXTERN int optics_compatible(Optics_t const * const one, Optics_t const * const two,
+                             int * const result)
 {
     not_null(one);
     not_null(two);
@@ -98,15 +99,15 @@ static int add_optics_objects(uint64_t const n, /**< Size of output g, omega, an
 
 #ifdef __NVCC__
 /** @brief Add optics objects together.*/
-__global__ static void add_optics_objects(uint64_t const n, /**< Size of arrays.*/
-                                          int const num_optics,
-                                          fp_t const * const g_in,
-                                          fp_t const * const omega_in,
-                                          fp_t const * const tau_in,
-                                          fp_t * const g_out,
-                                          fp_t * const omega_out,
-                                          fp_t * const tau_out
-                                         )
+__global__ static void add_optics_objects_d(uint64_t const n, /**< Size of arrays.*/
+                                            int const num_optics,
+                                            fp_t const * const g_in,
+                                            fp_t const * const omega_in,
+                                            fp_t const * const tau_in,
+                                            fp_t * const g_out,
+                                            fp_t * const omega_out,
+                                            fp_t * const tau_out
+                                           )
 {
     uint64_t i = blockIdx.x*blockDim.x + threadIdx.x;
     if (i < n)
@@ -128,8 +129,8 @@ __global__ static void add_optics_objects(uint64_t const n, /**< Size of arrays.
 
 
 /*Add optical properties together.*/
-int add_optics(Optics_t const * const * const optics, int const num_optics,
-               Optics_t * const result)
+EXTERN int add_optics(Optics_t const * const * const optics, int const num_optics,
+                      Optics_t * const result)
 {
     not_null(optics);
     not_null(result);
@@ -144,7 +145,7 @@ int add_optics(Optics_t const * const * const optics, int const num_optics,
         catch(optics_compatible(optics[j], o, &ok));
         if (ok == 0)
         {
-            char *mesg = "input optics objects (%p, %p) are incompatible.";
+            char const *mesg = "input optics objects (%p, %p) are incompatible.";
             raise(RS_VALUE_ERR, mesg, o, optics[j]);
         }
     }

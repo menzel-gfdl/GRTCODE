@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "curtis_godson.h"
 #include "debug.h"
+#include "extern.h"
 #include "floating_point_type.h"
 #include "optics.h"
 #include "rayleigh.h"
@@ -93,7 +94,7 @@ __global__ static void rayleigh_d(int const num_layers, /**< Number of atmospher
 
 
 /*Calculate the optical properties due to Rayleigh scattering.*/
-int rayleigh_scattering(Optics_t * const optics, fp_t * const pressure)
+EXTERN int rayleigh_scattering(Optics_t * const optics, fp_t * const pressure)
 {
     not_null(optics);
     not_null(pressure);

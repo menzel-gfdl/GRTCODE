@@ -1,5 +1,5 @@
-#ifndef KERNELS_CUH_
-#define KERNELS_CUH_
+#ifndef CUDA_KERNELS_CUH_
+#define CUDA_KERNELS_CUH_
 
 #include <stdint.h>
 #include "floating_point_type.h"

@@ -8,7 +8,7 @@
 #include "atmosphere.h"
 
 
-#define alloc(p, s) {p = malloc(sizeof(*p)*s);}
+#define alloc(p, s, t) {p = (t)malloc(sizeof(*p)*s);}
 #define nc_catch(e) { \
     int e_ = e; \
     if (e_ != NC_NOERR) {\
@@ -49,7 +49,7 @@ static void get_ppmv(int const ncid, /**< Netcdf file id.*/
 {
     int const num_layers = num_levels - 1;
     fp_t *buffer;
-    alloc(buffer, num_columns*num_layers);
+    alloc(buffer, num_columns*num_layers, fp_t *);
     int varid;
     nc_catch(nc_inq_varid(ncid, name, &varid));
     char unit[1024];
@@ -67,7 +67,7 @@ static void get_ppmv(int const ncid, /**< Netcdf file id.*/
     count[2] = num_layers;
     get_var(ncid, varid, start, count, buffer);
     fp_t *mol;
-    alloc(mol, num_columns*num_levels);
+    alloc(mol, num_columns*num_levels, fp_t *);
     int i;
     for (i=0; i<num_columns; ++i)
     {
@@ -113,7 +113,7 @@ static void get_gm_ppmv(int const ncid, /**< Netcdf file id.*/
     fp_t buffer;
     get_var(ncid, varid, start, count, &buffer);
     fp_t *mol;
-    alloc(mol, num_columns*num_levels);
+    alloc(mol, num_columns*num_levels, fp_t *);
     int i;
     for (i=0; i<num_columns*num_levels; ++i)
     {
@@ -133,7 +133,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     int ncid;
     nc_catch(nc_open(filepath, NC_NOWRITE, &ncid));
 
-    alloc(atm->level_pressure, atm->num_columns*atm->num_levels);
+    alloc(atm->level_pressure, atm->num_columns*atm->num_levels, fp_t *);
     int varid;
     nc_catch(nc_inq_varid(ncid, "pres_level", &varid));
     size_t start[4];
@@ -150,7 +150,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         atm->level_pressure[i] *= Patomb;
     }
 
-    alloc(atm->layer_pressure, atm->num_columns*atm->num_layers);
+    alloc(atm->layer_pressure, atm->num_columns*atm->num_layers, fp_t *);
     nc_catch(nc_inq_varid(ncid, "pres_layer", &varid));
     reset(start, count);
     start[0] = atm->x;
@@ -163,7 +163,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         atm->layer_pressure[i] *= Patomb;
     }
 
-    alloc(atm->level_temperature, atm->num_columns*atm->num_levels);
+    alloc(atm->level_temperature, atm->num_columns*atm->num_levels, fp_t *);
     nc_catch(nc_inq_varid(ncid, "temp_level", &varid));
     reset(start, count);
     start[0] = experiment;
@@ -173,7 +173,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     count[2] = atm->num_levels;
     get_var(ncid, varid, start, count, atm->level_temperature);
 
-    alloc(atm->layer_temperature, atm->num_columns*atm->num_layers);
+    alloc(atm->layer_temperature, atm->num_columns*atm->num_layers, fp_t *);
     nc_catch(nc_inq_varid(ncid, "temp_layer", &varid));
     reset(start, count);
     start[0] = experiment;
@@ -183,7 +183,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     count[2] = atm->num_layers;
     get_var(ncid, varid, start, count, atm->layer_temperature);
 
-    alloc(atm->surface_temperature, atm->num_columns);
+    alloc(atm->surface_temperature, atm->num_columns, fp_t *);
     nc_catch(nc_inq_varid(ncid, "surface_temperature", &varid));
     reset(start, count);
     start[0] = experiment;
@@ -191,14 +191,14 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     count[1] = atm->num_columns;
     get_var(ncid, varid, start, count, atm->surface_temperature);
 
-    alloc(atm->total_solar_irradiance, atm->num_columns);
+    alloc(atm->total_solar_irradiance, atm->num_columns, fp_t *);
     nc_catch(nc_inq_varid(ncid, "total_solar_irradiance", &varid));
     reset(start, count);
     start[0] = atm->x;
     count[0] = atm->num_columns;
     get_var(ncid, varid, start, count, atm->total_solar_irradiance);
 
-    alloc(atm->solar_zenith_angle, atm->num_columns);
+    alloc(atm->solar_zenith_angle, atm->num_columns, fp_t *);
     nc_catch(nc_inq_varid(ncid, "solar_zenith_angle", &varid));
     reset(start, count);
     start[0] = atm->x;
@@ -209,7 +209,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         atm->solar_zenith_angle[i] = cos(2.*M_PI*atm->solar_zenith_angle[i]/360.);
     }
 
-    alloc(atm->surface_albedo, atm->num_columns);
+    alloc(atm->surface_albedo, atm->num_columns, fp_t *);
     nc_catch(nc_inq_varid(ncid, "surface_albedo", &varid));
     reset(start, count);
     start[0] = atm->x;
@@ -217,13 +217,13 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     get_var(ncid, varid, start, count, atm->surface_albedo);
 
     fp_t *buffer;
-    alloc(buffer, atm->num_columns);
+    alloc(buffer, atm->num_columns, fp_t *);
     nc_catch(nc_inq_varid(ncid, "surface_emissivity", &varid));
     reset(start, count);
     start[0] = atm->x;
     count[0] = atm->num_columns;
     get_var(ncid, varid, start, count, buffer);
-    alloc(atm->surface_emissivity, atm->num_columns*atm->num_wavenumber);
+    alloc(atm->surface_emissivity, atm->num_columns*atm->num_wavenumber, fp_t *);
     for (i=0; i<atm->num_columns; ++i)
     {
         uint64_t j;
@@ -245,14 +245,14 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     fp_t *xh2o;
     get_ppmv(ncid, molecule_names[H2O], experiment, atm->x, atm->num_columns, atm->z,
              atm->num_levels, atm->level_pressure, atm->layer_pressure, &xh2o);
-    alloc(atm->ppmv, num_molecules);
+    alloc(atm->ppmv, num_molecules, fp_t **);
     atm->num_molecules = num_molecules;
     for (i=0; i<num_molecules; ++i)
     {
         fp_t *p;
         if (molecules[i] == H2O)
         {
-            alloc(p, atm->num_columns*atm->num_levels);
+            alloc(p, atm->num_columns*atm->num_levels, fp_t *);
             memcpy(p, xh2o, sizeof(*p)*atm->num_columns*atm->num_levels);
         }
         else if (molecules[i] == O3)
@@ -273,7 +273,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         atm->ppmv[i] = p;
     }
 
-    alloc(atm->cfc_ppmv, num_cfcs);
+    alloc(atm->cfc_ppmv, num_cfcs, fp_t **);
     atm->num_cfcs = num_cfcs;
     for (i=0; i<num_cfcs; ++i)
     {
@@ -381,7 +381,7 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     char *cia_names[32];
     cia_names[CIA_N2] = "nitrogen_GM";
     cia_names[CIA_O2] = "oxygen_GM";
-    alloc(atm->cia_ppmv, num_cias);
+    alloc(atm->cia_ppmv, num_cias, fp_t **);
     atm->num_cias = num_cias;
     for (i=0; i<num_cias; ++i)
     {

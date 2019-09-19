@@ -30,7 +30,7 @@ int get_collision_induced_cross_sections(CollisionInducedAbsorption_t * const ci
                 snprintf(&(cia->name_buf[offset]), CIA_NAME_LEN, "O2");
                 break;
             default:
-                {char *mesg = "unrecognized CIA id %d.";
+                {char const *mesg = "unrecognized CIA id %d.";
                 raise(RS_VALUE_ERR, mesg, id[j]);}
         }
         cia->id[j] = id[j];
@@ -39,7 +39,7 @@ int get_collision_induced_cross_sections(CollisionInducedAbsorption_t * const ci
 
     /*Read in the data.*/
     int num_vals = 1;
-    char *mesg = "Reading in collision-induced absorption cross sections from file %s.";
+    char const *mesg = "Reading in collision-induced absorption cross sections from file %s.";
     log_info(mesg, filepath);
     int num_lines;
     int num_cols;

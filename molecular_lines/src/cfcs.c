@@ -84,7 +84,7 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
             snprintf(xsc->name, CFC_NAME_LEN, "SF6");
             break;
         default:
-            {char *mesg = "unrecognized CFC id %d.";
+            {char const *mesg = "unrecognized CFC id %d.";
             raise(RS_VALUE_ERR, mesg, id);}
     }
 
@@ -96,8 +96,8 @@ int get_cfc_cross_sections(CfcCrossSection_t *xsc, int const id, char const * co
     int const ncols_req = 2;
     if (num_cols != ncols_req)
     {
-        char *mesg = "The number of columns (%d) in file %s does not match"
-                     " the expected number (%d).";
+        char const *mesg = "The number of columns (%d) in file %s does not match"
+                           " the expected number (%d).";
         raise(RS_VALUE_ERR, mesg, num_cols, filepath, ncols_req);
     }
 

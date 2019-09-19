@@ -1,12 +1,12 @@
 #include <string.h>
 #include "cfcs.h"
 #include "collision_induced_absorption.h"
+#ifdef __NVCC__
+#include "cuda_kernels.cuh"
+#endif
 #include "curtis_godson.h"
 #include "debug.h"
 #include "floating_point_type.h"
-#ifdef __NVCC__
-#include "kernels.cuh"
-#endif
 #include "kernels.h"
 #include "launch.h"
 #include "molecular_lines.h"
@@ -63,7 +63,7 @@ int launch(MolecularLines_t * const ml, /**< Molecular lines object.*/
         Molecule_t *mol = &(ml->mols[m]);
         int index;
         catch(molecule_hash(mol->id, &index));
-        char *mesg = "Calculating spectra for %s.";
+        char const *mesg = "Calculating spectra for %s.";
         log_info(mesg, mol->name);
 
         /*Calculate the integrated average layer partial pressure.*/
@@ -145,7 +145,7 @@ int launch(MolecularLines_t * const ml, /**< Molecular lines object.*/
         CfcCrossSection_t *cfc = &(ml->cfcs[m]);
         int index = cfc->id;
         fp_t const *xp = &(ml->x_cfc[index*ml->num_levels]);
-        char *mesg = "Calculating spectra for %s.";
+        char const *mesg = "Calculating spectra for %s.";
         log_info(mesg, cfc->name);
 
         /*Calculate CFC optical depths.*/
@@ -161,7 +161,7 @@ int launch(MolecularLines_t * const ml, /**< Molecular lines object.*/
         fp_t const *xp1 = &(ml->x_cia[index1*ml->num_levels]);
         int index2 = cia->id[1];
         fp_t const *xp2 = &(ml->x_cia[index2*ml->num_levels]);
-        char *mesg = "Calculating CIA spectra for %s - %s.";
+        char const *mesg = "Calculating CIA spectra for %s - %s.";
         log_info(mesg, cia->name[0], cia->name[1]);
 
         /*Calculate collision-induced absorption optical depths.*/

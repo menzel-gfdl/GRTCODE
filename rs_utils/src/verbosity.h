@@ -1,6 +1,8 @@
 #ifndef VERBOSITY_H_
 #define VERBOSITY_H_
 
+#include "extern.h"
+
 
 enum verbosity
 {
@@ -11,10 +13,10 @@ enum verbosity
 };
 
 
-void rs_set_verbosity(int const level);
+EXTERN void rs_set_verbosity(int const level);
 
 
-int rs_get_verbosity();
+EXTERN int rs_get_verbosity();
 
 
 #endif

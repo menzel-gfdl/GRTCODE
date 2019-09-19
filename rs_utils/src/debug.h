@@ -63,15 +63,23 @@
 #endif
 
 
+#ifdef __CUDA_ARCH__
+#define catch(val) { \
+    int e_ = val; \
+    if (e_ != RS_SUCCESS) { \
+        return e_; \
+    }}
+#else
 #define catch(val) { \
     int e_ = val; \
     if (e_ != RS_SUCCESS) { \
         backtrace(); return e_; \
     }}
+#endif
 
 
 #define sentinel() { \
-    char *s_ = "This branch should never be reached (%s,%d)."; \
+    char const *s_ = "This branch should never be reached (%s,%d)."; \
     raise(RS_SENTINEL_ERR, s_, __FILE__, __LINE__);}
 
 
@@ -90,21 +98,21 @@
 #else
 #define not_null(p) { \
     if (p == NULL) { \
-        char *s_ = "null pointer at address %p."; \
+        char const *s_ = "null pointer at address %p."; \
         raise(RS_NULL_ERR, s_, (void *)(&p)); \
     }}
 
 
 #define is_null(p) { \
     if (p != NULL) { \
-        char *s_ = "pointer at address %p is not null."; \
+        char const *s_ = "pointer at address %p is not null."; \
         raise(RS_NON_NULL_ERR, s_, (void *)(&p)); \
     }}
 
 
 #define not_nan(v) { \
     if (isnan((double)v)) { \
-        char *s_ = "input value (%e) is Nan."; \
+        char const *s_ = "input value (%e) is Nan."; \
         raise(RS_INVALID_ERR, s_, (double)v); \
     }}
 
@@ -113,7 +121,7 @@
     not_nan(v); \
     not_nan(min); \
     if (v < min) { \
-        char *s_ = "value (%e) less than minimum allowed (%e)."; \
+        char const *s_ = "value (%e) less than minimum allowed (%e)."; \
         raise(RS_RANGE_ERR, s_, (double)v, (double)min); \
     }}
 
@@ -122,7 +130,7 @@
     not_nan(v); \
     not_nan(max); \
     if (v > max) { \
-        char *s_ = "value (%e) greater than maximum allowed (%e)."; \
+        char const *s_ = "value (%e) greater than maximum allowed (%e)."; \
         raise(RS_RANGE_ERR, s_, (double)v, (double)max); \
     }}
 
@@ -131,14 +139,14 @@
     min_check(v, min); \
     max_check(v, max); \
     if (min > max) { \
-        char *s_ = "min value (%e) greater tha max value (%e)."; \
+        char const *s_ = "min value (%e) greater tha max value (%e)."; \
         raise(RS_RANGE_ERR, s_, (double)min, (double)max); \
     }}
 
 
 #define assert(v1, v2) { \
     if (v1 != v2) { \
-        char *s_ = "values (%u, %u) are not equal."; \
+        char const *s_ = "values (%u, %u) are not equal."; \
         raise(RS_VALUE_ERR, s_, (uint64_t)v1, (uint64_t)v2); \
     }}
 
@@ -192,15 +200,15 @@
     int e_; \
     floating_point_error_code(e_); \
     if (e_ == RS_DIVBYZERO_ERR) { \
-        char *mesg = "divide by zero (fetestexcept=%d)."; \
+        char const *mesg = "divide by zero (fetestexcept=%d)."; \
         raise(e_, mesg, FE_DIVBYZERO); \
     } \
     else if (e_ == RS_OVERFLOW_ERR) { \
-        char *mesg = "overflow (fetestexcept=%d)."; \
+        char const *mesg = "overflow (fetestexcept=%d)."; \
         raise(e_, mesg, FE_OVERFLOW); \
     } \
     else if (e_ == RS_INVALID_ERR) { \
-        char *mesg = "floating point invalid (fetestexcept=%d)."; \
+        char const *mesg = "floating point invalid (fetestexcept=%d)."; \
         raise(e_, mesg, FE_INVALID); \
     } \
 }
@@ -224,7 +232,7 @@
 #define gpu_catch(val) { \
     cudaError_t e_ = val; \
     if (e_ != cudaSuccess) { \
-        char *s_ = "cuda: %s"; \
+        char const *s_ = "cuda: %s"; \
         raise(RS_GPU_ERR, s_, cudaGetErrorString(e_)); \
     }}
 
