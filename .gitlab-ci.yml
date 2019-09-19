@@ -42,7 +42,7 @@ build:lscsky50-d:
     - source /opt/lmod/lmod/init/bash
     - module load intel/2019_up2
     - autoreconf --install
-    - ./configure --prefix /opt/gfdl-grtcode CC="icc" CFLAGS="-g -O2 -qopenmp" CPPFLAGS="-I/opt/hdf5/1.10.1/INTEL/include -I/opt/netcdf/4.6.1/INTEL/include" LDFLAGS="-qopenmp -L/opt/hdf5/1.10.1/INTEL/lib -L/opt/netcdf/4.6.1/INTEL/lib64"
+    - ./configure --prefix /opt/gfdl-grtcode CC="icc" CFLAGS="-g -O2 -qopenmp" CPPFLAGS="-I/opt/hdf5/1.10.1/INTEL/include -I/opt/netcdf/4.6.1/INTEL/include" LDFLAGS="-qopenmp -L/opt/hdf5/1.10.1/INTEL/lib -L/opt/netcdf/4.6.1/INTEL/lib64" CXX="icc"
     - make
   artifacts:
     untracked: true
