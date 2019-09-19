@@ -6,5 +6,8 @@ endif
 check_PROGRAMS = check_results
 check_results_SOURCES = check_results.c
 check_results_LDADD = ${top_builddir}/rs_utils/src/librs_utils.a \
-                      -lnetcdf -lhdf5 -lhdf5_hl -lm
+                      -lnetcdf -lm
+if ENABLE_CUDA
+check_results_LDADD += -lcudart
+endif
 TESTS = test_rfmip_irf

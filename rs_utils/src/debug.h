@@ -56,11 +56,7 @@
 
 
 /*Macros that return error codes.*/
-#ifdef __CUDA_ARCH__
-#define raise(err, mesg, ...) {return err;}
-#else
 #define raise(err, mesg, ...) {log_err(mesg, __VA_ARGS__); return err;}
-#endif
 
 
 #ifdef __CUDA_ARCH__
@@ -78,13 +74,9 @@
 #endif
 
 
-#define sentinel() { \
-    char const *s_ = "This branch should never be reached (%s,%d)."; \
-    raise(RS_SENTINEL_ERR, s_, __FILE__, __LINE__);}
-
-
 /*Safety checks.*/
 #if defined(__CUDA_ARCH__) || defined(FAST)
+#define sentinel() {return RS_SENTINEL_ERR;}
 #define not_null(p) {}
 #define is_null(p) {}
 #define not_nan(v) {}
@@ -96,6 +88,11 @@
 #define floating_point_error_code(e) {}
 #define catch_floating_point_exceptions(e) {}
 #else
+#define sentinel() { \
+    char const *s_ = "This branch should never be reached (%s,%d)."; \
+    raise(RS_SENTINEL_ERR, s_, __FILE__, __LINE__);}
+
+
 #define not_null(p) { \
     if (p == NULL) { \
         char const *s_ = "null pointer at address %p."; \

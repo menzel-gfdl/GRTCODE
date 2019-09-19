@@ -9,4 +9,7 @@ test_longwave_SOURCES = test_longwave.c
 test_longwave_LDADD = ${top_builddir}/longwave/src/liblongwave.a \
                       ${top_builddir}/rs_utils/src/librs_utils.a \
                       -lm
+if ENABLE_CUDA
+test_longwave_LDADD += -lcudart
+endif
 TESTS = test_longwave

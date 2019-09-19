@@ -11,7 +11,7 @@ rfmip_irf_LDADD = ${top_builddir}/shortwave/src/libshortwave.a \
                   ${top_builddir}/longwave/src/liblongwave.a \
                   ${top_builddir}/molecular_lines/src/libmolecular_lines.a \
                   ${top_builddir}/rs_utils/src/librs_utils.a \
-                  -lnetcdf -lhdf5 -lhdf5_hl -lm
+                  -lnetcdf -lm
 if ENABLE_CUDA
 rfmip_irf_LDADD += -lcudart
 endif

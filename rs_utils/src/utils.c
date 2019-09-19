@@ -6,12 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "debug.h"
+#include "extern.h"
 #include "floating_point_type.h"
 #include "utils.h"
 
 
 /*Malloc memory, with error checks.*/
-int malloc_ptr(void ** const p, size_t const num_bytes)
+EXTERN int malloc_ptr(void ** const p, size_t const num_bytes)
 {
     not_null(p);
     *p = malloc(num_bytes);
@@ -21,7 +22,7 @@ int malloc_ptr(void ** const p, size_t const num_bytes)
 
 
 /*Free malloced memory, with error checks.*/
-int free_ptr(void ** const p)
+EXTERN int free_ptr(void ** const p)
 {
     not_null(p);
     not_null(*p);

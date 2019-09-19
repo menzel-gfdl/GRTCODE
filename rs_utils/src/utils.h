@@ -5,18 +5,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "debug.h"
+#include "extern.h"
 #include "floating_point_type.h"
 
 
 /** @brief Malloc memory, with error checks.
     @return RS_SUCCESS or an error code.*/
-int malloc_ptr(void ** const p,
-               size_t const num_bytes);
+EXTERN int malloc_ptr(void ** const p,
+                      size_t const num_bytes);
 
 
 /** @brief Free malloced memory, with error checks.
     @return RS_SUCCESS or an error code.*/
-int free_ptr(void ** const p);
+EXTERN int free_ptr(void ** const p);
 
 
 /** @brief Copy a string into a buffer, checking its length.
