@@ -523,8 +523,9 @@ __global__ static void sw_fluxes_kernel_d(int const num_levels, /**< Number of a
         fp_t tau_buf[MAX_NUM_LEVELS];
         fp_t flux_up_buf[MAX_NUM_LEVELS];
         fp_t flux_down_buf[MAX_NUM_LEVELS];
+        int num_layers = num_levels - 1;
         int j;
-        for (j=0; j<num_levels; ++j)
+        for (j=0; j<num_layers; ++j)
         {
             uint64_t offset = j*num_wpoints + tid;
             omega_buf[j] = omega[offset];

@@ -1,4 +1,4 @@
-CUDA_COMPILE = $(NVCC) -x cu -dc -ccbin $(CXX) --compiler-options="$(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)"
+CUDA_COMPILE = $(NVCC) -lineinfo -x cu -dc -ccbin $(CXX) --compiler-options="$(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)"
 
 .c.o:
 	$(CUDA_COMPILE) -o $@ -c $<
