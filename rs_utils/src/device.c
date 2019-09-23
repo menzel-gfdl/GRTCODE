@@ -4,11 +4,8 @@
 #include "rs_config.h"
 
 
-/** @brief Determine the number of CUDA-enabled GPUs on the system.
-    @return RS_SUCCESS or an error code.*/
-static int get_num_gpus(int * num_devices, /**< Number of CUDA-enabled devices found.*/
-                        int const verbose /**< Verbosity flag.*/
-                       )
+/*Determine the number of CUDA-enabled GPUs on the system.*/
+EXTERN int get_num_gpus(int * num_devices, int const verbose)
 {
     not_null(num_devices);
 #ifdef __NVCC__

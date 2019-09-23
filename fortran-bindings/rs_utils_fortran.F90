@@ -236,6 +236,21 @@ end interface solar_flux_properties
 public :: solar_flux_properties
 
 
+interface get_num_gpus
+  !> @brief Determine the number of CUDA-enabled GPUs on the system.
+  !! @return RS_SUCCESS or an error code.
+  function c_get_num_gpus(num_devices, verbose) &
+    result(return_code) &
+    bind(c, name="get_num_gpus")
+    import c_int
+    integer(kind=c_int), intent(inout) :: num_devices !< Number of CUDA-enabled devices found.
+    integer(kind=c_int), intent(in), value :: verbose !< Verbosity flag.
+    integer(kind=c_int) :: return_code
+  end function c_get_num_gpus
+end interface get_num_gpus
+public :: get_num_gpus
+
+
 contains
 
 

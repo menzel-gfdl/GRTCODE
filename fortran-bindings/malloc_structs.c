@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "debug.h"
+#include "extern.h"
 #include "molecular_lines.h"
 #include "optics.h"
 #include "solar_flux.h"
@@ -17,7 +18,7 @@ enum StructTypes_t {
 
 /** @brief Malloc struct and associate input pointer.*/
 /** @return RS_SUCCESS or an error code.*/
-int malloc_struct(void **p, int type)
+EXTERN int malloc_struct(void **p, int type)
 {
     size_t s;
     switch (type)
@@ -48,7 +49,7 @@ int malloc_struct(void **p, int type)
 
 /** @brief Free struct associated with input pointer.*/
 /** @return RS_SUCCESS or an error code.*/
-int free_struct(void **p)
+EXTERN int free_struct(void **p)
 {
     gfree(*p, HOST_ONLY);
     *p = NULL;
@@ -58,8 +59,8 @@ int free_struct(void **p)
 
 /** @brief Retrieve arrays from optics structure.*/
 /** @return RS_SUCCESS or an error code.*/
-int optical_properties(Optics_t const * const optics, fp_t * const tau, fp_t * const omega,
-                       fp_t * const g)
+EXTERN int optical_properties(Optics_t const * const optics, fp_t * const tau, fp_t * const omega,
+                              fp_t * const g)
 {
     not_null(optics);
     size_t n = (optics->num_layers)*(optics->grid.n);
@@ -81,11 +82,11 @@ int optical_properties(Optics_t const * const optics, fp_t * const tau, fp_t * c
 
 /** @brief Get the spectral grid properties.
     @return RS_SUCCESS or an error code.*/
-int spectral_grid_properties(SpectralGrid_t const * const grid, /**< Spectral grid.*/
-                             double * const w0, /**< Grid lower bound.*/
-                             uint64_t * const n, /**< Spectral grid size.*/
-                             double * const dw /**< Grid spacing.*/
-                            )
+EXTERN int spectral_grid_properties(SpectralGrid_t const * const grid, /**< Spectral grid.*/
+                                    double * const w0, /**< Grid lower bound.*/
+                                    uint64_t * const n, /**< Spectral grid size.*/
+                                    double * const dw /**< Grid spacing.*/
+                                   )
 {
     not_null(grid);
     if (w0 != NULL)
@@ -106,9 +107,9 @@ int spectral_grid_properties(SpectralGrid_t const * const grid, /**< Spectral gr
 
 /** @brief Get the solar flux properties.
     @return RS_SUCCESS or an error code.*/
-int solar_flux_properties(SolarFlux_t const * const solar, /**< Solar flux.*/
-                          fp_t * const flux /**< Flux.*/
-                         )
+EXTERN int solar_flux_properties(SolarFlux_t const * const solar, /**< Solar flux.*/
+                                 fp_t * const flux /**< Flux.*/
+                                )
 {
     not_null(solar);
     not_null(flux);
