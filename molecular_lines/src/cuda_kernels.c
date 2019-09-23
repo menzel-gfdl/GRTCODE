@@ -10,6 +10,7 @@
 #include "tips2017.h"
 
 
+#ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ < 600
 __device__ static double atomicAdd(double *address,
                                    double val)
@@ -25,6 +26,7 @@ __device__ static double atomicAdd(double *address,
     } while (assumed != old);
     return __longlong_as_double(old);
 }
+#endif
 #endif
 
 

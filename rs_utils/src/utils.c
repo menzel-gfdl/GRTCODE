@@ -66,24 +66,17 @@ int to_int(char const * const s, int * const i)
     char *end;
     errno = 0;
     long n = strtol(s, &end, 10);
-    if (n == 0 && errno != 0)
+    if ((errno == ERANGE && (n == LONG_MAX || n == LONG_MIN)) ||
+        (n == 0 && errno != 0))
     {
-        if (errno == ERANGE)
-        {
-            char const *mesg = "the input string %s is out of range.";
-            raise(RS_RANGE_ERR, mesg, s);
-        }
-        else if (end == s || errno == EINVAL)
-        {
-            char const *mesg = "invalid input string %s format, expecting the string to"
-                               " contain an integer.";
-            raise(RS_VALUE_ERR, mesg, s);
-        }
-        else
-        {
-            char const *mesg = "unknown errno code (%d) returned from strtol.";
-            raise(RS_VALUE_ERR, mesg, errno);
-        }
+        char const *mesg = "the input string %s is out of range.";
+        raise(RS_RANGE_ERR, mesg, s);
+    }
+    if (end == s || errno == EINVAL)
+    {
+        char const *mesg = "invalid input string %s, expecting the string to"
+                           " contain an integer.";
+        raise(RS_VALUE_ERR, mesg, s);
     }
     if (n >= INT_MIN && n <= INT_MAX)
     {
@@ -106,24 +99,17 @@ int to_double(char const * const s, double * const d)
     char *end;
     errno = 0;
     *d = strtod(s, &end);
-    if (*d == 0.0 && errno != 0)
+    if ((errno == ERANGE && (*d == HUGE_VAL || *d == -1.*HUGE_VAL)) ||
+        (*d == 0. && errno != 0))
     {
-        if (errno == ERANGE)
-        {
-            char const *mesg = "the input string %s is out of range.";
-            raise(RS_RANGE_ERR, mesg, s);
-        }
-        else if (end == s)
-        {
-            char const *mesg = "invalid input string %s format, expecting the string to"
-                               " contain a floating point number.";
-            raise(RS_VALUE_ERR, mesg, s);
-        }
-        else
-        {
-            char const *mesg = "unknown errno code (%d) returned from strtod.";
-            raise(RS_VALUE_ERR, mesg, errno);
-        }
+        char const *mesg = "the input string %s is out of range.";
+        raise(RS_RANGE_ERR, mesg, s);
+    }
+    if (end == s)
+    {
+        char const *mesg = "invalid input string %s, expecting the string to"
+                           " contain a floating point number.";
+        raise(RS_VALUE_ERR, mesg, s);
     }
     return RS_SUCCESS;
 }

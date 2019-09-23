@@ -127831,10 +127831,6 @@ fp_t Q(int const mol_id,
 {
     fp_t Qt;
     int i = iso - 1;
-    if (i == -1)
-    {
-        i = 9;
-    }
     switch (mol_id)
     {
         case H2O:

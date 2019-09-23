@@ -149,13 +149,29 @@ static int HITRAN2012_cast(HITRAN2012_vals_t * const val,
             val->nil = NULL;
             break;
         case I32:
-            catch(to_int(sval,
-                         &(val->i)));
+            if (col == 1)
+            {
+                /*Handle HITRAN edge cases.  Since only 1 character is used
+                  to specify the isotopologue, but the number of
+                  isotopologues can exceed 9, they use assume the character
+                  is hex-like (e.g., 0 = 10, A = 11, B = 12, ...).*/
+                char c = sval[0];
+                if (c == '0')
+                {
+                    val->i = 10;
+                    break;
+                }
+                if (c >= 'A' && c <= 'Z')
+                {
+                    val->i = c - 'A' + 11;
+                    break;
+                }
+            }
+            catch(to_int(sval, &(val->i)));
             break;
         case F64:
         case F32:
-            catch(to_double(sval,
-                            &(val->d)));
+            catch(to_double(sval, &(val->d)));
             if (typ == F32)
             {
                 if (val->d >= -1.f*FLT_MAX && val->d <= FLT_MAX)
