@@ -66,15 +66,15 @@ EXTERN int optical_properties(Optics_t const * const optics, fp_t * const tau, f
     size_t n = (optics->num_layers)*(optics->grid.n);
     if (tau != NULL)
     {
-        memcpy(tau, optics->tau, sizeof(*(optics->tau))*n);
+        gmemcpy(tau, optics->tau, 1, optics->device, FROM_DEVICE);
     }
     if (omega != NULL)
     {
-        memcpy(omega, optics->omega, sizeof(*(optics->omega))*n);
+        gmemcpy(omega, optics->omega, n, optics->device, FROM_DEVICE);
     }
     if (g != NULL)
     {
-        memcpy(g, optics->g, sizeof(*(optics->g))*n);
+        gmemcpy(g, optics->g, n, optics->device, FROM_DEVICE);
     }
     return RS_SUCCESS;
 }

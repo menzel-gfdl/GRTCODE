@@ -207,6 +207,7 @@ int main(int argc, char **argv)
     add_argument(&parser, "-O3", NULL, "Include O3.", NULL);
     add_argument(&parser, "-SF6", NULL, "CSV file with SF6 cross sections.", &one);
     add_argument(&parser, "-c", "--line-cutoff", "Cutoff [1/cm] from line center.", &one);
+    add_argument(&parser, "-d", "--device", "GPU id", &one);
     add_argument(&parser, "-h2o-ctm", NULL, "Directory containing H2O continuum files", &one);
     add_argument(&parser, "-o", NULL, "Name of output file.", &one);
     add_argument(&parser, "-o3-ctm", NULL, "Directory containing O3 continuum files", &one);
@@ -233,7 +234,15 @@ int main(int argc, char **argv)
 
     /*Set device.*/
     Device_t device;
-    catch(create_device(&device, NULL));
+    if (get_argument(parser, "-d", buffer))
+    {
+        int d = atoi(buffer);
+        catch(create_device(&device, &d));
+    }
+    else
+    {
+        catch(create_device(&device, NULL));
+    }
 
     /*Create a spectral grid.*/
     double w0 = 1.;
