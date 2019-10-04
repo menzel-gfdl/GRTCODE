@@ -1,3 +1,106 @@
+/* GRTCODE is a GPU-able Radiative Transfer Code
+ * Copyright (C) 2016  Garrett Wright
+ * Modified in 2019 by Raymond Menzel
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; version 2.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+
+
+/* This is the 2017 version of the Total Internal Partition Sum (TIPS) code written by
+   R.R. Gamache and ported to c by Raymond Menzel.  The paper describing the code
+   can be found at https://doi.org/10.1016/j.jqsrt.2017.03.045.
+
+***********************
+      Program TIPS_2017
+************************
+     written by R.R. Gamache
+
+
+ ...date last changed 27         June, 2017
+
+  MIT License
+
+  Copyright (c) [2016] [Robert Gamache]
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+
+   --  UPDATES  --
+     27 June, 2017 too many to list - see publication 
+     Gamache et al., Total internal partition sums for molecular isotopologues on the HITRAN 
+     database and beyond, JQSRT, 203, 70-87 2017. 
+   --  UPDATES  --
+     7 May 2104 addition of 737 and 646 of CO2, 
+     16 April 2104 corrected and greatly improved Q(T)s for O2 including 88, 78, and 77 isotopologues, 
+     18 March 2011 addition of molecules 43-51, 838,837 of CO2, 
+      1222 of C2H2, CH3D, 13CH3D, 13C12CH6,CH3Br
+     19 July 2010 correction of the sign of D in CO  constants
+     13 July 2010 addition of several new species/isotopologues: ^13C^18O2, 
+        ^18O^13C^17O, ^13CH3D,  ^13C12CH2, CF4: note a number of the block 
+        data codes were updated as well
+     15 May 2008 Dijon Q(T) values for CH4
+     18 December 2003 better vibrational fundamentals for PH3
+
+     This program calculates the total internal
+     partition sum (TIPS) for a given molecule, isotopologue, and
+     temperature.  Current limitations are the molecular species on the
+     HITRAN molecular database plus a few additional  molecules and the temperature range 1 - 3500 K.
+
+ ...This program calculates the TIPS by 4-point LaaGrange interpolation
+
+ ..  JQSRT - 82, 401-412, 2003
+ ..  J. Fischer(a) R.R. Gamache(a&), A. Goldman(b), L.S. Rothman(c), and A. Perrin(d)
+ ..  
+ ..  (a)  Department of Environmental, Earth, and Atmospheric Sciences, 
+ ..       University of Massachusetts Lowell, Lowell, MA 01854, U.S.A.
+ ..  
+ ..  (b)  Department of Physics, University of Denver, Denver, CO 80208, U.S.A.
+ ..  
+ ..  (c)  Harvard-Smithsonian Center for Astrophysics, 60 Garden St, Cambridge, MA 02138 USA
+ ..  
+ ..  (d)  Laboratoire de Photophysique Moléculaire, Université Paris Sud, 91405 Orsay, FRANCE
+ ..  
+ ..  &  Corresponding author. Email address: Robert_Gamache@uml.edu
+ ..  Abstract
+ ..        Total internal partition sums (TIPS) are calculated for all molecular species in 
+ ..  the 2000 HITRAN database.  In addition, the TIPS for 13 other isotopomers/isotopologues 
+ ..  of ozone and carbon dioxide are presented.  The calculations address the corrections 
+ ..  suggested by Goldman et al. (JQSRT 2000;66:55-86).  The calculations consider the 
+ ..  temperature range 70-3000 K to be applicable to a variety of remote sensing needs.  
+ ..  The method of calculation for each molecular species is stated and comparisons with 
+ ..  data from the literature are discussed.  A new method of recall for the partition sums, 
+ ..  Lagrange 4-point interpolation, is developed.  This method, unlike previous versions of 
+ ..  the TIPS code, allows all molecular species to be considered.  
+*/
+
+
 #include "debug.h"
 #include "floating_point_type.h"
 #include "molecules.h"

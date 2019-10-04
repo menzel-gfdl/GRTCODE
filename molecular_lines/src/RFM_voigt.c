@@ -1,3 +1,58 @@
+/* GRTCODE is a GPU-able Radiative Transfer Code
+ * Copyright (C) 2016  Garrett Wright
+ * Modified in 2019 by Raymond Menzel
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; version 2.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+
+
+/* This is the voishp subroutine from the Reference Forward Model written by A. Dudhia
+   and ported to c by Raymond Menzel.  A paper describing the Reference Forward Model
+   is located at https://doi.org/10.1016/j.jqsrt.2016.06.018.
+
+  VERSION
+      19-SEP-11  AD  Move DATA statements after variable declarations
+      03-MAY-00  RJW JQSRT corrections
+      30-DEC-98  RJW Incorporate JQSRT paper version of Humlicek revision
+      03-MAR-97  AD  Version 3.
+      01-OCT-96  AD  Version 2.
+      01-SEP-96  AD  Version 1.
+      16-JUL-96  RJW Corrected typo
+      02-JUL-96  RJW Modified Humlicek region 1 (assumed major region)
+      08-JUN-96  AD  Original. Based on GENLN2 module VOIGT.
+
+  DESCRIPTION
+      Calculate Voigt Line shape.
+      Called by RFMFIN and RFMWID.
+      This modifies the GENLN2 VOIGT algorithm - see VOIGL2 for original.
+      The Voigt lineshape formulation:
+
+                  g(X,Y) = S * g0 * K(X,Y)
+                  g0 = 1/Ad * SQRT(ln2/pi)
+                  X = (nu - nu0)/Ad *SQRT(ln2)
+                  Y = Al/Ad *SQRT(ln2)
+                  K(X,Y) = Y/pi *
+                  INT^(+infty)_(-infty){exp(-t**2)/[Y**2 + (X-t)**2]}dt
+
+      This routine calculates the complex probability function using a
+      modified version of the Humlicek algorithm (JQSRT V27 437 1982)
+      accepted for publication in JQSRT 1999.
+      The calculation is performed for the array of x,y pairs for a given line
+      over the fine mesh points of the current wide mesh.
+*/
+
+
 #include <math.h>
 #include <stdint.h>
 #include "debug.h"
