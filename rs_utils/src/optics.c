@@ -188,3 +188,19 @@ EXTERN int add_optics(Optics_t const * const * const optics, int const num_optic
     gfree(tau, o->device);
     return RS_SUCCESS;
 }
+
+
+/*Update optical properties.*/
+EXTERN int update_optics(Optics_t * const optics, fp_t const * const tau,
+                         fp_t const * const omega, fp_t const * const g)
+{
+    not_null(optics);
+    not_null(tau);
+    not_null(omega);
+    not_null(g);
+    uint64_t n = optics->num_layers*optics->grid.n;
+    gmemcpy(optics->tau, tau, n, optics->device, FROM_HOST);
+    gmemcpy(optics->omega, omega, n, optics->device, FROM_HOST);
+    gmemcpy(optics->g, g, n, optics->device, FROM_HOST);
+    return RS_SUCCESS;
+}

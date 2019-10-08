@@ -68,4 +68,13 @@ EXTERN int add_optics(Optics_t const * const * const optics, /**< Array of optic
                      );
 
 
+/** @brief Update optical properties.
+    @return RS_SUCCESS or an error code.*/
+EXTERN int update_optics(Optics_t * const optics, /**< Optics object.*/
+                         fp_t const * const tau, /**< Optica depth (layer, wavenumber).*/
+                         fp_t const * const omega, /**< Single-scatter albedo (layer, wavenumber).*/
+                         fp_t const * const g /**< Asymmetry factor (layer, wavenumber).*/
+                        );
+
+
 #endif
