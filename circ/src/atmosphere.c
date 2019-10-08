@@ -22,6 +22,7 @@
 #include <string.h>
 #include "floating_point_type.h"
 #include "molecular_lines.h"
+#include "utils.h"
 #include "netcdf.h"
 #include "atmosphere.h"
 
@@ -162,17 +163,40 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     get_var(ncid, varid, start, count, &(atm->total_solar_irradiance));
     atm->total_solar_irradiance /= atm->solar_zenith_angle;
 
-/*
+
+    /*Read in the surface albedo and interpolate to the spectral grid.*/
+    int dimid;
+    nc_catch(nc_inq_dimid(ncid, "wavenumber", &dimid));
+    size_t num_wavenumber;
+    nc_catch(nc_inq_dimlen(ncid, dimid, &num_wavenumber));
+    fp_t *w;
+    alloc(w, num_wavenumber, fp_t *);
+    nc_catch(nc_inq_varid(ncid, "wavenumber", &varid));
+    reset(start, count);
+    start[0] = 0;
+    count[0] = num_wavenumber;
+    get_var(ncid, varid, start, count, w);
+    fp_t *buffer;
+    alloc(buffer, num_wavenumber, fp_t *);
     nc_catch(nc_inq_varid(ncid, "surface_albedo", &varid));
     reset(start, count);
     start[0] = 0;
-    count[0] = 1;
-    get_var(ncid, varid, start, count, &(atm->surface_albedo));
-*/
-    atm->surface_albedo = 0.196;
-
-    alloc(atm->surface_emissivity, atm->grid.n, fp_t *);
+    count[0] = num_wavenumber;
+    get_var(ncid, varid, start, count, buffer);
+    alloc(atm->surface_albedo, atm->grid.n, fp_t *);
+    memset(atm->surface_albedo, 0, atm->grid.n);
     uint64_t j;
+    for (j=0; j<atm->grid.n; ++j)
+    {
+        linear_interpolation(w, buffer, num_wavenumber,
+                             (fp_t)(atm->grid.w0 + j*atm->grid.dw),
+                             &(atm->surface_albedo[j]));
+    }
+    free(w);
+    free(buffer);
+
+    /*CIRC cases assume the surface emissivity is 1.*/
+    alloc(atm->surface_emissivity, atm->grid.n, fp_t *);
     for (j=0; j<atm->grid.n; ++j)
     {
         atm->surface_emissivity[j] = 1.;
@@ -257,7 +281,6 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     start[0] = 0;
     count[0] = 1;
     get_var(ncid, varid, start, count, &alpha);
-    fp_t *buffer;
     alloc(buffer, atm->num_layers, fp_t *);
     nc_catch(nc_inq_varid(ncid, "aerosol_optical_depth_at_1_micron", &varid));
     reset(start, count);
@@ -313,6 +336,7 @@ void destroy_atmosphere(Atmosphere_t * const atm)
     free(atm->layer_pressure);
     free(atm->level_temperature);
     free(atm->layer_temperature);
+    free(atm->surface_albedo);
     free(atm->surface_emissivity);
     free(atm->aerosol_optical_depth);
     free(atm->aerosol_single_scatter_albedo);

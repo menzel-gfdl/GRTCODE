@@ -42,6 +42,8 @@ EXTERN int create_shortwave(Shortwave_t * const sw, int const num_levels,
     if (sw->device != HOST_ONLY)
     {
         gmalloc(sw->solar_flux, sw->grid.n, sw->device);
+        gmalloc(sw->sfc_alpha_dir, sw->grid.n, sw->device);
+        gmalloc(sw->sfc_alpha_dif, sw->grid.n, sw->device);
         gmalloc(sw->flux_up, sw->grid.n*num_levels, sw->device);
         gmalloc(sw->flux_down, sw->grid.n*num_levels, sw->device);
     }
@@ -56,6 +58,8 @@ EXTERN int destroy_shortwave(Shortwave_t * const sw)
     if (sw->device != HOST_ONLY)
     {
         gfree(sw->solar_flux, sw->device);
+        gfree(sw->sfc_alpha_dir, sw->device);
+        gfree(sw->sfc_alpha_dif, sw->device);
         gfree(sw->flux_up, sw->device);
         gfree(sw->flux_down, sw->device);
     }
@@ -456,10 +460,10 @@ static int sw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
                                                     direct beam.*/
                             fp_t const mu_dif, /**< Cosine of the zenith angle for a diffuse
                                                     beam.*/
-                            fp_t const sfc_alpha_dir, /**< Albedo of the Earth's surface for
-                                                           a direct beam.*/
-                            fp_t const sfc_alpha_dif, /**< Albedo of the Earth's surface for
-                                                           a diffuse beam.*/
+                            fp_t const * const sfc_alpha_dir, /**< Albedo of the Earth's surface for
+                                                                   a direct beam.*/
+                            fp_t const * const sfc_alpha_dif, /**< Albedo of the Earth's surface for
+                                                                   a diffuse beam.*/
                             fp_t const total_solar_irradiance, /**< Total solar irradiance [W/m^2].*/
                             fp_t const * const solar_flux, /**< Incident solar flux [cm] at the top
                                                                 of the atmosphere at each spectral
@@ -490,8 +494,8 @@ static int sw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
             g_buf[j] = g[offset];
             tau_buf[j] = tau[offset];
         }
-        sw_flux(num_levels, omega_buf, g_buf, tau_buf, mu_dir, mu_dif, sfc_alpha_dir,
-                sfc_alpha_dif, solar_flux[i], flux_up_buf, flux_down_buf);
+        sw_flux(num_levels, omega_buf, g_buf, tau_buf, mu_dir, mu_dif, sfc_alpha_dir[i],
+                sfc_alpha_dif[i], solar_flux[i], flux_up_buf, flux_down_buf);
         for (j=0; j<num_levels; ++j)
         {
             uint64_t offset = j*num_wpoints + i;
@@ -517,10 +521,10 @@ __global__ static void sw_fluxes_kernel_d(int const num_levels, /**< Number of a
                                                                   direct beam.*/
                                           fp_t const mu_dif, /**< Cosine of the zenith angle for a diffuse
                                                                   beam.*/
-                                          fp_t const sfc_alpha_dir, /**< Albedo of the Earth's surface for
-                                                                         a direct beam.*/
-                                          fp_t const sfc_alpha_dif, /**< Albedo of the Earth's surface for
-                                                                         a diffuse beam.*/
+                                          fp_t const * const sfc_alpha_dir, /**< Albedo of the Earth's surface for
+                                                                                 a direct beam.*/
+                                          fp_t const * const sfc_alpha_dif, /**< Albedo of the Earth's surface for
+                                                                                 a diffuse beam.*/
                                           fp_t const total_solar_irradiance, /**< Total solar irradiance [W/m^2].*/
                                           fp_t const * const solar_flux, /**< Incident solar flux [cm] at the top
                                                                               of the atmosphere at each spectral
@@ -550,8 +554,8 @@ __global__ static void sw_fluxes_kernel_d(int const num_levels, /**< Number of a
             g_buf[j] = g[offset];
             tau_buf[j] = tau[offset];
         }
-        sw_flux(num_levels, omega_buf, g_buf, tau_buf, mu_dir, mu_dif, sfc_alpha_dir,
-                sfc_alpha_dif, solar_flux[tid], flux_up_buf, flux_down_buf);
+        sw_flux(num_levels, omega_buf, g_buf, tau_buf, mu_dir, mu_dif, sfc_alpha_dir[tid],
+                sfc_alpha_dif[tid], solar_flux[tid], flux_up_buf, flux_down_buf);
         for (j=0; j<num_levels; ++j)
         {
             uint64_t offset = j*num_wpoints + tid;
@@ -567,8 +571,9 @@ __global__ static void sw_fluxes_kernel_d(int const num_levels, /**< Number of a
 /*Calculate the shortwave radiative fluxes at each spectral grid point at
   each atmospheric level in the column.*/
 EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, Optics_t const * const optics,
-                               fp_t const mu_dir, fp_t const mu_dif, fp_t const sfc_alpha_dir,
-                               fp_t const sfc_alpha_dif, fp_t const total_solar_irradiance,
+                               fp_t const mu_dir, fp_t const mu_dif,
+                               fp_t * const sfc_alpha_dir, fp_t * const sfc_alpha_dif,
+                               fp_t const total_solar_irradiance,
                                fp_t * const solar_flux,  fp_t * const flux_up,
                                fp_t * const flux_down)
 {
@@ -585,16 +590,21 @@ EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, Optics_t const * const op
     if (sw->device == HOST_ONLY)
     {
         sw->solar_flux = solar_flux;
+        sw->sfc_alpha_dir = sfc_alpha_dir;
+        sw->sfc_alpha_dif = sfc_alpha_dif;
         sw->flux_up = flux_up;
         sw->flux_down = flux_down;
     }
     else
     {
         gmemcpy(sw->solar_flux, solar_flux, sw->grid.n, sw->device, FROM_HOST);
+        gmemcpy(sw->sfc_alpha_dir, sfc_alpha_dir, sw->grid.n, sw->device, FROM_HOST);
+        gmemcpy(sw->sfc_alpha_dif, sfc_alpha_dif, sw->grid.n, sw->device, FROM_HOST);
     }
     glaunch(sw_fluxes_kernel, sw->grid.n, sw->device, sw->num_levels, sw->grid.n,
-            optics->omega, optics->g, optics->tau, mu_dir, mu_dif, sfc_alpha_dir,
-            sfc_alpha_dif, total_solar_irradiance, sw->solar_flux, sw->flux_up, sw->flux_down);
+            optics->omega, optics->g, optics->tau, mu_dir, mu_dif, sw->sfc_alpha_dir,
+            sw->sfc_alpha_dif, total_solar_irradiance, sw->solar_flux, sw->flux_up,
+            sw->flux_down);
     if (sw->device != HOST_ONLY)
     {
         gmemcpy(flux_up, sw->flux_up, sw->grid.n*sw->num_levels, sw->device, FROM_DEVICE);

@@ -39,6 +39,9 @@ rfmip-irf/src/rfmip_irf
 rfmip-irf/src/*.nc
 rfmip-irf/test/*.nc
 rfmip-irf/test/check_results
+circ/src/circ
+circ/test/*.nc
+circ/test/check_results
 longwave/test/test_longwave
 shortwave/test/test_shortwave
 *.mod

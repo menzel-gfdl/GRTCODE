@@ -41,7 +41,7 @@ typedef struct Atmosphere
     fp_t *surface_temperature; /**< Surface temperature [K] (column).*/
     fp_t *total_solar_irradiance; /**< Total solar irradiance at TOA [W/m^2] (column).*/
     fp_t *solar_zenith_angle; /**< Cosine of solar zenith angle (column).*/
-    fp_t *surface_albedo; /**< Surface albedo (column).*/
+    fp_t *surface_albedo; /**< Surface albedo (column, wavenumber).*/
     fp_t *surface_emissivity; /**< Surface emissivity (column, wavenumber).*/
     fp_t **ppmv; /**< Molecular abundance [ppmv] (molecule, column, level).*/
     fp_t **cfc_ppmv; /**< CFC abundance [ppmv] (CFC, column, level).*/

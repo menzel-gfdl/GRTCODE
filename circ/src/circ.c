@@ -434,8 +434,8 @@ int main(int argc, char **argv)
 
         /*Calculate shortwave fluxes.*/
         fp_t const zen_dif = 0.5;
-        fp_t const albedo_dir = atm.surface_albedo;
-        fp_t const albedo_dif = albedo_dir;
+        fp_t *albedo_dir = atm.surface_albedo;
+        fp_t *albedo_dif = albedo_dir;
         catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif,
                                   albedo_dir, albedo_dif, atm.total_solar_irradiance,
                                   solar_flux.incident_flux, flux_up, flux_down));

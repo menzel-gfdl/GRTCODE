@@ -33,7 +33,9 @@ typedef struct Shortwave
     int num_levels; /**< Number of atmospheric levels.*/
     SpectralGrid_t grid; /**< Spectral grid.*/
     Device_t device; /**< Device.*/
-    fp_t *solar_flux; /**< Incident solar flux [W*cm/m^2].*/
+    fp_t *solar_flux; /**< Incident solar flux [W*cm/m^2] (wavenumber).*/
+    fp_t *sfc_alpha_dir; /**< Surface albedo for direct beam (wavenumber).*/
+    fp_t *sfc_alpha_dif; /**< Surface albedo for diffuse beam (wavenumber).*/
     fp_t *flux_up; /**< Upward radiative flux [W*cm/m^2] (level, wavenumber).*/
     fp_t *flux_down; /**< Downward radiative flux [W*cm/m^2] (level, wavenumber).*/
 } Shortwave_t;
@@ -61,8 +63,8 @@ EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, /**< Shortwave object.*/
                                Optics_t const * const optics, /**< Optics object.*/
                                fp_t const mu_dir, /**< Cosine of zenith angle for direct beam.*/
                                fp_t const mu_dif, /**< Cosine of zenith angle for diffuse beam.*/
-                               fp_t const sfc_alpha_dir, /**< Surface albedo for direct beam.*/
-                               fp_t const sfc_alpha_dif, /**< Surface albedo for diffuse beam.*/
+                               fp_t * const sfc_alpha_dir, /**< Surface albedo for direct beam (wavenumber).*/
+                               fp_t * const sfc_alpha_dif, /**< Surface albedo for diffuse beam (wavenumber).*/
                                fp_t const total_solar_irradiance, /**< Total solar irradiance [W/m^2].*/
                                fp_t * const solar_flux, /**< Solar flux [cm] (wavenumber).*/
                                fp_t * const flux_up, /**< Upward flux [W*cm/m^2] (level, wavenumber).*/

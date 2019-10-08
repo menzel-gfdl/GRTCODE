@@ -103,6 +103,7 @@ static void get_ppmv(int const ncid, /**< Netcdf file id.*/
         }
         mol[o+num_layers] = buffer[o2+num_layers-1]*unit_val;
     }
+    free(buffer);
     *xmol = mol;
     return;
 }
@@ -227,15 +228,23 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         atm->solar_zenith_angle[i] = cos(2.*M_PI*atm->solar_zenith_angle[i]/360.);
     }
 
-    alloc(atm->surface_albedo, atm->num_columns, fp_t *);
+    fp_t *buffer;
+    alloc(buffer, atm->num_columns, fp_t *);
     nc_catch(nc_inq_varid(ncid, "surface_albedo", &varid));
     reset(start, count);
     start[0] = atm->x;
     count[0] = atm->num_columns;
-    get_var(ncid, varid, start, count, atm->surface_albedo);
+    get_var(ncid, varid, start, count, buffer);
+    alloc(atm->surface_albedo, atm->num_columns*atm->num_wavenumber, fp_t *);
+    for (i=0; i<atm->num_columns; ++i)
+    {
+        uint64_t j;
+        for (j=0; j<(atm->num_wavenumber); ++j)
+        {
+            atm->surface_albedo[i*atm->num_wavenumber+j] = buffer[i];
+        }
+    }
 
-    fp_t *buffer;
-    alloc(buffer, atm->num_columns, fp_t *);
     nc_catch(nc_inq_varid(ncid, "surface_emissivity", &varid));
     reset(start, count);
     start[0] = atm->x;
