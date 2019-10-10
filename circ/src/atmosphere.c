@@ -324,6 +324,21 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         }
     }
     free(buffer);
+
+    /*Get cloud properties.*/
+    alloc(atm->liquid_water_path, atm->num_layers, fp_t *);
+    nc_catch(nc_inq_varid(ncid, "liquid_water_path", &varid));
+    reset(start, count);
+    start[0] = 0;
+    count[0] = atm->num_layers;
+    get_var(ncid, varid, start, count, atm->liquid_water_path);
+    alloc(atm->liquid_water_droplet_radius, atm->num_layers, fp_t *);
+    nc_catch(nc_inq_varid(ncid, "liquid_water_effective_particle_size", &varid));
+    reset(start, count);
+    start[0] = 0;
+    count[0] = atm->num_layers;
+    get_var(ncid, varid, start, count, atm->liquid_water_droplet_radius);
+
     nc_catch(nc_close(ncid));
     return;
 }
@@ -341,6 +356,8 @@ void destroy_atmosphere(Atmosphere_t * const atm)
     free(atm->aerosol_optical_depth);
     free(atm->aerosol_single_scatter_albedo);
     free(atm->aerosol_asymmetry_factor);
+    free(atm->liquid_water_path);
+    free(atm->liquid_water_droplet_radius);
     int i;
     for (i=0; i<atm->num_molecules; ++i)
     {

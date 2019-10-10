@@ -6,7 +6,7 @@ if USE_SINGLE_PRECISION
 AM_CPPFLAGS += -DSINGLE_PRECISION
 endif
 bin_PROGRAMS = circ
-circ_SOURCES = atmosphere.c circ.c
+circ_SOURCES = utilities.c cloud_optics.c atmosphere.c circ.c
 circ_LDADD = ${top_builddir}/shortwave/src/libshortwave.a \
                   ${top_builddir}/longwave/src/liblongwave.a \
                   ${top_builddir}/molecular_lines/src/libmolecular_lines.a \

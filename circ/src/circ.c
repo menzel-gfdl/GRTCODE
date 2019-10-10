@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include "atmosphere.h"
 #include "argparse.h"
+#include "cloud_optics.h"
 #include "device.h"
 #include "floating_point_type.h"
 #include "longwave.h"
@@ -350,8 +351,8 @@ int main(int argc, char **argv)
     catch(create_optics(&optics_rayleigh, atm.num_layers, &grid, &device));
     Optics_t optics_aerosol;
     catch(create_optics(&optics_aerosol, atm.num_layers, &grid, &device));
-    catch(update_optics(&optics_aerosol, atm.aerosol_optical_depth,
-                        atm.aerosol_single_scatter_albedo, atm.aerosol_asymmetry_factor));
+    Optics_t optics_clouds;
+    catch(create_optics(&optics_clouds, atm.num_layers, &grid, &device));
 
     /*Initialize a longwave object.*/
     Longwave_t longwave;
@@ -394,6 +395,23 @@ int main(int argc, char **argv)
     catch(grt_calculate_optical_depth(&molecular_lines, level_pressure,
                                       level_temperature, &optics_ml));
 
+    /*Get the aerosol optical properties.*/
+    catch(update_optics(&optics_aerosol, atm.aerosol_optical_depth,
+                        atm.aerosol_single_scatter_albedo, atm.aerosol_asymmetry_factor));
+
+    /*Calculate the cloud optical properties.*/
+    catch(cloud_optics(&optics_clouds, atm.liquid_water_path,
+                       atm.liquid_water_droplet_radius));
+
+   /*Calculate the optical properities.*/
+    catch(rayleigh_scattering(&optics_rayleigh, level_pressure));
+
+    /*Calculate the combined optical properties.*/
+    Optics_t const * const optics_mech[4] = {&optics_ml, &optics_aerosol,
+                                             &optics_clouds, &optics_rayleigh};
+    Optics_t optics_combined;
+    catch(add_optics(optics_mech, 4, &optics_combined));
+
     /*Calculate longwave fluxes.*/
     fp_t surface_temperature = atm.surface_temperature;
     fp_t *layer_temperature = atm.layer_temperature;
@@ -402,7 +420,7 @@ int main(int argc, char **argv)
     double lw_solver_wn = 3250. > grid.wn ? grid.wn : 3250.;
     SpectralGrid_t lw_solver_grid;
     catch(create_spectral_grid(&lw_solver_grid, lw_solver_w0, lw_solver_wn, grid.dw));
-    catch(calculate_lw_fluxes(&longwave, &optics_ml, surface_temperature,
+    catch(calculate_lw_fluxes(&longwave, &optics_combined, surface_temperature,
                               layer_temperature, level_temperature,
                               surface_emissivity, flux_up, flux_down,
                               &(lw_solver_grid.w0), &(lw_solver_grid.wn)));
@@ -423,15 +441,6 @@ int main(int argc, char **argv)
     fp_t const zen_dir = atm.solar_zenith_angle;
     if (zen_dir > 0.)
     {
-        /*Calculate the optical properities of a column.*/
-        catch(rayleigh_scattering(&optics_rayleigh, level_pressure));
-
-        /*Calculate the combined optical properties.*/
-        Optics_t const * const optics_mech[3] = {&optics_ml, &optics_rayleigh,
-                                                 &optics_aerosol};
-        Optics_t optics_combined;
-        catch(add_optics(optics_mech, 3, &optics_combined));
-
         /*Calculate shortwave fluxes.*/
         fp_t const zen_dif = 0.5;
         fp_t *albedo_dir = atm.surface_albedo;
@@ -439,7 +448,6 @@ int main(int argc, char **argv)
         catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif,
                                   albedo_dir, albedo_dif, atm.total_solar_irradiance,
                                   solar_flux.incident_flux, flux_up, flux_down));
-        catch(destroy_optics(&optics_combined));
 
         /*Integrate fluxes and write them to the output file.*/
         for (j=0; j<atm.num_levels; ++j)
@@ -461,6 +469,8 @@ int main(int argc, char **argv)
     catch(destroy_optics(&optics_ml));
     catch(destroy_optics(&optics_rayleigh));
     catch(destroy_optics(&optics_aerosol));
+    catch(destroy_optics(&optics_clouds));
+    catch(destroy_optics(&optics_combined));
     catch(destroy_molecular_lines(&molecular_lines));
     destroy_atmosphere(&atm);
     destroy_parser(&parser);

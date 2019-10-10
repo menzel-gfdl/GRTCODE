@@ -49,6 +49,8 @@ typedef struct Atmosphere
     fp_t *aerosol_optical_depth; /**< Aerosol optical depth (layer, wavenumber).*/
     fp_t *aerosol_single_scatter_albedo; /**< Aerosol single-scatter albedo (layer, wavenumber).*/
     fp_t *aerosol_asymmetry_factor; /**< Aerosol asymmetry factory (layer, wavenumber).*/
+    fp_t *liquid_water_path; /**< Liquid water path [g/m^2] (layer).*/
+    fp_t *liquid_water_droplet_radius; /**< Liquid water equivalent radiu [microns] (layer).*/
 } Atmosphere_t;
 
 
