@@ -37,4 +37,13 @@ EXTERN void rs_set_verbosity(int const level);
 EXTERN int rs_get_verbosity();
 
 
+EXTERN void reset_error_buffer();
+
+
+EXTERN void append_to_error_buffer(char const * const mesg);
+
+
+EXTERN void copy_error_buffer(char * const buffer, int const buffer_size);
+
+
 #endif

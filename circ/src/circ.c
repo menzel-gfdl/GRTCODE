@@ -38,7 +38,10 @@
 
 #define catch(e) { \
     if (e != RS_SUCCESS) { \
-        fprintf(stderr, "[%s, %d] Error.\n", __FILE__, __LINE__); \
+        char b_[1024]; \
+        grt_errstr(e, b_, 1024); \
+        fprintf(stderr, "[%s, %d] Error:\n", __FILE__, __LINE__); \
+        fprintf(stderr, b_); \
         return EXIT_FAILURE; \
     }}
 #ifndef M_PI

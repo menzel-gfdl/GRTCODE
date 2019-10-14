@@ -35,18 +35,10 @@
 
 
 #define backtrace() { \
-    if (rs_get_verbosity() >= RS_ERROR) { \
-        fprintf(stderr, "\r\33[2K\t%s: %d\n", __FILE__, __LINE__); \
-    }}
-
-
-#define log_err(mesg, ...) { \
-    if (rs_get_verbosity() >= RS_ERROR) { \
-        char s__[1024]; \
-        snprintf(s__, 1024, mesg, __VA_ARGS__); \
-        fprintf(stderr, "\r\33[2K[%s] error: %s \nBacktrace:\n", __func__, s__); \
-        backtrace(); \
-    }}
+    char s____[1024]; \
+    snprintf(s____, 1024, "\r\33[2K\t%s: %d\n", __FILE__, __LINE__); \
+    append_to_error_buffer(s____); \
+    }
 
 
 #define log_warn(mesg, ...) { \
@@ -74,7 +66,15 @@
 
 
 /*Macros that return error codes.*/
-#define raise(err, mesg, ...) {log_err(mesg, __VA_ARGS__); return err;}
+#define raise(err, mesg, ...) { \
+    reset_error_buffer(); \
+    char s__[1024]; \
+    snprintf(s__, 1024, mesg , __VA_ARGS__); \
+    char s___[1024]; \
+    snprintf(s___, 1024, "Error: %s\nBacktrace:", s__); \
+    append_to_error_buffer(s___); \
+    backtrace(); \
+    return err;}
 
 
 #ifdef __CUDA_ARCH__
@@ -87,7 +87,8 @@
 #define catch(val) { \
     int e_ = val; \
     if (e_ != RS_SUCCESS) { \
-        backtrace(); return e_; \
+        backtrace(); \
+        return e_; \
     }}
 #endif
 

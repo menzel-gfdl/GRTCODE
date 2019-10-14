@@ -498,50 +498,6 @@ EXTERN int grt_errstr(int const code, char * const buf, int const buf_size)
 {
     not_null(buf);
     min_check(buf_size, 1);
-    switch (code)
-    {
-        case RS_SUCCESS:
-            break;
-        case RS_INVALID_ERR:
-            snprintf(buf, buf_size, "GRT: detected a floating point invalid.");
-            break;
-        case RS_DIVBYZERO_ERR:
-            snprintf(buf, buf_size, "GRT: detected a floating point divide-by-zero.");
-            break;
-        case RS_OVERFLOW_ERR:
-            snprintf(buf, buf_size, "GRT: detected a floating point overflow.");
-            break;
-        case RS_UNDERFLOW_ERR:
-            snprintf(buf, buf_size, "GRT: detected a floating point underflow.");
-            break;
-        case RS_SENTINEL_ERR:
-            snprintf(buf, buf_size, "GRT: entered unexpected code branch.");
-            break;
-        case RS_NULL_ERR:
-            snprintf(buf, buf_size, "GRT: attempt to dereference a null pointer.");
-            break;
-        case RS_NON_NULL_ERR:
-            snprintf(buf, buf_size,
-                     "GRT: expected a null pointer, but pointer already has a value"
-                         " assigned to it.");
-            break;
-        case RS_RANGE_ERR:
-            snprintf(buf, buf_size, "GRT: detected a value out of its expected range.");
-            break;
-        case RS_VALUE_ERR:
-            snprintf(buf, buf_size, "GRT: detected a bad value.");
-            break;
-        case RS_COMPILER_ERR:
-            snprintf(buf, buf_size, "GRT: build was done with an incorrect compiler.");
-            break;
-        case RS_IO_ERR:
-            snprintf(buf, buf_size, "GRT: error while performing I/O.");
-            break;
-        case RS_GPU_ERR:
-            snprintf(buf, buf_size, "GRT: error while running on GPU.");
-            break;
-        default:
-            snprintf(buf, buf_size, "Unknown code %d.", code);
-    }
+    copy_error_buffer(buf, buf_size);
     return RS_SUCCESS;
 }

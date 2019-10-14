@@ -16,12 +16,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
+#include <stdio.h>
+#include <string.h>
 #include "extern.h"
 #include "verbosity.h"
 
 
 static int verbosity = RS_NONE;
-
+static char error_buffer[4096];
 
 EXTERN void rs_set_verbosity(int const level)
 {
@@ -32,4 +34,24 @@ EXTERN void rs_set_verbosity(int const level)
 EXTERN int rs_get_verbosity()
 {
     return verbosity;
+}
+
+
+EXTERN void reset_error_buffer()
+{
+    memset(error_buffer, '\0', 4096);
+}
+
+
+EXTERN void append_to_error_buffer(char const * const mesg)
+{
+    char b[4096];
+    snprintf(b, 4096, "%s", error_buffer);
+    snprintf(error_buffer, 4096, "%s%s", b, mesg);
+}
+
+
+EXTERN void copy_error_buffer(char * const buffer, int const buffer_size)
+{
+    snprintf(buffer, buffer_size, "%s\n", error_buffer);
 }
