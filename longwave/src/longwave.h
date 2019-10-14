@@ -63,9 +63,9 @@ EXTERN int destroy_longwave(Longwave_t * const lw /**< Longwave object.*/
 EXTERN int calculate_lw_fluxes(Longwave_t * const lw, /**< Longwave object.*/
                                Optics_t const * const optics, /**< Optics object.*/
                                fp_t const T_surf, /**< Surface temperature.*/
-                               fp_t * const T_layers, /**< Temperature [K] (layers).*/
-                               fp_t * const T_levels, /**< Temperature [K] (levels).*/
-                               fp_t * const emis, /**< Emissivity (wavenumber).*/
+                               fp_t * const T_layers, /**< Temperature [K] (layer).*/
+                               fp_t * const T_levels, /**< Temperature [K] (level).*/
+                               fp_t * const emis, /**< Surface emissivity (wavenumber).*/
                                fp_t * const flux_up, /**< Upward flux [W*cm/m^2] (level, wavenumber).*/
                                fp_t * const flux_down, /**< Downward flux [W*cm/m^2] (level, wavenumber.*/
                                double const * const x, /**< Spectral lower bound [1/cm].*/

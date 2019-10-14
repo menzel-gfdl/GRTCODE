@@ -68,15 +68,13 @@ EXTERN int destroy_longwave(Longwave_t * const lw)
 }
 
 
-/** @brief Calculate the spectral radiance [W/m] using Planck's Law.
+/** @brief Calculate the spectral radiance [W*cm/m^2] using Planck's Law.
     @return RS_SUCCESS or an error code.*/
 HOST DEVICE static int planck_law(fp_t const T, /**< Temperature [K].*/
                                   fp_t const w, /**< Wavenumber [1/cm].*/
                                   fp_t * const I /**< Spectral radiance [W*cm/m^2].*/
                                  )
 {
-    not_null(I);
-
     /*Constants, defined as:
       c1 = 2*h*c*c with units: [(W*cm^4)/m^2]
       c2 = h*c/k with units: [cm*K]
@@ -86,32 +84,29 @@ HOST DEVICE static int planck_law(fp_t const T, /**< Temperature [K].*/
       k = Boltzmann's constant*/
     fp_t const c1 = 1.1910429526245744e-8;
     fp_t const c2 = 1.4387773538277202;
+    not_null(I);
     clear_floating_point_exceptions();
     fp_t e = c2*w/T;
-
-    /*Clamp down exponential argument to prevent overflow.*/
     if (e > MAX_EXP_ARG)
     {
+        /*Clamp down exponential argument to prevent overflow.*/
         e = MAX_EXP_ARG;
     }
-    e = exp(e);
+    e = EXP(e);
     *I = (c1*w*w*w)/(e - 1.);
     catch_floating_point_exceptions();
     return RS_SUCCESS;
 }
 
 
-/** @brief Calculate an effective spectral radiance [W/m], taking into account a
+/** @brief Calculate an effective spectral radiance [W*cm/m^2], taking into account a
            temperature difference between the center and edge of a layer.  This
            method was taken from https://doi.org/10.1029/92JD01419.
     @return RS_SUCCESS or an error code.*/
-HOST DEVICE static int effective_planck(fp_t const Tcenter, /**< Temperature [K] in the
-                                                                 layer center.*/
-                                        fp_t const Tedge, /**< Temperature [K] at the
-                                                               layer edge.*/
+HOST DEVICE static int effective_planck(fp_t const Tcenter, /**< Temperature [K] in the layer center.*/
+                                        fp_t const Tedge, /**< Temperature [K] at the layer edge.*/
                                         fp_t const w, /**< Wavenumber [1/cm].*/
-                                        fp_t const tau, /**< Optical depth of layer at input
-                                                             wavenumber.*/
+                                        fp_t const tau, /**< Optical depth of layer at input wavenumber.*/
                                         fp_t * const I /**< Spectral radiance [W*cm/m^2].*/
                                        )
 {
@@ -139,23 +134,16 @@ HOST DEVICE static int effective_planck(fp_t const Tcenter, /**< Temperature [K]
 HOST DEVICE static int lw_flux(int const nlevels, /**< Number of atmospheric pressure levels.*/
                                fp_t const w, /**< Wavenumber [1/cm].*/
                                fp_t const T_surf, /**< Temperature [K] of the Earth's surface.*/
-                               fp_t const * const T_layers, /**< Temperature [K] of each
-                                                                 atmospheric layer.*/
-                               fp_t const * const T_levels, /**< Temperature [K] at each
-                                                                 atmospheric pressure level.*/
-                               fp_t const * const tau, /**< Optical depth at the input wavenumber
-                                                            of each atmospheric layer.*/
-                               fp_t const emis, /**< Emissivity at the input wavenumber of the
-                                                     Earth's surface.*/
+                               fp_t const * const T_layers, /**< Temperature [K] (layer).*/
+                               fp_t const * const T_levels, /**< Temperature [K] (level).*/
+                               fp_t const * const tau, /**< Optical depth (layer, wavenumber).*/
+                               fp_t const emis, /**< Surface emissivity (wavenumber).*/
                                fp_t * const flux_up, /**< Upward longwave radiative fluxes
-                                                          [W*cm/m^2] at the input wavenumber at
-                                                          each pressure level.*/
+                                                          [W*cm/m^2] (level, wavenumber).*/
                                fp_t * const flux_down /**< Downward longwave radiative fluxes
-                                                           [W*cm/m^2] at the input wavenumber at
-                                                           each pressure level.*/
+                                                           [W*cm/m^2] (level, wavenumber).*/
                               )
 {
-    /*Check inputs.*/
     num_levels_in_range(nlevels);
     wavenumber_in_range(w);
     temperature_in_range(T_surf);
@@ -200,10 +188,10 @@ HOST DEVICE static int lw_flux(int const nlevels, /**< Number of atmospheric pre
         fp_t ext[MAX_NUM_LEVELS-1];
         for (i=0; i<nlayers; ++i)
         {
-            /*Clamp down exponential argument to prevent overflow.*/
             fp_t e = c1[j]*tau[i];
             if (e > MAX_EXP_ARG)
             {
+                /*Clamp down exponential argument to prevent overflow.*/
                 e = MAX_EXP_ARG;
             }
             ext[i] = exp(e);
@@ -250,21 +238,16 @@ static int lw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
                             double const wres, /**< Spectral grid resolution [1/cm].*/
                             uint64_t const num_wpoints, /*Spectral grid size.*/
                             uint64_t const max_num_wpoints, /**< Maximum spectral grid size.*/
-                            fp_t const T_surf, /**< Temperature [K] of the Earth's surface.*/
-                            fp_t const * const T_layers, /**< Temperature [K] of each
-                                                              atmospheric layer.*/
-                            fp_t const * const T_levels, /**< Temperature [K] at each
-                                                              atmospheric pressure level.*/
-                            fp_t const * const tau, /**< Optical depth of each atmospheric
-                                                         layer at each spectral grid point.*/
-                            fp_t const * const emis, /**< Emissivity of the Earth's surface
-                                                          at each spectral grid point.*/
+                            fp_t const T_surf, /**< Surface temperature [K].*/
+                            fp_t const * const T_layers, /**< Temperature [K] (layer).*/
+                            fp_t const * const T_levels, /**< Temperature [K] (level).*/
+                            fp_t const * const tau, /**< Optical depth (layer, wavenumber).*/
+                            fp_t const * const omega, /**< Single scater albedo (layer, wavenumber).*/
+                            fp_t const * const emis, /**< Surface emissivity (wavenumber).*/
                             fp_t * const flux_up, /**< Upward longwave radiative fluxes
-                                                       [W*cm/m^2] at each spectral grid point at
-                                                       each pressure level.*/
+                                                       [W*cm/m^2] (level, wavenumber).*/
                             fp_t * const flux_down /**< Downward longwave radiative fluxes
-                                                        [W*cm/m^2] at each spectral grid point
-                                                        at each pressure level.*/
+                                                        [W*cm/m^2] (level, wavenumber).*/
                            )
 {
     uint64_t i;
@@ -279,7 +262,8 @@ static int lw_fluxes_kernel(int const num_levels, /**< Number of atmospheric pre
         int j;
         for (j=0; j<num_layers; ++j)
         {
-            tau_buf[j] = tau[j*max_num_wpoints+i];
+            uint64_t o = j*max_num_wpoints+i;
+            tau_buf[j] = tau[o]*(1. - omega[o]);
         }
         lw_flux(num_levels, w, T_surf, T_layers, T_levels, tau_buf, emis[i],
                 flux_up_buf, flux_down_buf);
@@ -300,21 +284,16 @@ __global__ static void lw_fluxes_kernel_d(int const num_levels, /**< Number of a
                                           double const wres, /**< Spectral grid resolution [1/cm].*/
                                           uint64_t const num_wpoints, /**< Spectral grid size.*/
                                           uint64_t const max_num_wpoints, /**< Maximum spectral grid size.*/
-                                          fp_t const T_surf, /**< Temperature [K] of the Earth's surface.*/
-                                          fp_t const * const T_layers, /**< Temperature [K] of each
-                                                                            atmospheric layer.*/
-                                          fp_t const * const T_levels, /**< Temperature [K] at each
-                                                                            atmospheric pressure level.*/
-                                          fp_t const * const tau, /**< Optical depth of each atmospheric
-                                                                       layer at each spectral grid point.*/
-                                          fp_t const * const emis, /**< Emissivity of the Earth's surface
-                                                                        at each spectral grid point.*/
+                                          fp_t const T_surf, /**< Surface temperature [K].*/
+                                          fp_t const * const T_layers, /**< Temperature [K] (layer).*/
+                                          fp_t const * const T_levels, /**< Temperature [K] (level).*/
+                                          fp_t const * const tau, /**< Optical depth (layer, wavenumber).*/
+                                          fp_t const * const omega, /**< Single scater albedo (layer, wavenumber).*/
+                                          fp_t const * const emis, /**< Surface emissivity (wavenumber).*/
                                           fp_t * const flux_up, /**< Upward longwave radiative fluxes
-                                                                     [W*cm/m^2] at each spectral grid point at
-                                                                     each pressure level.*/
+                                                                     [W*cm/m^2] (level, wavenumber).*/
                                           fp_t * const flux_down /**< Downward longwave radiative fluxes
-                                                                      [W*cm/m^2] at each spectral grid point
-                                                                      at each pressure level.*/
+                                                                      [W*cm/m^2] (level, wavenumber).*/
                                          )
 {
     uint64_t tid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -328,7 +307,8 @@ __global__ static void lw_fluxes_kernel_d(int const num_levels, /**< Number of a
         int j;
         for (j=0; j<num_layers; ++j)
         {
-            tau_buf[j] = tau[j*max_num_wpoints+tid];
+            uint64_t o = j*max_num_wpoints+tid
+            tau_buf[j] = tau[o]*(1. - omega[o]);
         }
         lw_flux(num_levels, w, T_surf, T_layers, T_levels, tau_buf, emis[tid],
                 flux_up_buf, flux_down_buf);
@@ -402,7 +382,7 @@ EXTERN int calculate_lw_fluxes(Longwave_t * const lw, Optics_t const * const opt
 
     glaunch(lw_fluxes_kernel, n, lw->device, lw->num_levels, w0,
             lw->grid.dw, n, lw->grid.n, T_surf, lw->layer_temperature, lw->level_temperature,
-            optics->tau, &(lw->emissivity[lb]), lw->flux_up, lw->flux_down);
+            optics->tau, optics->omega, &(lw->emissivity[lb]), lw->flux_up, lw->flux_down);
     if (lw->device != HOST_ONLY)
     {
         gmemcpy(flux_up, lw->flux_up, n*lw->num_levels, lw->device, FROM_DEVICE);
