@@ -3,8 +3,8 @@ export OMP_NUM_THREADS="4"
 declare datadir="../../data"
 
 
-#Case 1b.
-../src/circ $datadir/circ/circ-case1.nc \
+for i in `seq 1 1`; do
+../src/circ "$datadir/circ/circ-case${i}.nc" \
   $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
   -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
   -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
@@ -14,17 +14,5 @@ declare datadir="../../data"
   -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
   -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
   -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
-  -o output.circ-case1.nc
-
-#Case 2.
-../src/circ $datadir/circ/circ-case2.nc \
-  $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
-  -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
-  -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum \
-  -CFC-11 $datadir/cfc_cross_sections/CFC-11_absorption_cross_sections.csv \
-  -CFC-12 $datadir/cfc_cross_sections/CFC-12_absorption_cross_sections.csv \
-  -CCl4 $datadir/cfc_cross_sections/CCl4_absorption_cross_sections.csv \
-  -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
-  -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
-  -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
-  -o output.circ-case2.nc
+  -o "output.circ-case${i}.nc" -r 1. -s disort
+done

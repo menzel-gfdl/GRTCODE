@@ -1,12 +1,15 @@
-#ifndef HU_STAMNES_1993_TABLES
-#define HU_STAMNES_1993_TABLES
+#ifndef HU_STAMNES_1993_TABLES_H_
+#define HU_STAMNES_1993_TABLES_H_
 
 
-#define num_spectral_bands 74
+#include "floating_point_type.h"
+
+
+#define hu_num_spectral_bands 74
 #define table_size 222
 
 
-fp_t const spectral_band[num_spectral_bands+2] = {
+static fp_t const hu_spectral_band[hu_num_spectral_bands+2] = {
     200., 150., 100., 80., 60., 50., 40., 32.,
     25., 20., 19., 18., 17.5, 17., 16.5, 15.5,
     15., 14.5, 14., 13.5, 12.5, 11.5, 11., 10.5,
@@ -20,7 +23,7 @@ fp_t const spectral_band[num_spectral_bands+2] = {
 
 
 /*Tables 1 + 4.*/
-fp_t const a1[table_size] = {
+static fp_t const a1[table_size] = {
     3.93e-2, 1.71e+0, 8.63e+1, -4.00e+2, -3.93e+3, -2.93e+4, -7.27e-6, -1.22e-1,
     -9.86e+0, -3.52e+1, -7.98e+1, -1.23e+2, -1.82e+2, -2.83e+2, -4.56e+2, -6.18e+2,
     -7.47e+2, -7.78e+2, -4.90e+2, -8.34e+1, -1.79e+0, -3.88e-5, -5.91e+4, -9.91e-6,
@@ -53,7 +56,7 @@ fp_t const a1[table_size] = {
     9.41E+2, 9.40E+2};
 
 
-fp_t const b1[table_size] = {
+static fp_t const b1[table_size] = {
     2.35e+0, 1.36e+0, 2.92e-1, -1.60e+0, -3.69e+0, -5.18e+0, 6.00e+0, 2.61e+0,
     1.16e+0, 7.86e-1, 5.70e-1, 4.66e-1, 3.78e-1, 2.90e-1, 2.08e-1, 1.64e-1,
     1.38e-1, 1.28e-1, 1.66e-1, 4.12e-1, 1.36e+0, 5.24e+0, -6.00e+0, 6.00e+0,
@@ -86,7 +89,7 @@ fp_t const b1[table_size] = {
     -8.06e-1, -8.06e-1};
 
 
-fp_t const c1[table_size] = {
+static fp_t const c1[table_size] = {
     1.90e+1, 2.87e+1, -6.76e+1, 1.39e+2, 1.35e+2, 1.44e+2, 1.76e+2, 2.37e+2,
     3.30e+2, 4.02e+2, 4.81e+2, 5.41e+2, 6.15e+2, 7.28e+2, 9.07e+2, 1.07e+3,
     1.19e+3, 1.20e+3, 8.69e+2, 3.51e+2, 1.66e+2, 1.40e+2, 1.55e+2, 1.95e+2,
@@ -120,7 +123,7 @@ fp_t const c1[table_size] = {
 
 
 /*Tables 2 + 5.*/
-fp_t const a2[table_size] = {
+static fp_t const a2[table_size] = {
     -1.37e-3, -3.95e-2, -3.03e-1, -1.05e+1, 1.92e+0, 1.27e+0, 1.38e+0, 1.39e+0,
     1.22e+0, 1.10e+0, 1.00e+0, 9.54e-1, 9.18e-1, 8.82e-1, 8.53e-1, 8.41e-1,
     8.36e-1, 8.38e-1, 8.57e-1, 9.43e-1, 9.80e-1, 1.07e+0, 1.70e+0, 7.67e+0,
@@ -153,7 +156,7 @@ fp_t const a2[table_size] = {
     2.18e-6, 3.14e-6};
 
 
-fp_t const b2[table_size] = {
+static fp_t const b2[table_size] = {
     2.03e+0, 9.70e-1, 4.12e-1, 2.40e-2, -1.90e-1, -5.24e-1, -9.68e-1, -1.23e+0,
     -1.25e+0, -1.17e+0, -1.07e+0, -1.01e+0, -9.46e-1, -8.72e-1, -7.86e-1, -7.32e-1,
     -6.76e-1, -6.18e-1, -5.22e-1, -3.90e-1, -4.36e-1, -8.10e-1, -1.50e+0, -3.08e+0,
@@ -186,7 +189,7 @@ fp_t const b2[table_size] = {
     6.90e-1, 6.88e-1};
 
 
-fp_t const c2[table_size] = {
+static fp_t const c2[table_size] = {
     1.01e+0, 1.12e+0, 1.49e+0, 1.18e+1, -5.67e-1, 2.35e-1, 4.13e-1, 4.71e-1,
     4.88e-1, 4.86e-1, 4.80e-1, 4.73e-1, 4.66e-1, 4.55e-1, 4.38e-1, 4.25e-1,
     4.08e-1, 3.88e-1, 3.42e-1, 2.32e-1, 2.31e-1, 3.27e-1, 3.23e-1, 2.96e-1,
@@ -220,7 +223,7 @@ fp_t const c2[table_size] = {
 
 
 /*Tables 3 + 6.*/
-fp_t const a3[table_size] = {
+static fp_t const a3[table_size] = {
     9.87e-4, 7.53e-3, 2.47e-2, 7.07e-2, 2.73e-1, -7.79e+1, -2.27e+0, -2.38e+0,
     -2.51e+0, -2.53e+0, -2.56e+0, -2.57e+0, -2.58e+0, -2.57e+0, -2.56e+0, -2.53e+0,
     -2.51e+0, -2.46e+0, -2.40e+0, -2.24e+0, -2.02e+0, -1.85e+0, -1.76e+0, -1.84e+0,
@@ -253,7 +256,7 @@ fp_t const a3[table_size] = {
     -1.30e-1, -9.92e-2};
 
 
-fp_t const b3[table_size] = {
+static fp_t const b3[table_size] = {
     1.99e+0, 1.48e+0, 1.15e+0, 8.84e-1, 5.40e-1, -6.00e-3, -5.48e-1, -9.36e-1,
     -1.15e+0, -1.21e+0, -1.26e+0, -1.29e+0, -1.32e+0, -1.35e+0, -1.40e+0, -1.42e+0,
     -1.44e+0, -1.46e+0, -1.48e+0, -1.50e+0, -1.50e+0, -1.50e+0, -1.55e+0, -1.71e+0,
@@ -286,7 +289,7 @@ fp_t const b3[table_size] = {
     -9.86e-1, -9.08e-1};
 
 
-fp_t const c3[table_size] = {
+static fp_t const c3[table_size] = {
     -6.72e-4, -2.62e-2, -7.20e-2, -1.65e-1, -4.70e-1, 7.75e+1, 1.32e+0, 1.03e+0,
     9.71e-1, 9.61e-1, 9.55e-1, 9.53e-1, 9.52e-1, 9.51e-1, 9.51e-1, 9.52e-1,
     9.54e-1, 9.57e-1, 9.63e-1, 9.75e-1, 9.84e-1, 9.82e-1, 9.72e-1, 8.47e-1,

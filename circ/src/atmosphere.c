@@ -163,40 +163,50 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
     get_var(ncid, varid, start, count, &(atm->total_solar_irradiance));
     atm->total_solar_irradiance /= atm->solar_zenith_angle;
 
-
-    /*Read in the surface albedo and interpolate to the spectral grid.*/
-    int dimid;
-    nc_catch(nc_inq_dimid(ncid, "wavenumber", &dimid));
-    size_t num_wavenumber;
-    nc_catch(nc_inq_dimlen(ncid, dimid, &num_wavenumber));
-    fp_t *w;
-    alloc(w, num_wavenumber, fp_t *);
-    nc_catch(nc_inq_varid(ncid, "wavenumber", &varid));
-    reset(start, count);
-    start[0] = 0;
-    count[0] = num_wavenumber;
-    get_var(ncid, varid, start, count, w);
-    fp_t *buffer;
-    alloc(buffer, num_wavenumber, fp_t *);
-    nc_catch(nc_inq_varid(ncid, "surface_albedo", &varid));
-    reset(start, count);
-    start[0] = 0;
-    count[0] = num_wavenumber;
-    get_var(ncid, varid, start, count, buffer);
     alloc(atm->surface_albedo, atm->grid.n, fp_t *);
-    memset(atm->surface_albedo, 0, atm->grid.n);
-    uint64_t j;
-    for (j=0; j<atm->grid.n; ++j)
+    if (atm->alpha >= 0.)
     {
-        linear_interpolation(w, buffer, num_wavenumber,
-                             (fp_t)(atm->grid.w0 + j*atm->grid.dw),
-                             &(atm->surface_albedo[j]));
+        uint64_t j;
+        for (j=0; j<atm->grid.n; ++j)
+        {
+            atm->surface_albedo[j] = atm->alpha;
+        }
     }
-    free(w);
-    free(buffer);
+    else
+    {
+        /*Read in the surface albedo and interpolate to the spectral grid.*/
+        int dimid;
+        nc_catch(nc_inq_dimid(ncid, "wavenumber", &dimid));
+        size_t num_wavenumber;
+        nc_catch(nc_inq_dimlen(ncid, dimid, &num_wavenumber));
+        fp_t *w;
+        alloc(w, num_wavenumber, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "wavenumber", &varid));
+        reset(start, count);
+        start[0] = 0;
+        count[0] = num_wavenumber;
+        get_var(ncid, varid, start, count, w);
+        fp_t *buffer;
+        alloc(buffer, num_wavenumber, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "surface_albedo", &varid));
+        reset(start, count);
+        start[0] = 0;
+        count[0] = num_wavenumber;
+        get_var(ncid, varid, start, count, buffer);
+        uint64_t j;
+        for (j=0; j<atm->grid.n; ++j)
+        {
+            linear_interpolation(w, buffer, num_wavenumber,
+                                 (fp_t)(atm->grid.w0 + j*atm->grid.dw),
+                                 &(atm->surface_albedo[j]));
+        }
+        free(w);
+        free(buffer);
+    }
 
     /*CIRC cases assume the surface emissivity is 1.*/
     alloc(atm->surface_emissivity, atm->grid.n, fp_t *);
+    uint64_t j;
     for (j=0; j<atm->grid.n; ++j)
     {
         atm->surface_emissivity[j] = 1.;
@@ -274,70 +284,77 @@ void create_atmosphere(Atmosphere_t * const atm, char const * const filepath,
         atm->cia_ppmv[i] = p;
     }
 
-    /*Get aerosol optical properties.*/
-    fp_t alpha;
-    nc_catch(nc_inq_varid(ncid, "angstrom_exponent", &varid));
-    reset(start,count);
-    start[0] = 0;
-    count[0] = 1;
-    get_var(ncid, varid, start, count, &alpha);
-    alloc(buffer, atm->num_layers, fp_t *);
-    nc_catch(nc_inq_varid(ncid, "aerosol_optical_depth_at_1_micron", &varid));
-    reset(start, count);
-    start[0] = 0;
-    count[0] = atm->num_layers;
-    get_var(ncid, varid, start, count, buffer);
-    alloc(atm->aerosol_optical_depth, atm->num_layers*atm->grid.n, fp_t *);
-    fp_t const cmtomicron = 10000.;
-    for (i=0; i<atm->num_layers; ++i)
+    if (!atm->clean)
     {
-        for (j=0; j<atm->grid.n; ++j)
+        /*Get aerosol optical properties.*/
+        fp_t alpha;
+        nc_catch(nc_inq_varid(ncid, "angstrom_exponent", &varid));
+        reset(start,count);
+        start[0] = 0;
+        count[0] = 1;
+        get_var(ncid, varid, start, count, &alpha);
+        fp_t *buffer;
+        alloc(buffer, atm->num_layers, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "aerosol_optical_depth_at_1_micron", &varid));
+        reset(start, count);
+        start[0] = 0;
+        count[0] = atm->num_layers;
+        get_var(ncid, varid, start, count, buffer);
+        alloc(atm->aerosol_optical_depth, atm->num_layers*atm->grid.n, fp_t *);
+        fp_t const cmtomicron = 10000.;
+        for (i=0; i<atm->num_layers; ++i)
         {
-            fp_t lambda = cmtomicron/(atm->grid.w0 + j*atm->grid.dw);
-            atm->aerosol_optical_depth[i*atm->grid.n+j] = buffer[i]*pow(lambda, -1.*alpha);
+            for (j=0; j<atm->grid.n; ++j)
+            {
+                fp_t lambda = cmtomicron/(atm->grid.w0 + j*atm->grid.dw);
+                atm->aerosol_optical_depth[i*atm->grid.n+j] = buffer[i]*pow(lambda, -1.*alpha);
+            }
         }
-    }
-    nc_catch(nc_inq_varid(ncid, "aerosol_single_scatter_albedo", &varid));
-    reset(start, count);
-    start[0] = 0;
-    count[0] = atm->num_layers;
-    get_var(ncid, varid, start, count, buffer);
-    alloc(atm->aerosol_single_scatter_albedo, atm->num_layers*atm->grid.n, fp_t *);
-    for (i=0; i<atm->num_layers; ++i)
-    {
-        for (j=0; j<atm->grid.n; ++j)
+        nc_catch(nc_inq_varid(ncid, "aerosol_single_scatter_albedo", &varid));
+        reset(start, count);
+        start[0] = 0;
+        count[0] = atm->num_layers;
+        get_var(ncid, varid, start, count, buffer);
+        alloc(atm->aerosol_single_scatter_albedo, atm->num_layers*atm->grid.n, fp_t *);
+        for (i=0; i<atm->num_layers; ++i)
         {
-            atm->aerosol_single_scatter_albedo[i*atm->grid.n+j] = buffer[i];
+            for (j=0; j<atm->grid.n; ++j)
+            {
+                atm->aerosol_single_scatter_albedo[i*atm->grid.n+j] = buffer[i];
+            }
         }
-    }
-    nc_catch(nc_inq_varid(ncid, "aerosol_asymmetry_factor", &varid));
-    reset(start, count);
-    start[0] = 0;
-    count[0] = atm->num_layers;
-    get_var(ncid, varid, start, count, buffer);
-    alloc(atm->aerosol_asymmetry_factor, atm->num_layers*atm->grid.n, fp_t *);
-    for (i=0; i<atm->num_layers; ++i)
-    {
-        for (j=0; j<atm->grid.n; ++j)
+        nc_catch(nc_inq_varid(ncid, "aerosol_asymmetry_factor", &varid));
+        reset(start, count);
+        start[0] = 0;
+        count[0] = atm->num_layers;
+        get_var(ncid, varid, start, count, buffer);
+        alloc(atm->aerosol_asymmetry_factor, atm->num_layers*atm->grid.n, fp_t *);
+        for (i=0; i<atm->num_layers; ++i)
         {
-            atm->aerosol_asymmetry_factor[i*atm->grid.n+j] = buffer[i];
+            for (j=0; j<atm->grid.n; ++j)
+            {
+                atm->aerosol_asymmetry_factor[i*atm->grid.n+j] = buffer[i];
+            }
         }
+        free(buffer);
     }
-    free(buffer);
 
-    /*Get cloud properties.*/
-    alloc(atm->liquid_water_path, atm->num_layers, fp_t *);
-    nc_catch(nc_inq_varid(ncid, "liquid_water_path", &varid));
-    reset(start, count);
-    start[0] = 0;
-    count[0] = atm->num_layers;
-    get_var(ncid, varid, start, count, atm->liquid_water_path);
-    alloc(atm->liquid_water_droplet_radius, atm->num_layers, fp_t *);
-    nc_catch(nc_inq_varid(ncid, "liquid_water_effective_particle_size", &varid));
-    reset(start, count);
-    start[0] = 0;
-    count[0] = atm->num_layers;
-    get_var(ncid, varid, start, count, atm->liquid_water_droplet_radius);
+    if (!atm->clear)
+    {
+        /*Get cloud properties.*/
+        alloc(atm->liquid_water_path, atm->num_layers, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "liquid_water_path", &varid));
+        reset(start, count);
+        start[0] = 0;
+        count[0] = atm->num_layers;
+        get_var(ncid, varid, start, count, atm->liquid_water_path);
+        alloc(atm->liquid_water_droplet_radius, atm->num_layers, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "liquid_water_effective_particle_size", &varid));
+        reset(start, count);
+        start[0] = 0;
+        count[0] = atm->num_layers;
+        get_var(ncid, varid, start, count, atm->liquid_water_droplet_radius);
+    }
 
     nc_catch(nc_close(ncid));
     return;
@@ -353,11 +370,17 @@ void destroy_atmosphere(Atmosphere_t * const atm)
     free(atm->layer_temperature);
     free(atm->surface_albedo);
     free(atm->surface_emissivity);
-    free(atm->aerosol_optical_depth);
-    free(atm->aerosol_single_scatter_albedo);
-    free(atm->aerosol_asymmetry_factor);
-    free(atm->liquid_water_path);
-    free(atm->liquid_water_droplet_radius);
+    if (!atm->clean)
+    {
+        free(atm->aerosol_optical_depth);
+        free(atm->aerosol_single_scatter_albedo);
+        free(atm->aerosol_asymmetry_factor);
+    }
+    if (!atm->clear)
+    {
+        free(atm->liquid_water_path);
+        free(atm->liquid_water_droplet_radius);
+    }
     int i;
     for (i=0; i<atm->num_molecules; ++i)
     {

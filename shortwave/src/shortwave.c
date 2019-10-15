@@ -574,7 +574,7 @@ EXTERN int calculate_sw_fluxes(Shortwave_t * const sw, Optics_t const * const op
                                fp_t const mu_dir, fp_t const mu_dif,
                                fp_t * const sfc_alpha_dir, fp_t * const sfc_alpha_dif,
                                fp_t const total_solar_irradiance,
-                               fp_t * const solar_flux,  fp_t * const flux_up,
+                               fp_t * const solar_flux, fp_t * const flux_up,
                                fp_t * const flux_down)
 {
     not_null(sw);

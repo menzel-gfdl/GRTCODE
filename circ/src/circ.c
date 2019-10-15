@@ -20,10 +20,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "atmosphere.h"
 #include "argparse.h"
 #include "cloud_optics.h"
 #include "device.h"
+#include "disort_shortwave.h"
 #include "floating_point_type.h"
 #include "longwave.h"
 #include "molecular_lines.h"
@@ -50,6 +52,13 @@
 #define MAX_NUM_MOLECULES 7
 #define MAX_NUM_CFCS 21
 #define MAX_NUM_CIAS 3
+
+
+static enum
+{
+    TWOSTREAM,
+    DISORT
+} solvers;
 
 
 /** @brief Integrate using simple trapezoids on a uniform grid.*/
@@ -196,12 +205,17 @@ int main(int argc, char **argv)
     add_argument(&parser, "-O2-N2", NULL, "CSV file with O2-N2 collison cross sections", &one);
     add_argument(&parser, "-O2-O2", NULL, "CSV file with O2-O2 collison cross sections", &one);
     add_argument(&parser, "-O3", NULL, "Include O3.", NULL);
+    add_argument(&parser, "-a", "--surface-albedo", "Spectrally constant surface albedo.", &one);
     add_argument(&parser, "-c", "--line-cutoff", "Cutoff [1/cm] from line center.", &one);
+    add_argument(&parser, "-clean", NULL, "Run without aerosols.", NULL);
+    add_argument(&parser, "-clear", NULL, "Run without clouds.", NULL);
     add_argument(&parser, "-d", "--device", "GPU id", &one);
     add_argument(&parser, "-h2o-ctm", NULL, "Directory containing H2O continuum files", &one);
     add_argument(&parser, "-o", NULL, "Name of output file.", &one);
     add_argument(&parser, "-o3-ctm", NULL, "Directory containing O3 continuum files", &one);
+    add_argument(&parser, "-p", "--cloud", "Cloud parameterization.", &one);
     add_argument(&parser, "-r", "--spectral-resolution", "Spectral resolution [1/cm].", &one);
+    add_argument(&parser, "-s", "--solver", "Shortwave solver.", &one);
     add_argument(&parser, "-v", "--verbose", "Increase verbosity.", NULL);
     add_argument(&parser, "-w", "--spectral-lower-bound", "Spectral lower bound [1/cm].", &one);
     add_argument(&parser, "-W", "--spectral-upper-bound", "Spectral upper bound [1/cm].", &one);
@@ -304,6 +318,26 @@ int main(int argc, char **argv)
     {
         atm.Z = atoi(buffer);
     }
+    atm.alpha = -1.;
+    if (get_argument(parser, "-a", buffer))
+    {
+        atm.alpha = atof(buffer);
+        if (atm.alpha < 0.)
+        {
+            fprintf(stderr, "Surface albedo (-a) must be >= 0.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    atm.clean = 0;
+    if (get_argument(parser, "-clean", NULL))
+    {
+        atm.clean = 1;
+    }
+    atm.clear = 0;
+    if (get_argument(parser, "-clear", NULL))
+    {
+        atm.clear = 1;
+    }
     get_argument(parser, "input_file", buffer);
     create_atmosphere(&atm, buffer, molecules, num_molecules, cfc, num_cfcs,
                       cia_species, num_cia_species);
@@ -398,13 +432,32 @@ int main(int argc, char **argv)
     catch(grt_calculate_optical_depth(&molecular_lines, level_pressure,
                                       level_temperature, &optics_ml));
 
-    /*Get the aerosol optical properties.*/
-    catch(update_optics(&optics_aerosol, atm.aerosol_optical_depth,
-                        atm.aerosol_single_scatter_albedo, atm.aerosol_asymmetry_factor));
+    if (!atm.clean)
+    {
+        /*Get the aerosol optical properties.*/
+        catch(update_optics(&optics_aerosol, atm.aerosol_optical_depth,
+                            atm.aerosol_single_scatter_albedo, atm.aerosol_asymmetry_factor));
+    }
 
-    /*Calculate the cloud optical properties.*/
-    catch(cloud_optics(&optics_clouds, atm.liquid_water_path,
-                       atm.liquid_water_droplet_radius));
+    if (!atm.clear)
+    {
+        /*Calculate the cloud optical properties.*/
+        LiquidCloud_t cloud_param = hu_stamnes_1993;
+        if (get_argument(parser, "-p", buffer))
+        {
+            if (strcmp(buffer, "slingo") == 0)
+            {
+                cloud_param = slingo_1989;
+            }
+            else if (strcmp(buffer, "hu") != 0)
+            {
+                fprintf(stderr, "Cloud parameterization (-p) must be either hu or slingo.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        catch(cloud_optics(&optics_clouds, atm.liquid_water_path,
+                           atm.liquid_water_droplet_radius, cloud_param));
+    }
 
    /*Calculate the optical properities.*/
     catch(rayleigh_scattering(&optics_rayleigh, level_pressure));
@@ -447,10 +500,32 @@ int main(int argc, char **argv)
         /*Calculate shortwave fluxes.*/
         fp_t const zen_dif = 0.5;
         fp_t *albedo_dir = atm.surface_albedo;
-        fp_t *albedo_dif = albedo_dir;
-        catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif,
-                                  albedo_dir, albedo_dif, atm.total_solar_irradiance,
-                                  solar_flux.incident_flux, flux_up, flux_down));
+        int solver = TWOSTREAM;
+        if (get_argument(parser, "-s", buffer))
+        {
+            if (strcmp(buffer, "disort") == 0)
+            {
+                solver = DISORT;
+            }
+            else if (strcmp(buffer, "2stream") != 0)
+            {
+                fprintf(stderr, "Shortwave solver (-s) must be disort or 2stream.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        if (solver == DISORT)
+        {
+            catch(disort_shortwave(&optics_combined, zen_dir, albedo_dir,
+                                   atm.total_solar_irradiance, solar_flux.incident_flux,
+                                   flux_up, flux_down));
+        }
+        else
+        {
+            fp_t *albedo_dif = albedo_dir;
+            catch(calculate_sw_fluxes(&shortwave, &optics_combined, zen_dir, zen_dif,
+                                      albedo_dir, albedo_dif, atm.total_solar_irradiance,
+                                      solar_flux.incident_flux, flux_up, flux_down));
+        }
 
         /*Integrate fluxes and write them to the output file.*/
         for (j=0; j<atm.num_levels; ++j)

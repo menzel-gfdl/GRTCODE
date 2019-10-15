@@ -26,6 +26,9 @@
 /** @brief Atmospheric properties.*/
 typedef struct Atmosphere
 {
+    int clean; /**< Assume the sky is clean.*/
+    int clear; /**< Assume the sky is clear.*/
+    fp_t alpha; /**< Surface albedo.*/
     int z; /**< Level lower bound index.*/
     int Z; /**< Level upper bound index.*/
     int num_levels; /**< Number of atmopsheric levels.*/

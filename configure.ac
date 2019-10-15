@@ -78,6 +78,16 @@ esac],[fortran=false])
 AM_CONDITIONAL([FORTRAN_BINDINGS], [test x$fortran = xtrue])
 AC_PROG_FC
 
+#Provide an option to use DISORT.
+AC_ARG_ENABLE([use_disort],
+[--enable-disort Use disort solver],
+[case "${enableval}" in
+  yes) use_disort=true ;;
+  no)  use_disort=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-disort]) ;;
+esac],[use_disort=false])
+AM_CONDITIONAL([USE_DISORT], [test x$use_disort = xtrue])
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
                  rs_utils/Makefile rs_utils/src/Makefile
