@@ -13,7 +13,7 @@ EXTERN int disort_shortwave(Optics_t * const optics, fp_t const zen_dir,
                             fp_t * const solar_flux, fp_t * const flux_up,
                             fp_t * const flux_down)
 {
-#ifdef DISORT
+#ifdef USE_DISORT
     /*Configure DISORT.*/
     disort_state ds;
     ds.nlyr = optics->num_layers;

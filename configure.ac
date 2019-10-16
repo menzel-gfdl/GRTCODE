@@ -13,6 +13,14 @@ AC_PROG_RANLIB
 AC_PROG_INSTALL
 AC_SYS_LARGEFILE
 
+#Check for math library.
+AC_CHECK_HEADER([math.h], [], [AC_MSG_ERROR([cannot find math.h])])
+AC_CHECK_LIB([m], [pow], [], [AC_MSG_ERROR([cannot link -lm.])])
+
+#Check for netcdf.
+AC_CHECK_HEADER([netcdf.h], [], [AC_MSG_ERROR([cannot find netcdf.h])])
+AC_CHECK_LIB([netcdf], [nc_open], [], [AC_MSG_ERROR([could not link libnetcdf.])])
+
 #Provide an option to build in single precision.
 AC_ARG_ENABLE([single_precision],
 [--enable-single-precision Use single precision],
@@ -53,7 +61,10 @@ int main(void)
     return 0;
 }
 EOF
-    if $NVCC -x cu -w -o conftest.x conftest.cu && ./conftest.x
+    if $NVCC -x cu -w -o conftest.o -c conftest.cu && \
+       $NVCC -dlink -o conftest-device.o conftest.o && \
+       $CXX $LDFLAGS -o conftest.x conftest.o conftest-device.o -lcudart && \
+       ./conftest.x
     then
       AC_MSG_RESULT([yes])
       rm -f conftest.cu conftest.x
@@ -69,7 +80,7 @@ fi
 
 #Provide an option to build fortran bindings.
 AC_ARG_ENABLE([fortran],
-[--enable-fortran Build fortran bindings],
+[--enable-fortran Build fortran bindings.],
 [case "${enableval}" in
   yes) fortran=true ;;
   no)  fortran=false ;;
@@ -79,14 +90,19 @@ AM_CONDITIONAL([FORTRAN_BINDINGS], [test x$fortran = xtrue])
 AC_PROG_FC
 
 #Provide an option to use DISORT.
-AC_ARG_ENABLE([use_disort],
-[--enable-disort Use disort solver],
+AC_ARG_ENABLE([disort],
+[--enable-disort Use disort solver.],
 [case "${enableval}" in
-  yes) use_disort=true ;;
-  no)  use_disort=false ;;
+  yes) disort=true ;;
+  no)  disort=false ;;
   *) AC_MSG_ERROR([bad value ${enableval} for --enable-disort]) ;;
-esac],[use_disort=false])
-AM_CONDITIONAL([USE_DISORT], [test x$use_disort = xtrue])
+esac],[disort=false])
+AM_CONDITIONAL([USE_DISORT], [test x$disort = xtrue])
+if test x$disort = xtrue
+then
+  AC_CHECK_HEADER([cdisort.h], [], [AC_MSG_ERROR([cannot find cdisort.h])])
+  AC_CHECK_LIB([cdisort], [c_disort], [], [AC_MSG_ERROR([could not link libcdisort.])], [-lm])
+fi
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile

@@ -307,7 +307,7 @@ __global__ static void lw_fluxes_kernel_d(int const num_levels, /**< Number of a
         int j;
         for (j=0; j<num_layers; ++j)
         {
-            uint64_t o = j*max_num_wpoints+tid
+            uint64_t o = j*max_num_wpoints+tid;
             tau_buf[j] = tau[o]*(1. - omega[o]);
         }
         lw_flux(num_levels, w, T_surf, T_layers, T_levels, tau_buf, emis[tid],
