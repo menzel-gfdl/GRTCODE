@@ -1,5 +1,7 @@
 #include <stdint.h>
+#ifdef USE_DISORT
 #include "cdisort.h"
+#endif
 #include "debug.h"
 #include "disort_shortwave.h"
 #include "extern.h"
