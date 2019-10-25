@@ -32,8 +32,8 @@ typedef struct Atmosphere
     int num_levels;
     fp_t mu_dir;
     fp_t mu_dif;
-    fp_t surface_albedo_dir;
-    fp_t surface_albedo_dif;
+    fp_t *surface_albedo_dir;
+    fp_t *surface_albedo_dif;
     fp_t total_solar_irradiance;
     fp_t *solar_flux;
     fp_t *flux_up;
@@ -47,6 +47,10 @@ static int create_atmosphere(Atmosphere_t * const atmos, SpectralGrid_t const * 
     int num_layers = num_levels - 1;
     atmos->device = device;
     atmos->num_levels = num_levels;
+    atmos->surface_albedo_dir = NULL;
+    gmalloc(atmos->surface_albedo_dir, grid->n, device);
+    atmos->surface_albedo_dif = NULL;
+    gmalloc(atmos->surface_albedo_dif, grid->n, device);
     atmos->solar_flux = NULL;
     gmalloc(atmos->solar_flux, grid->n, device);
     atmos->flux_up = NULL;
@@ -59,6 +63,8 @@ static int create_atmosphere(Atmosphere_t * const atmos, SpectralGrid_t const * 
 
 static int destroy_atmosphere(Atmosphere_t * const atmos)
 {
+    gfree(atmos->surface_albedo_dir, atmos->device);
+    gfree(atmos->surface_albedo_dif, atmos->device);
     gfree(atmos->solar_flux, atmos->device);
     gfree(atmos->flux_up, atmos->device);
     gfree(atmos->flux_down, atmos->device);
@@ -91,12 +97,12 @@ static int setup(SpectralGrid_t * const grid, Optics_t * const optics,
     catch(create_atmosphere(atmos, grid, num_levels, device));
     for (j=0; j<grid->n; ++j)
     {
+        atmos->surface_albedo_dir[j] = 0.35;
+        atmos->surface_albedo_dif[j] = 0.35;
         atmos->solar_flux[j] = 0.99*rand()/((double)RAND_MAX);
     }
     atmos->mu_dir = 0.8;
     atmos->mu_dif = 0.5;
-    atmos->surface_albedo_dir = 0.35;
-    atmos->surface_albedo_dif = 0.35;
     atmos->total_solar_irradiance = 1350.;
     return RS_SUCCESS;
 }
