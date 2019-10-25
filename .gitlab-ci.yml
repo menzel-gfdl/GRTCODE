@@ -15,6 +15,8 @@ test:gfdl-ws:
   stage: test
   tags:
     - gfdl-ws
+  variables:
+    LD_LIBRARY_PATH: /home/Raymond.Menzel/local/lib
   script:
     - make check
   dependencies:
@@ -55,7 +57,7 @@ test:lscsky50-d:
     - skylake
   script:
     - source /opt/lmod/lmod/init/bash
-    - module load intel/2019_up2
+    - module load intel/2019_up2 netcdf/4.6.1
     - make check
   dependencies:
     - build:lscsky50-d

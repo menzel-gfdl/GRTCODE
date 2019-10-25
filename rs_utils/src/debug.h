@@ -326,21 +326,23 @@
 
 
 #define glaunch(func, threads, loc, ...) { \
-    if (loc == HOST_ONLY) { \
-        int t_ = omp_get_max_threads(); \
-        if ((uint64_t)threads < (uint64_t)t_) { \
-            omp_set_num_threads(threads); \
+    if ((int)threads > 0) \
+    { \
+        if (loc == HOST_ONLY) { \
+            int t_ = omp_get_max_threads(); \
+            if ((uint64_t)threads < (uint64_t)t_) { \
+                omp_set_num_threads(threads); \
+            } \
+            log_info("Running %s with %d openmp threads on host.", str(func), \
+                     ((uint64_t)threads < (uint64_t)t_) ? (int)threads : t_); \
+            catch(func(__VA_ARGS__)); \
+            if ((uint64_t)threads < (uint64_t)t_) { \
+                omp_set_num_threads(t_); \
+            } \
         } \
-        log_info("Running %s with %d openmp threads on host.", str(func), \
-                 ((uint64_t)threads < (uint64_t)t_) ? (int)threads : t_); \
-        catch(func(__VA_ARGS__)); \
-        if ((uint64_t)threads < (uint64_t)t_) { \
-            omp_set_num_threads(t_); \
-        } \
-    } \
-    else { \
-        _glaunch(func, threads, loc, __VA_ARGS__); \
-    }}
+        else { \
+            _glaunch(func, threads, loc, __VA_ARGS__); \
+        }}}
 
 
 #endif
