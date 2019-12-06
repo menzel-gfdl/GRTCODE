@@ -53,12 +53,12 @@ fp_t angstrom_exponent(fp_t tau1, /**< Optical thickness at wavelength lambda1.*
 
 /** @brief Intepolate between two points using an "angstrom exponent".
     @return GRTCODE_SUCCESS or an error code.*/
-int angstrom_exponent_sample(fp_t const * const x, /**< Wavelengths to interpolate between (2).*/
-                             fp_t const * const y, /**< Optical thickness to interpolate between (2).*/
-                             fp_t const * const newx, /**< Wavelengths to interpolate to (n).*/
-                             fp_t * const newy, /**< Interpolated optical thicknesses (n).*/
-                             size_t n /**< Number of elements in newx and newy arrays.*/
-                            );
+EXTERN int angstrom_exponent_sample(fp_t const * const x, /**< Wavelengths to interpolate between (2).*/
+                                    fp_t const * const y, /**< Optical thickness to interpolate between (2).*/
+                                    fp_t const * const newx, /**< Wavelengths to interpolate to (n).*/
+                                    fp_t * const newy, /**< Interpolated optical thicknesses (n).*/
+                                    size_t n /**< Number of elements in newx and newy arrays.*/
+                                   );
 
 
 /** @brief Extrapolate using a constant value.
@@ -98,16 +98,15 @@ int integrate2(fp_t const * const x, /**< Integration domain points (n).*/
 
 /** @brief Interpolate piece-wise between adjacent values in an array.
     @return GRTCODE_SUCCESS or an error code.*/
-int interpolate2(fp_t const * const x, /**< Domain points to interpolate from (n).*/
-                 fp_t const * const y, /**< Function values to interpolate from (n).*/
-                 size_t n, /**< Number of elements in the x and y arrays.*/
-                 fp_t const * const newx, /**< Domain points to interpolate to (newn).*/
-                 fp_t * const newy, /**< Interpolated function values (newn).*/
-                 size_t newn, /**< Number of elements in the newx and newy arrays.*/
-                 Sample1d_t interp, /**< Interpolation function between adjacent points.*/
-                 Sample1d_t extrap /**< Extrapolation function for points outside the
-                                        original domain.*/
-                );
+EXTERN int interpolate2(fp_t const * const x, /**< Domain points to interpolate from (n).*/
+                        fp_t const * const y, /**< Function values to interpolate from (n).*/
+                        size_t n, /**< Number of elements in the x and y arrays.*/
+                        fp_t const * const newx, /**< Domain points to interpolate to (newn).*/
+                        fp_t * const newy, /**< Interpolated function values (newn).*/
+                        size_t newn, /**< Number of elements in the newx and newy arrays.*/
+                        Sample1d_t interp, /**< Interpolation function between adjacent points.*/
+                        Sample1d_t extrap /**< Extrapolation function for points outside the original domain.*/
+                       );
 
 
 /** @brief Check if bit is turned on in bit field.
@@ -119,12 +118,12 @@ int is_active(uint64_t const bit_field, /**< Bit field.*/
 
 /** @brief Linearly interpolate between two points.
     @return GRTCODE_SUCCESS or an error code.*/
-int linear_sample(fp_t const * const x, /**< Domain points to interpolate from (2).*/
-                  fp_t const * const y, /**< Function values to interpolate from (2).*/
-                  fp_t const * const newx, /**< Domain points to interpolate to (n).*/
-                  fp_t * const newy, /**< Interpolated function values (n).*/
-                  size_t n /**< Number of elements in the newx and newy arrays.*/
-                 );
+EXTERN int linear_sample(fp_t const * const x, /**< Domain points to interpolate from (2).*/
+                         fp_t const * const y, /**< Function values to interpolate from (2).*/
+                         fp_t const * const newx, /**< Domain points to interpolate to (n).*/
+                         fp_t * const newy, /**< Interpolated function values (n).*/
+                         size_t n /**< Number of elements in the newx and newy arrays.*/
+                        );
 
 
 /** @brief Malloc memory, with error checks.

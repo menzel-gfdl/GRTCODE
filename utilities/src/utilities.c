@@ -51,8 +51,8 @@ fp_t angstrom_exponent(fp_t tau1, fp_t tau2, fp_t lambda1, fp_t lambda2)
 
 
 /*Intepolate between two points using an "angstrom exponent".*/
-int angstrom_exponent_sample(fp_t const * const x, fp_t const * const y,
-                             fp_t const * const newx, fp_t * const newy, size_t n)
+EXTERN int angstrom_exponent_sample(fp_t const * const x, fp_t const * const y,
+                                    fp_t const * const newx, fp_t * const newy, size_t n)
 {
     size_t i;
     for (i=0; i<2; ++i)
@@ -146,9 +146,9 @@ int integrate2(fp_t const * const x, fp_t const * const y, size_t n, fp_t * cons
 
 
 /*Interpolate piece-wise between adjacent values in an array.*/
-int interpolate2(fp_t const * const x, fp_t const * const y, size_t n,
-                 fp_t const * const newx, fp_t * const newy, size_t newn,
-                 Sample1d_t interp, Sample1d_t extrap)
+EXTERN int interpolate2(fp_t const * const x, fp_t const * const y, size_t n,
+                        fp_t const * const newx, fp_t * const newy, size_t newn,
+                        Sample1d_t interp, Sample1d_t extrap)
 {
     not_null(x);
     not_null(y);
@@ -232,8 +232,8 @@ int is_active(uint64_t const bit_field, int const index)
 
 
 /*Linearly interpolate between two points.*/
-int linear_sample(fp_t const * const x, fp_t const * const y,
-                  fp_t const * const newx, fp_t * const newy, size_t n)
+EXTERN int linear_sample(fp_t const * const x, fp_t const * const y,
+                         fp_t const * const newx, fp_t * const newy, size_t n)
 {
     fp_t const m = (y[1] - y[0])/(x[1] - x[0]);
     fp_t const b = y[0] - m*x[0];
