@@ -63,7 +63,7 @@ int main(void)
 EOF
     if $NVCC -x cu -w -o conftest.o -c conftest.cu && \
        $NVCC -dlink -o conftest-device.o conftest.o && \
-       $CXX -o conftest.x conftest.o conftest-device.o -lcudart && \
+       $CXX $LDFLAGS -o conftest.x conftest.o conftest-device.o -lcudart && \
        ./conftest.x
     then
       AC_MSG_RESULT([yes])

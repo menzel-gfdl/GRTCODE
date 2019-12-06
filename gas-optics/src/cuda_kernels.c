@@ -21,11 +21,13 @@
 #include <stdint.h>
 #include "cuda_kernels.cuh"
 #include "debug.h"
+#include "grtcode_config.h"
 #include "grtcode_utilities.h"
 #include "kernel_utils.h"
 #include "line_shape.h"
 #include "RFM_voigt.h"
 #include "spectral_bin.h"
+#include "spectral_bin-internal.h"
 #include "tips2017.h"
 
 

@@ -20,8 +20,9 @@
 #include <string.h>
 #include "debug.h"
 #include "extern.h"
-#include "molecular_lines.h"
+#include "gas_optics.h"
 #include "optics.h"
+#include "return_codes.h"
 #include "solar_flux.h"
 #include "spectral_grid.h"
 
@@ -29,13 +30,13 @@
 enum StructTypes_t {
     GRID = 0,
     OPTICS,
-    MOLECULAR_LINES,
+    GAS_OPTICS,
     SOLAR_FLUX
 };
 
 
 /** @brief Malloc struct and associate input pointer.*/
-/** @return RS_SUCCESS or an error code.*/
+/** @return GRTCODE_SUCCESS or an error code.*/
 EXTERN int malloc_struct(void **p, int type)
 {
     size_t s;
@@ -47,36 +48,36 @@ EXTERN int malloc_struct(void **p, int type)
         case OPTICS:
             s = sizeof(Optics_t);
             break;
-        case MOLECULAR_LINES:
-            s = sizeof(MolecularLines_t);
+        case GAS_OPTICS:
+            s = sizeof(GasOptics_t);
             break;
         case SOLAR_FLUX:
             s = sizeof(SolarFlux_t);
             break;
         default:
             {char *mesg = "unrecognized structure type %d.";
-            raise(RS_VALUE_ERR, mesg, type);}
+            raise(GRTCODE_VALUE_ERR, mesg, type);}
     }
     not_null(p);
     is_null(*p);
     *p = malloc(s);
     not_null(*p);
-    return RS_SUCCESS;
+    return GRTCODE_SUCCESS;
 }
 
 
 /** @brief Free struct associated with input pointer.*/
-/** @return RS_SUCCESS or an error code.*/
+/** @return GRTCODE_SUCCESS or an error code.*/
 EXTERN int free_struct(void **p)
 {
     gfree(*p, HOST_ONLY);
     *p = NULL;
-    return RS_SUCCESS;
+    return GRTCODE_SUCCESS;
 }
 
 
 /** @brief Retrieve arrays from optics structure.*/
-/** @return RS_SUCCESS or an error code.*/
+/** @return GRTCODE_SUCCESS or an error code.*/
 EXTERN int optical_properties(Optics_t const * const optics, fp_t * const tau, fp_t * const omega,
                               fp_t * const g)
 {
@@ -94,12 +95,12 @@ EXTERN int optical_properties(Optics_t const * const optics, fp_t * const tau, f
     {
         gmemcpy(g, optics->g, n, optics->device, FROM_DEVICE);
     }
-    return RS_SUCCESS;
+    return GRTCODE_SUCCESS;
 }
 
 
 /** @brief Get the spectral grid properties.
-    @return RS_SUCCESS or an error code.*/
+    @return GRTCODE_SUCCESS or an error code.*/
 EXTERN int spectral_grid_properties(SpectralGrid_t const * const grid, /**< Spectral grid.*/
                                     double * const w0, /**< Grid lower bound.*/
                                     uint64_t * const n, /**< Spectral grid size.*/
@@ -119,12 +120,12 @@ EXTERN int spectral_grid_properties(SpectralGrid_t const * const grid, /**< Spec
     {
         *dw = grid->dw;
     }
-    return RS_SUCCESS;
+    return GRTCODE_SUCCESS;
 }
 
 
 /** @brief Get the solar flux properties.
-    @return RS_SUCCESS or an error code.*/
+    @return GRTCODE_SUCCESS or an error code.*/
 EXTERN int solar_flux_properties(SolarFlux_t const * const solar, /**< Solar flux.*/
                                  fp_t * const flux /**< Flux.*/
                                 )
@@ -132,5 +133,5 @@ EXTERN int solar_flux_properties(SolarFlux_t const * const solar, /**< Solar flu
     not_null(solar);
     not_null(flux);
     memcpy(flux, solar->incident_flux, sizeof(*(solar->incident_flux))*solar->n);
-    return RS_SUCCESS;
+    return GRTCODE_SUCCESS;
 }

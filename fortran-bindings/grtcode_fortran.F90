@@ -1,3 +1,4 @@
+!> @file
 !GRTCODE is a GPU-able Radiative Transfer Code
 !Copyright (C) 2016  Garrett Wright
 !Modified in 2019 by Raymond Menzel
@@ -15,8 +16,7 @@
 !along with this program; if not, write to the Free Software
 !Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-!> @file
-!! @brief Fortran bindings for utilities.
+!> @brief Fortran bindings for utilities.
 module grtcode
 use, intrinsic :: iso_c_binding, only: c_char, c_double, c_float, c_int, c_int64_t, &
                                        c_null_char, c_null_ptr, c_ptr
@@ -32,7 +32,7 @@ integer, parameter :: fp = c_double
 integer, parameter, public :: grtcode_success = 0
 integer, parameter :: grid_struct = 0
 integer, parameter :: optics_struct = 1
-integer, parameter :: molecular_lines_struct = 2
+integer, parameter :: gas_optics_struct = 2
 integer, parameter :: solar_flux_struct = 3
 integer(kind=c_int), parameter, public :: H2O = 1
 integer(kind=c_int), parameter, public :: CO2 = 2
@@ -219,13 +219,13 @@ public :: free_struct
 
 
 interface
-  subroutine rs_set_verbosity(level) &
+  subroutine grtcode_set_verbosity(level) &
     bind(c)
     import c_int
     integer(kind=c_int), intent(in), value :: level
-  end subroutine rs_set_verbosity
+  end subroutine grtcode_set_verbosity
 end interface
-public :: rs_set_verbosity
+public :: grtcode_set_verbosity
 
 
 interface optical_properties
@@ -352,13 +352,13 @@ type, public :: MolecularLines_t
 end type MolecularLines_t
 
 
-interface create_molecular_lines
+interface create_gas_optics
   !> @brief Reserve memory for molecular lines.
   !! @return RS_SUCCESS or an error code.
-  function c_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o_ctm_dir, &
-                                    o3_ctm_dir, wcutoff, optical_depth_method) &
+  function c_create_gas_optics(ml, num_levels, grid, device, hitran_path, h2o_ctm_dir, &
+                               o3_ctm_file, wcutoff, optical_depth_method) &
     result(return_code) &
-    bind(c, name="create_molecular_lines")
+    bind(c, name="create_gas_optics")
     import c_char, c_double, c_int, c_ptr
     type(c_ptr), value :: ml !< Molecular lines object.
     integer(kind=c_int), intent(in), value :: num_levels !< Number of atmospheric levels.
@@ -366,29 +366,29 @@ interface create_molecular_lines
     integer(kind=c_int), intent(in) :: device !< Device.
     character(kind=c_char, len=1), dimension(*), intent(in) :: hitran_path !< Path to HITRAN database file.
     character(kind=c_char, len=1), dimension(*), intent(in) :: h2o_ctm_dir !< Path to water vapor continuum directory.
-    character(kind=c_char, len=1), dimension(*), intent(in) :: o3_ctm_dir !< Path to ozone continuum directory.
+    character(kind=c_char, len=1), dimension(*), intent(in) :: o3_ctm_file !< Path to ozone continuum file.
     real(kind=c_double), intent(in), optional :: wcutoff !< Cutoff from line center [1/cm].
     integer(kind=c_int), intent(in), optional :: optical_depth_method !< Method used to calculate the optical depths.
     integer(kind=c_int) :: return_code
-  end function c_create_molecular_lines
-  module procedure f_create_molecular_lines
-end interface create_molecular_lines
-public :: create_molecular_lines
+  end function c_create_gas_optics
+  module procedure f_create_gas_optics
+end interface create_gas_optics
+public :: create_gas_optics
 
 
-interface destroy_molecular_lines
+interface destroy_gas_optics
   !> @brief Free memory for the molecular lines.
   !! @return RS_SUCCESS or an error code.
-  function c_destroy_molecular_lines(ml) &
+  function c_destroy_gas_optics(ml) &
     result(return_code) &
-    bind(c, name="destroy_molecular_lines")
+    bind(c, name="destroy_gas_optics")
     import c_int, c_ptr
     type(c_ptr), value :: ml !< Molecular lines object.
     integer(kind=c_int) :: return_code
-  end function c_destroy_molecular_lines
-  module procedure f_destroy_molecular_lines
-end interface destroy_molecular_lines
-public :: destroy_molecular_lines
+  end function c_destroy_gas_optics
+  module procedure f_destroy_gas_optics
+end interface destroy_gas_optics
+public :: destroy_gas_optics
 
 
 interface add_molecule
@@ -396,7 +396,7 @@ interface add_molecule
   !! @return RS_SUCCESS or an error code.
   function grt_add_molecule(ml, molecule_id, min_line_center, max_line_center) &
     result(return_code) &
-    bind(c)
+    bind(c, name="add_molecule")
     import c_double, c_int, c_ptr
     type(c_ptr), value :: ml !< Molecular lines object.
     integer(kind=c_int), intent(in), value :: molecule_id !< Molecule id.
@@ -414,7 +414,7 @@ interface set_molecule_ppmv
   !! @return RS_SUCCESS or an error code.
   function grt_set_molecule_ppmv(ml, molecule_id, ppmv) &
     result(return_code) &
-    bind(c)
+    bind(c, name="set_molecule_ppmv")
     import c_int, c_ptr, fp
     type(c_ptr), value :: ml !< Molecular lines object.
     integer(kind=c_int), intent(in), value :: molecule_id  !< Molecule id.
@@ -431,7 +431,7 @@ interface add_cfc
   !! @return RS_SUCCESS or an error code.
   function grt_add_cfc(ml, cfc_id, filepath) &
     result(return_code) &
-    bind(c)
+    bind(c, name="add_cfc")
     import c_char, c_int, c_ptr
     type(c_ptr), value :: ml !< Molecular lines object.
     integer(kind=c_int), intent(in), value :: cfc_id !< CFC id.
@@ -448,7 +448,7 @@ interface set_cfc_ppmv
   !! @return RS_SUCCESS or an error code.
   function grt_set_cfc_ppmv(ml, cfc_id, ppmv) &
     result(return_code) &
-    bind(c)
+    bind(c, name="set_cfc_ppmv")
     import c_int, c_ptr, fp
     type(c_ptr), value :: ml !< Molecular lines object.
     integer(kind=c_int), intent(in), value :: cfc_id !< CFC id.
@@ -465,7 +465,7 @@ interface add_cia
   !! @return RS_SUCCESS or an error code.
   function grt_add_cia(ml, species1, species2, filepath) &
     result(return_code) &
-    bind(c)
+    bind(c, name="add_cia")
     import c_char, c_int, c_ptr
     type(c_ptr), value :: ml !< Molecular lines object.
     integer(kind=c_int), intent(in), value :: species1 !< Id of species.
@@ -483,7 +483,7 @@ interface set_cia_ppmv
   !! @return RS_SUCCESS or an error code.
   function grt_set_cia_ppmv(ml, cia_id, ppmv) &
     result(return_code) &
-    bind(c)
+    bind(c, name="set_cia_ppmv")
     import c_int, c_ptr, fp
     type(c_ptr), value :: ml !< Molecularlines object.
     integer(kind=c_int), intent(in), value :: cia_id !< CIA species id.
@@ -500,7 +500,7 @@ interface calculate_optics
   !! @return RS_SUCCESS or an error code.
   function grt_calculate_optical_depth(ml, pressure, temperature, optics) &
     result(return_code) &
-    bind(c)
+    bind(c, name="calculate_optical_depth")
     import c_int, c_ptr, fp
     type(c_ptr), value :: ml !< Molecular lines object.
     real(kind=fp), dimension(*), intent(in) :: pressure !< Pressure [mb] (level).
@@ -518,7 +518,7 @@ interface num_molecules
   !! @return RS_SUCCESS or an error code.
   function grt_get_num_molecules(ml, n) &
     result(return_code) &
-    bind(c)
+    bind(c, name="get_num_molecules")
     import c_int, c_ptr
     type(c_ptr), intent(in), value :: ml !< Molecular lines object.
     integer(kind=c_int), intent(out) :: n !< Number of molecules.
@@ -529,12 +529,12 @@ end interface num_molecules
 public :: num_molecules
 
 
-interface grt_errstr
+interface grtcode_errstr
   !> @brief Return a message for an input return code.
   !! @return RS_SUCCESS or an error code.
   function c_grt_errstr(code, buf, buf_size) &
     result(return_code) &
-    bind(c, name="grt_errstr")
+    bind(c, name="grtcode_errstr")
     import c_char, c_int
     integer(kind=c_int), intent(in), value :: code !< Error code.
     character(kind=c_char, len=1), dimension(*) :: buf !< Buffer to hold error message.
@@ -542,8 +542,8 @@ interface grt_errstr
     integer(kind=c_int) :: return_code
   end function c_grt_errstr
   module procedure f_grt_errstr
-end interface grt_errstr
-public :: grt_errstr
+end interface grtcode_errstr
+public :: grtcode_errstr
 
 
 interface rayleigh_scattering
@@ -722,8 +722,8 @@ function f_solar_flux_properties(solar, flux) &
 end function f_solar_flux_properties
 
 
-function f_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o_ctm_dir, &
-                                  o3_ctm_dir, wcutoff, optical_depth_method) &
+function f_create_gas_optics(ml, num_levels, grid, device, hitran_path, h2o_ctm_dir, &
+                             o3_ctm_dir, wcutoff, optical_depth_method) &
   result(return_code)
   type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
   integer(kind=c_int), intent(in) :: num_levels !< Number of atmospheric levels.
@@ -750,28 +750,28 @@ function f_create_molecular_lines(ml, num_levels, grid, device, hitran_path, h2o
     call append_null_char("none", o3b)
   endif
   ml%ml = c_null_ptr
-  return_code = malloc_struct(ml%ml, molecular_lines_struct)
+  return_code = malloc_struct(ml%ml, gas_optics_struct)
   if (return_code .ne. grtcode_success) then
     return
   endif
-  return_code = c_create_molecular_lines(ml%ml, num_levels, grid%grid, device%device, &
-                                         hitran, h2ob, o3b, wcutoff, optical_depth_method)
+  return_code = c_create_gas_optics(ml%ml, num_levels, grid%grid, device%device, &
+                                    hitran, h2ob, o3b, wcutoff, optical_depth_method)
   deallocate(hitran)
   deallocate(h2ob)
   deallocate(o3b)
-end function f_create_molecular_lines
+end function f_create_gas_optics
 
 
-function f_destroy_molecular_lines(ml) &
+function f_destroy_gas_optics(ml) &
   result(return_code)
   type(MolecularLines_t), intent(inout) :: ml !< Molecular lines object.
   integer(kind=c_int) :: return_code
-  return_code = c_destroy_molecular_lines(ml%ml)
+  return_code = c_destroy_gas_optics(ml%ml)
   if (return_code .ne. grtcode_success) then
     return
   endif
   return_code = free_struct(ml%ml)
-end function f_destroy_molecular_lines
+end function f_destroy_gas_optics
 
 
 function f_add_molecule(ml, molecule_id, min_line_center, max_line_center) &

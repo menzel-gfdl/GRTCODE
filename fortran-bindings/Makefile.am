@@ -1,5 +1,5 @@
-AM_CPPFLAGS = -I${top_builddir}/rs_utils/src \
-              -I${top_builddir}/molecular_lines/src \
+AM_CPPFLAGS = -I${top_builddir}/utilities/src \
+              -I${top_builddir}/gas-optics/src \
               -I${top_builddir}/shortwave/src
 if USE_SINGLE_PRECISION
 AM_CPPFLAGS += -DSINGLE_PRECISION
