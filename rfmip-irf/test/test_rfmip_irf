@@ -1,11 +1,11 @@
 #!/bin/bash -x
 export OMP_NUM_THREADS="4"
-declare datadir="../../data"
+declare datadir="../../grtcode-data"
 
 
 #Forcing index = 1
-../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
-  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
+../src/rfmip_irf $datadir/rfmip-irf/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
+  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux/solar_flux.csv -v \
   -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
   -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum/ozone_continuum.csv \
   -CFC-11 $datadir/cfc_cross_sections/CFC-11_absorption_cross_sections.csv \
@@ -36,8 +36,8 @@ declare datadir="../../data"
 
 
 #Forcing index = 2
-../src/rfmip_irf $datadir/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
-  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux.csv -v \
+../src/rfmip_irf $datadir/rfmip-irf/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
+  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux/solar_flux.csv -v \
   -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
   -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum/ozone_continuum.csv \
   -CFC-11-eq $datadir/cfc_cross_sections/CFC-11_absorption_cross_sections.csv  \
@@ -50,13 +50,13 @@ declare datadir="../../data"
 
 
 #Forcing index = 3
-../src/rfmip_irf ../../data/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
-  0 ../../data/HITRAN_files/hitran2016.par ../../data/solar_flux.csv -v \
+../src/rfmip_irf $datadir/rfmip-irf/multiple_input4MIPs_radiation_RFMIP_UColorado-RFMIP-1-2_none.nc \
+  0 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux/solar_flux.csv -v \
   -H2O -CO2 -O3 -N2O -CH4 -CO -O2 \
-  -h2o-ctm ../../data/water_vapor_continuum -o3-ctm ../../data/ozone_continuum/ozone_continuum.csv \
-  -CFC-12-eq ../../data/cfc_cross_sections/CFC-12_absorption_cross_sections.csv  \
-  -HFC-134a-eq ../../data/cfc_cross_sections/HFC-134a_absorption_cross_sections.csv \
-  -N2-N2 ../../data/collision_induced_absorption/N2-N2.csv \
-  -O2-N2 ../../data/collision_induced_absorption/O2-N2.csv \
-  -O2-O2 ../../data/collision_induced_absorption/O2-O2.csv \
+  -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum/ozone_continuum.csv \
+  -CFC-12-eq $datadir/cfc_cross_sections/CFC-12_absorption_cross_sections.csv  \
+  -HFC-134a-eq $datadir/cfc_cross_sections/HFC-134a_absorption_cross_sections.csv \
+  -N2-N2 $datadir/collision_induced_absorption/N2-N2.csv \
+  -O2-N2 $datadir/collision_induced_absorption/O2-N2.csv \
+  -O2-O2 $datadir/collision_induced_absorption/O2-O2.csv \
   -x 0 -X 0 -o output.forcing_index3.nc

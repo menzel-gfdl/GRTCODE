@@ -48,6 +48,10 @@ requires a c compiler, such as the freely available gcc.  In order to run on NVI
 a c++ compiler (such as g++), CUDA, and the NVCC compiler are also required.
 The optional FORTRAN front-end library obviously also requires a FORTRAN
 compiler (such as gfortran).  Some of the binaries also require the netCDF library.
+A tarball with example input data can be downloaded from
+[GFDL's FTP server](ftp://ftp2.gfdl.noaa.gov/perm/GFDL_pubrelease/test_data/grtcode-data.tar.gz).
+To run the tests, download the example data, untar in the base of the repository,
+and then run ```make check``` after building.
 
 # Building
 
@@ -82,7 +86,7 @@ To build a CUDA-enabled version, run:
 $ autoreconf --install
 $ ./configure --enable-cuda
 $ make
-$ make check (this is optional but recommended)
+$ make check (this is optional, but recommended and requires downloading/untar-ing the example input data.)
 $ make install
 ```
 
@@ -103,7 +107,7 @@ by running:
 $ autoreconf --install
 $ ./configure --enable-fortran
 $ make
-$ make check (this is optional but recommended)
+$ make check (this is optional, but recommended and requires downloading/untar-ing the example input data.)
 $ make install
 ```
 
