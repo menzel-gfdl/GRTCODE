@@ -113,5 +113,6 @@ AC_CONFIG_FILES([Makefile
                  longwave/Makefile longwave/src/Makefile longwave/test/Makefile
                  rfmip-irf/Makefile rfmip-irf/src/Makefile rfmip-irf/test/Makefile
                  circ/Makefile circ/src/Makefile circ/test/Makefile
+                 era5/Makefile era5/src/Makefile era5/test/Makefile
                  fortran-bindings/Makefile])
 AC_OUTPUT
