@@ -3,7 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "argparse.h"
-#include "extern.h"
+
+
+#ifdef __cplusplus
+#define EXTERNC extern "C"
+#else
+#define EXTERNC
+#endif
 
 
 /*Check for whitespace and starting dashes in an argument name.*/
@@ -151,7 +157,7 @@ static void print_help(Parser_t const p /*Parser.*/
 
 
 /*Create a parser and add help option.*/
-EXTERN Parser_t create_parser(int const argc, char **argv, char const * const description)
+EXTERNC Parser_t create_parser(int const argc, char **argv, char const * const description)
 {
     Parser_t p;
     p.argc = argc;
@@ -173,9 +179,9 @@ EXTERN Parser_t create_parser(int const argc, char **argv, char const * const de
 
 
 /*Add argument to parser.*/
-EXTERN void add_argument(Parser_t * const parser, char const * const name,
-                         char const * const longname, char const * const description,
-                         int const * const requires_value)
+EXTERNC void add_argument(Parser_t * const parser, char const * const name,
+                          char const * const longname, char const * const description,
+                          int const * const requires_value)
 {
     Argument_t *arg = (Argument_t *)malloc(sizeof(*arg));
     arg->head = NULL;
@@ -248,7 +254,7 @@ EXTERN void add_argument(Parser_t * const parser, char const * const name,
 
 
 /*Parse arguments.*/
-EXTERN void parse_args(Parser_t const p)
+EXTERNC void parse_args(Parser_t const p)
 {
     int num_pos_args = 0;
     int i;
@@ -329,7 +335,7 @@ EXTERN void parse_args(Parser_t const p)
 
 
 /*Get the value of an argument.*/
-EXTERN int get_argument(Parser_t const p, char const * const name, char buffer[valuelen])
+EXTERNC int get_argument(Parser_t const p, char const * const name, char buffer[valuelen])
 {
     int result = 0;
     Argument_t *a = p.args;
@@ -352,7 +358,7 @@ EXTERN int get_argument(Parser_t const p, char const * const name, char buffer[v
 
 
 /*Free memory reserved by parser.*/
-EXTERN void destroy_parser(Parser_t * const p)
+EXTERNC void destroy_parser(Parser_t * const p)
 {
     Argument_t *a = p->args;
     Argument_t *b ;
