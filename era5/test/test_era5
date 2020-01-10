@@ -1,0 +1,10 @@
+#!/bin/bash -x
+export OMP_NUM_THREADS="4"
+declare datadir="../../grtcode-data"
+declare eradatadir="../../../era5/"
+
+../src/era5 $datadir/HITRAN_files/hitran2016.par $datadir/solar_flux/solar_flux.csv -v \
+  $eradatadir/remapped-level.nc $eradatadir/remapped-single.nc -H2O -O3 \
+  -h2o-ctm $datadir/water_vapor_continuum -o3-ctm $datadir/ozone_continuum/ozone_continuum.csv \
+  -o "output.era5.nc" -s 2stream \
+  -x 0 -X 0 -y 0 -Y 0 -t 0 -T 0

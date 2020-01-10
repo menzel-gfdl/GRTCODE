@@ -42,6 +42,8 @@ rfmip-irf/test/check_results
 circ/src/circ
 circ/test/*.nc
 circ/test/check_results
+era5/src/era5
+era5/test/*.nc
 longwave/test/test_longwave
 shortwave/test/test_shortwave
 *.mod
