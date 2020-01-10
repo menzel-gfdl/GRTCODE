@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "atmosphere.h"
+#include "circ.h"
 #include "driver.h"
 #include "gas_optics.h"
 #include "grtcode_utilities.h"

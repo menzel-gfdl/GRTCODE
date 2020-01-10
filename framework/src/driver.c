@@ -327,8 +327,8 @@ static int driver(Atmosphere_t const atm, /*Atmospheric state.*/
 }
 
 
-/*Main driver program.  When linking an executable, the use must provide a c file that
-  includes driver.h in this directory and provides implementations for:
+/*Main driver program.  When linking an executable, the use must provide an object file that
+  includes implementations for the following defined in driver.h:
    - struct output;
    - void close_flux_file(Output_t *output);
    - Atmosphere_t create_atmosphere(Parser_t parser);

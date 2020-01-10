@@ -1,14 +1,16 @@
-AM_CPPFLAGS = -I${top_builddir}/shortwave/src \
-              -I${top_builddir}/longwave/src \
-              -I${top_builddir}/cloud-optics/src \
-              -I${top_builddir}/gas-optics/src \
-              -I${top_builddir}/utilities/src
+AM_CPPFLAGS = -I${top_srcdir}/framework/src \
+              -I${top_srcdir}/shortwave/src \
+              -I${top_srcdir}/longwave/src \
+              -I${top_srcdir}/cloud-optics/src \
+              -I${top_srcdir}/gas-optics/src \
+              -I${top_srcdir}/utilities/src
 if USE_SINGLE_PRECISION
 AM_CPPFLAGS += -DSINGLE_PRECISION
 endif
 bin_PROGRAMS = circ
-circ_SOURCES = atmosphere.c circ.c
-circ_LDADD = ${top_builddir}/shortwave/src/libshortwave.a \
+circ_SOURCES = circ.c
+circ_LDADD = ${top_builddir}/framework/src/libdriver.a \
+             ${top_builddir}/shortwave/src/libshortwave.a \
              ${top_builddir}/longwave/src/liblongwave.a \
              ${top_builddir}/cloud-optics/src/libcloud_optics.a \
              ${top_builddir}/gas-optics/src/libgas_optics.a \
