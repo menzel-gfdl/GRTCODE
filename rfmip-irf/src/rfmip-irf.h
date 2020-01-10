@@ -16,8 +16,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef CIRC_H_
-#define CIRC_H_
+#ifndef RFMIP_IRF_H_
+#define RFMIP_IRF_H_
 
 #include "grtcode_utilities.h"
 
