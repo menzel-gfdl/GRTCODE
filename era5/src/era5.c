@@ -43,10 +43,10 @@
 
 enum dimid
 {
-    LAT = 0,
-    LON,
+    TIME = 0,
     LEVEL,
-    TIME,
+    LAT,
+    LON,
     NUM_DIMS
 };
 
@@ -61,6 +61,7 @@ struct Output
 
 static size_t nlon;
 static size_t nlat;
+static size_t nlevel;
 
 
 /*Reorder from (t,z,y,x) to (t,y,x,z).*/
@@ -215,7 +216,8 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
         nc_catch(nc_inq_dimlen(ncid, dimid, &num_levels));
         Z = (int)num_levels - 1;
     }
-    atm.num_levels = Z - z + 1;
+    nlevel = Z - z + 1;
+    atm.num_levels = nlevel;
     atm.num_layers = atm.num_levels - 1;
 
     /*Pressure.*/
@@ -262,18 +264,22 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
     tzyx_to_tyxz(atm.level_temperature, temperature, nlon, nlat, atm.num_levels, atm.num_times);
     free(temperature);
     alloc(atm.layer_temperature, atm.num_times*atm.num_columns*atm.num_layers, fp_t *);
-    for (i=0; i<atm.num_times*atm.num_columns; ++i)
+    for (i=0; i<atm.num_times; ++i)
     {
         int j;
-        for (j=0; j<atm.num_layers; ++j)
+        for (j=0; j<atm.num_columns; ++j)
         {
-            int offset_lay = i*atm.num_layers + j;
-            int offset_lev = i*atm.num_levels + j;
-            fp_t *tlay = &(atm.layer_temperature[offset_lay]);
-            fp_t const *tlev = &(atm.level_temperature[offset_lev]);
-            fp_t const *play = &(atm.layer_pressure[offset_lay]);
-            fp_t const *plev = &(atm.level_pressure[offset_lev]);
-            tlay[j] = tlev[j] + (tlev[j+1] - tlev[j])*(play[j] - plev[j])/(plev[j+1] - plev[j]);
+            int k;
+            for (k=0; k<atm.num_layers; ++k)
+            {
+                int offset_lay = i*atm.num_columns*atm.num_layers + j*atm.num_layers + k;
+                int offset_lev = i*atm.num_columns*atm.num_levels + j*atm.num_levels + k;
+                fp_t *tlay = &(atm.layer_temperature[offset_lay]);
+                fp_t const *tlev = &(atm.level_temperature[offset_lev]);
+                fp_t const *play = &(atm.layer_pressure[offset_lay]);
+                fp_t const *plev = &(atm.level_pressure[offset_lev]);
+                tlay[k] = tlev[k] + (tlev[k+1] - tlev[k])*(play[k] - plev[k])/(plev[k+1] - plev[k]);
+            }
         }
     }
 
@@ -325,6 +331,9 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
     {
         snprintf(atm.o3_ctm, valuelen, "%s", "none");
     }
+    atm.num_cfcs = 0;
+    atm.num_cias = 0;
+    atm.num_cia_species = 0;
 
     /*Close level file and open single file.*/
     nc_catch(nc_close(ncid));
@@ -455,15 +464,21 @@ void destroy_atmosphere(Atmosphere_t * const atm)
     {
         free(atm->cfc_ppmv[i]);
     }
-    free(atm->cfc_ppmv);
-    free(atm->cfc);
+    if (atm->num_cfcs > 0)
+    {
+        free(atm->cfc_ppmv);
+        free(atm->cfc);
+    }
     for (i=0; i<atm->num_cia_species; ++i)
     {
         free(atm->cia_ppmv[i]);
     }
-    free(atm->cia_ppmv);
-    free(atm->cia);
-    free(atm->cia_species);
+    if (atm->num_cias > 0)
+    {
+        free(atm->cia_ppmv);
+        free(atm->cia);
+        free(atm->cia_species);
+    }
     return;
 }
 
@@ -508,7 +523,10 @@ void create_flux_file(Output_t **output, char const * const filepath,
     file->dimid = (int *)malloc(sizeof(*(file->dimid))*NUM_DIMS);
     file->varid = (int *)malloc(sizeof(*(file->varid))*NUM_VARS);
     nc_catch(nc_create(filepath, NC_NETCDF4, &(file->ncid)));
+    nc_catch(nc_def_dim(file->ncid, "time", atm->num_times, &(file->dimid[TIME])));
     nc_catch(nc_def_dim(file->ncid, "level", atm->num_levels, &(file->dimid[LEVEL])));
+    nc_catch(nc_def_dim(file->ncid, "lat", nlat, &(file->dimid[LAT])));
+    nc_catch(nc_def_dim(file->ncid, "lon", nlon, &(file->dimid[LON])));
     add_flux_variable(file, RLU, "rlu", "upwelling_longwave_flux_in_air", NULL);
     add_flux_variable(file, RLD, "rld", "downwelling_longwave_flux_in_air", NULL);
     fp_t const zero = 0;
@@ -534,14 +552,14 @@ void write_output(Output_t *output, VarId_t id, fp_t *data, int time, int column
 {
     size_t num_levels;
     nc_catch(nc_inq_dimlen(output->ncid, output->dimid[LEVEL], &num_levels));
-    size_t start = 0;
-    size_t count = num_levels;
+    int lat = column/nlon;
+    int lon = column - nlon*lat;
+    size_t start[4] = {time, 0, lat, lon};
+    size_t count[4] = {1, nlevel, 1, 1};
 #ifdef SINGLE_PRECISION
-    nc_catch(nc_put_vara_float(output->ncid, output->varid[id], &start, &count, data))
+    nc_catch(nc_put_vara_float(output->ncid, output->varid[id], start, count, data))
 #else
-    nc_catch(nc_put_vara_double(output->ncid, output->varid[id], &start, &count, data))
+    nc_catch(nc_put_vara_double(output->ncid, output->varid[id], start, count, data))
 #endif
-    (void)time;
-    (void)column;
     return;
 }
