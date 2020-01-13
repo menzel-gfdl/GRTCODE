@@ -122,9 +122,8 @@ static void tyxz_to_tzyx(fp_t *dest, fp_t *src, int nx, int ny, int nz, int nt)
 Atmosphere_t create_atmosphere(Parser_t *parser)
 {
     /*Add/parse command line arguments.*/
-/*
-    parser->description = "Calculates the radiative fluxes for the NASA CIRC test cases.";
-*/
+    snprintf(parser->description, desclen,
+             "Calculates the radiative fluxes for ERA5 reanalysis data.");
     add_argument(parser, "level_file", NULL, "Input data file.", NULL);
     add_argument(parser, "single_file", NULL, "Input data file.", NULL);
     int one = 1;
@@ -272,12 +271,12 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
             int k;
             for (k=0; k<atm.num_layers; ++k)
             {
-                int offset_lay = i*atm.num_columns*atm.num_layers + j*atm.num_layers + k;
-                int offset_lev = i*atm.num_columns*atm.num_levels + j*atm.num_levels + k;
-                fp_t *tlay = &(atm.layer_temperature[offset_lay]);
-                fp_t const *tlev = &(atm.level_temperature[offset_lev]);
-                fp_t const *play = &(atm.layer_pressure[offset_lay]);
-                fp_t const *plev = &(atm.level_pressure[offset_lev]);
+                int layer_offset = i*atm.num_columns*atm.num_layers + j*atm.num_layers;
+                int level_offset = i*atm.num_columns*atm.num_levels + j*atm.num_levels;
+                fp_t *tlay = &(atm.layer_temperature[layer_offset]);
+                fp_t const *tlev = &(atm.level_temperature[level_offset]);
+                fp_t const *play = &(atm.layer_pressure[layer_offset]);
+                fp_t const *plev = &(atm.level_pressure[level_offset]);
                 tlay[k] = tlev[k] + (tlev[k+1] - tlev[k])*(play[k] - plev[k])/(plev[k+1] - plev[k]);
             }
         }
@@ -314,7 +313,7 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
             int j;
             for (j=0; j<atm.num_times*atm.num_levels*nlat*nlon; ++j)
             {
-                abundance[i] = (abundance[i]*scale + add)*to_ppmv;
+                abundance[j] = (abundance[j]*scale + add)*to_ppmv;
             }
             tzyx_to_tyxz(ppmv, abundance, nlon, nlat, atm.num_levels, atm.num_times);
             atm.num_molecules++;
@@ -353,12 +352,76 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
         atm.surface_temperature[i] = atm.surface_temperature[i]*scale + add;
     }
 
-    /*Solar zenith angle.*/
-    alloc(atm.solar_zenith_angle, atm.num_times*atm.num_columns, fp_t *);
-    for (i=0; i<atm.num_times*atm.num_columns; ++i)
+    /*Calculate the cosine of the solar zenith angle from the solar irradiance.*/
+    int dimid;
+    nc_catch(nc_inq_dimid(ncid, "lon", &dimid));
+    size_t global_num_lon;
+    nc_catch(nc_inq_dimlen(ncid, dimid, &global_num_lon));
+    nc_catch(nc_inq_dimid(ncid, "lat", &dimid));
+    size_t global_num_lat;
+    nc_catch(nc_inq_dimlen(ncid, dimid, &global_num_lat));
+    fp_t *lat;
+    alloc(lat, global_num_lat, fp_t *);
+    nc_catch(nc_inq_varid(ncid, "lat", &varid));
+    start[0] = 0; start[1] = 0; start[2] = 0; start[3] = 0;
+    count[0] = global_num_lat; count[1] = 1; count[2] = 1; count[3] = 1;
+    get_var(ncid, varid, start, count, lat);
+    fp_t *weights;
+    alloc(weights, global_num_lat, fp_t *);
+    fp_t total_weight = 0.;
+    for (i=0; i<global_num_lat; ++i)
     {
-        atm.solar_zenith_angle[i] = 0.5;
+        weights[i] = cos(2.*M_PI*lat[i]/360.);
+        total_weight += weights[i];
     }
+    free(lat);
+    fp_t *irradiance;
+    alloc(irradiance, atm.num_times*global_num_lat*global_num_lon, fp_t *);
+    nc_catch(nc_inq_varid(ncid, "tisr", &varid));
+    start[0] = t; start[1] = 0; start[2] = 0; start[3] = 0;
+    count[0] = atm.num_times; count[1] = global_num_lat; count[2] = global_num_lon; count[3] = 1;
+    get_var(ncid, varid, start, count, irradiance);
+    nc_catch(nc_get_att_double(ncid, varid, "scale_factor", &scale));
+    nc_catch(nc_get_att_double(ncid, varid, "add_offset", &add));
+    fp_t *mean_irradiance;
+    alloc(mean_irradiance, atm.num_times, fp_t *);
+    fp_t const seconds_per_day = 86400.;
+    for (i=0; i<atm.num_times; ++i)
+    {
+        mean_irradiance[i] = 0.;
+        int j;
+        for (j=0; j<global_num_lat; ++j)
+        {
+            fp_t running_sum = 0.;
+            int k;
+            for (k=0; k<global_num_lon; ++k)
+            {
+                int offset = i*global_num_lat*global_num_lon + j*global_num_lon + k;
+                irradiance[offset] = (irradiance[offset]*scale + add)/seconds_per_day;
+                running_sum += irradiance[offset];
+            }
+            mean_irradiance[i] += (running_sum/global_num_lon)*(weights[j]/total_weight);
+        }
+        mean_irradiance[i] *= 4.;
+    }
+    free(weights);
+    alloc(atm.solar_zenith_angle, atm.num_times*atm.num_columns, fp_t *);
+    for (i=0; i<atm.num_times; ++i)
+    {
+        int j;
+        for (j=0; j<nlat; ++j)
+        {
+            int k;
+            for (k=0; k<nlon; ++k)
+            {
+                int offset1 = i*nlat*nlon + j*nlon + k;
+                int offset2 = i*global_num_lat*global_num_lon + (j+y)*global_num_lon + k+x;
+                atm.solar_zenith_angle[offset1] = irradiance[offset2]/mean_irradiance[i];
+            }
+        }
+    }
+    free(irradiance);
+    free(mean_irradiance);
 
     /*Solar irradiance.*/
     alloc(atm.total_solar_irradiance, atm.num_times*atm.num_columns, fp_t *);
@@ -368,10 +431,10 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
     get_var(ncid, varid, start, count, atm.total_solar_irradiance);
     nc_catch(nc_get_att_double(ncid, varid, "scale_factor", &scale));
     nc_catch(nc_get_att_double(ncid, varid, "add_offset", &add));
-    for (i=0; i<atm.num_columns; ++i)
+    for (i=0; i<atm.num_times*atm.num_columns; ++i)
     {
         atm.total_solar_irradiance[i] = (atm.total_solar_irradiance[i]*scale + add)/
-                                        atm.solar_zenith_angle[i];
+                                        (seconds_per_day*atm.solar_zenith_angle[i]);
     }
 
     /*Surface albedo.*/

@@ -71,9 +71,8 @@ struct Output
 Atmosphere_t create_atmosphere(Parser_t *parser)
 {
     /*Add/parse command line arguments.*/
-/*
-    parser->description = "Calculates the radiative fluxes for the NASA CIRC test cases.";
-*/
+    snprintf(parser->description, desclen,
+             "Calculates the radiative fluxes for the NASA CIRC test cases.");
     add_argument(parser, "input_file", NULL, "Input data file.", NULL);
     int one = 1;
     add_argument(parser, "-a", "--surface-albedo", "Spectrally constant surface albedo.", &one);

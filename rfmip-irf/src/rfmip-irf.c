@@ -63,9 +63,8 @@ struct Output
 Atmosphere_t create_atmosphere(Parser_t *parser)
 {
     /*Add/parse command line arguments.*/
-/*
-    parser->description = "Calculates the radiative fluxes for the CMIP6 RFMIP-IRF scenarios.";
-*/
+    snprintf(parser->description, desclen,
+             "Calculates the radiative fluxes for the CMIP6 RFMIP-IRF scenarios.");
     add_argument(parser, "input_file", NULL, "Input data file.", NULL);
     add_argument(parser, "experiment", NULL, "Experiment number.", NULL);
     int one = 1;
