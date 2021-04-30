@@ -2,14 +2,17 @@
 #define DRIVER_H_
 
 #include "argparse.h"
-#include "cloud_optics.h"
 #include "grtcode_utilities.h"
 
 
 typedef enum VarId
 {
-    RLD = 0,
-    RLU,
+    RLDAF = 0,
+    RLDCS,
+    RLDCSAF,
+    RLUAF,
+    RLUCS,
+    RLUCSAF,
     RSU,
     RSD,
     H2OVMR,
@@ -51,7 +54,7 @@ typedef struct Atmosphere
     size_t albedo_grid_size; /*Length of albedo_grid array.*/
     Cfc_t *cfc; /*GRTCODE cfc ids and paths.*/
     fp_t **cfc_ppmv; /*CFC abundance [ppmv] (CFC, time, column, level).*/
-    LiquidCloud_t cloud_param; /*Cloud parameterization.*/
+    fp_t *cloud_fraction; /*Cloud fraction (time, column, layer).*/
     Cia_t *cia; /*GRTCODE CIA ids and paths.*/
     fp_t **cia_ppmv; /*CIA abundance [ppmv] (molecule, time, column, level).*/
     int *cia_species; /*GRTCODE CIA ids.*/
@@ -60,12 +63,14 @@ typedef struct Atmosphere
     fp_t *emissivity_grid; /*Wavenumber [cm-1] grid for the surface emissivity (wavenumber).*/
     size_t emissivity_grid_size; /*Length of emissivity_grid array.*/
     char h2o_ctm[valuelen]; /*Path to water vapor continuum directory.*/
+    fp_t *ice_water_content; /*Cloud ice water content [g m-3] (time, column, layer).*/
     fp_t *layer_pressure; /*Pressure [atm] (time, column, layer).*/
     fp_t *layer_temperature; /*Temperature [K] (time, column, layer).*/
     fp_t *level_pressure; /*Pressure [atm] (time, column, level).*/
     fp_t *level_temperature; /*Temperature [K] (time, column, level).*/
+    fp_t *layer_thickness; /*Thickness [m] (time, column, layer).*/
     fp_t *liquid_water_droplet_radius; /*Liquid water equivalent radius [microns] (time, column, layer).*/
-    fp_t *liquid_water_path; /*Liquid water path [g/m2] (time, column, layer).*/
+    fp_t *liquid_water_content; /*Cloud liquid water content [g m-3] (time, column, layer).*/
     int *molecules; /*GRTCODE molecule ids.*/
     int num_cfcs; /*Length of cfc array.*/
     int num_cia_species; /*Length of cia_species array.*/

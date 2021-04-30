@@ -476,6 +476,78 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
     }
     free(albedo);
 
+
+    /*Clouds.*/
+    atm.clear = get_argument(*parser, "-clear", buffer) ? 1 : 0;
+    if (!atm.clear)
+    {
+        /*Calclutate air density.*/
+        fp_t *air_density;
+        alloc(air_density, atm.num_times*atm.num_columns*atm.num_layers, fp_t *);
+        for (i=0; i<atm.num_times*atm.num_columns*atm.num_layers; ++i)
+        {
+            air_density[i] = (atm.layer_pressure[i]*(29.9647/1000.))/
+                             (atm.layer_temperature[i]*8.314462);
+        }
+
+        /*Read in the cloud properties.*/
+        alloc(atm.cloud_fraction, atm.num_times*atm.num_columns*atm.num_layers, fp_t *);
+        fp_t *clouds;
+        alloc(clouds, atm.num_times*atm.num_layers*atm.num_columns, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "cc", &varid));
+        start[0] = t; start[1] = z; start[2] = y; start[3] = x;
+        count[0] = atm.num_times; count[1] = atm.num_layers; count[2] = nlat; count[3] = nlon;
+        get_var(ncid, varid, start, count, clouds);
+        tzyx_to_tyxz(atm.cloud_fraction, clouds, nlon, nlat, atm.num_layers, atm.num_times);
+        alloc(atm.ice_water_content, atm.num_times*atm.num_columns*atm.num_layers, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "ciwc", &varid));
+        start[0] = t; start[1] = z; start[2] = y; start[3] = x;
+        count[0] = atm.num_times; count[1] = atm.num_layers; count[2] = nlat; count[3] = nlon;
+        get_var(ncid, varid, start, count, clouds);
+        tzyx_to_tyxz(atm.ice_water_content, clouds, nlon, nlat, atm.num_layers, atm.num_times);
+        fp_t const kg_to_g = 1000.;
+        for (i=0; i<atm.num_times*atm.num_columns*atm.num_layers; ++i)
+        {
+            atm.ice_water_content[i] *= air_density[i]*kg_to_g;
+        }
+        alloc(atm.liquid_water_content, atm.num_times*atm.num_columns*atm.num_layers, fp_t *);
+        nc_catch(nc_inq_varid(ncid, "clwc", &varid));
+        start[0] = t; start[1] = z; start[2] = y; start[3] = x;
+        count[0] = atm.num_times; count[1] = atm.num_layers; count[2] = nlat; count[3] = nlon;
+        get_var(ncid, varid, start, count, clouds);
+        tzyx_to_tyxz(atm.liquid_water_content, clouds, nlon, nlat, atm.num_layers, atm.num_times);
+        free(clouds);
+        for (i=0; i<atm.num_times*atm.num_columns*atm.num_layers; ++i)
+        {
+            atm.liquid_water_content[i] *= air_density[i]*kg_to_g;
+        }
+        free(air_density);
+
+        /*Calculate layer thickness.*/
+        alloc(atm.layer_thickness, atm.num_times*atm.num_columns*atm.num_layers, fp_t *);
+        for (i=0; i<atm.num_times; ++i)
+        {
+            int j;
+            for (j=0; j<nlat; ++j)
+            {
+                int k;
+                for (k=0; k<nlon; ++k)
+                {
+                    int offset = atm.num_levels*(i*nlat*nlon + j*nlon + k);
+                    fp_t const *plev = &(atm.level_pressure[offset]);
+                    offset = atm.num_layers*(i*nlat*nlon + j*nlon + k);
+                    fp_t const *tlay = &(atm.layer_temperature[offset]);
+                    int m;
+                    for (m=0; m<atm.num_layers; ++m)
+                    {
+                        atm.layer_thickness[offset+m] = (abs(log(plev[m]) - log(plev[m+1]))*
+                                                        tlay[m]*8.314462)/((29.9647/1000.)*9.81);
+                    }
+                }
+            }
+        }
+    }
+
     /*Close the era5 file.*/
     nc_catch(nc_close(ncid));
 
@@ -622,9 +694,6 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
 
     /*Aerosols.*/
     atm.clean = 1;
-
-    /*Clouds.*/
-    atm.clear = 1;
     return atm;
 }
 
@@ -652,8 +721,10 @@ void destroy_atmosphere(Atmosphere_t * const atm)
     }
     if (!atm->clear)
     {
-        free(atm->liquid_water_droplet_radius);
-        free(atm->liquid_water_path);
+        free(atm->cloud_fraction);
+        free(atm->ice_water_content);
+        free(atm->liquid_water_content);
+        free(atm->layer_thickness);
     }
     int i;
     for (i=0; i<atm->num_molecules; ++i)
@@ -691,7 +762,8 @@ static void add_flux_variable(Output_t * const o, /*Output object.*/
                               char const * const name, /*Variable name.*/
                               char const * const standard_name, /*Variable standard name.*/
                               char const * const units, /*Units.*/
-                              fp_t const * const fill_value /*Fill value.*/
+                              fp_t const * const fill_value, /*Fill value.*/
+                              int const num_dims /*Number of dimensions.*/
                              )
 {
 #ifdef SINGLE_PRESCISION
@@ -700,8 +772,9 @@ static void add_flux_variable(Output_t * const o, /*Output object.*/
     nc_type type = NC_DOUBLE;
 #endif
     int varid;
-    int dimids[4] = {o->dimid[TIME], o->dimid[LEVEL], o->dimid[LAT], o->dimid[LON]};
-    nc_catch(nc_def_var(o->ncid, name, type, 4, dimids, &varid));
+    int dimids[5] = {o->dimid[TIME], o->dimid[LEVEL], o->dimid[LAT], o->dimid[LON],
+                     o->dimid[LW_WAVENUMBER]};
+    nc_catch(nc_def_var(o->ncid, name, type, num_dims, dimids, &varid));
     nc_catch(nc_put_att_text(o->ncid, varid, "units", strlen(units), units));
     nc_catch(nc_put_att_text(o->ncid, varid, "standard_name", strlen(standard_name),
                              standard_name));
@@ -759,7 +832,6 @@ void create_flux_file(Output_t **output, char const * const filepath,
 
     nc_catch(nc_def_dim(file->ncid, "layer", atm->num_layers, &(file->dimid[LAYER])));
 
-/*
     nc_catch(nc_def_dim(file->ncid, "wavenumber", lw_grid->n, &(file->dimid[LW_WAVENUMBER])));
     nc_catch(nc_def_var(file->ncid, "wavenumber", NC_DOUBLE, 1,
              &(file->dimid[LW_WAVENUMBER]), &varid));
@@ -773,21 +845,25 @@ void create_flux_file(Output_t **output, char const * const filepath,
         grid[i] = lw_grid->w0 + i*lw_grid->dw;
     }
     nc_catch(nc_put_vara_double(file->ncid, varid, start, count, grid));
-*/
 
     fp_t const fill = -1;
-    add_flux_variable(file, RLU, "rlu", "upwelling_longwave_flux_in_air", "W m-2", &fill);
-    add_flux_variable(file, RLD, "rld", "downwelling_longwave_flux_in_air", "W m-2", &fill);
-    add_flux_variable(file, RSU, "rsu", "upwelling_shortwave_flux_in_air", "W m-2", &fill);
-    add_flux_variable(file, RSD, "rsd", "downwelling_shortwave_flux_in_air", "W m-2", &fill);
-
-    add_flux_variable(file, PLEV, "p", "air_pressure", "mb", NULL);
-    add_flux_variable(file, TLEV, "t", "air_temperature", "K", NULL);
-    add_flux_variable(file, H2OVMR, "h2o_vmr", "water_vapor_vmr", "ppmv", NULL);
-    add_flux_variable(file, O3VMR, "o3_vmr", "ozone_vmr", "ppmv", NULL);
-    add_flux_variable(file, CH4VMR, "ch4_vmr", "methane_vmr", "ppmv", NULL);
-    add_flux_variable(file, CO2VMR, "co2_vmr", "carbon_dioxide_vmr", "ppmv", NULL);
-    add_flux_variable(file, N2OVMR, "n2o_vmr", "nitrous_oxide_vmr", "ppmv", NULL);
+    add_flux_variable(file, RLUAF, "rluaf", "upwelling_aerosol_free_longwave_flux_in_air",
+                      "W m-2", &fill, 5);
+    add_flux_variable(file, RLUCSAF, "rlucsaf",
+                      "upwelling_clear_sky_aerosol_free_longwave_flux_in_air", "W m-2",
+                      &fill, 5);
+    add_flux_variable(file, RLDAF, "rldaf", "downwelling_aerosol_free_longwave_flux_in_air",
+                      "W m-2", &fill, 5);
+    add_flux_variable(file, RLDCSAF, "rldcsaf",
+                      "downwelling_clear_sky_aerosol_free_longwave_flux_in_air",
+                      "W m-2", &fill, 5);
+    add_flux_variable(file, PLEV, "p", "air_pressure", "mb", NULL, 4);
+    add_flux_variable(file, TLEV, "t", "air_temperature", "K", NULL, 4);
+    add_flux_variable(file, H2OVMR, "h2o_vmr", "water_vapor_vmr", "ppmv", NULL, 4);
+    add_flux_variable(file, O3VMR, "o3_vmr", "ozone_vmr", "ppmv", NULL, 4);
+    add_flux_variable(file, CH4VMR, "ch4_vmr", "methane_vmr", "ppmv", NULL, 4);
+    add_flux_variable(file, CO2VMR, "co2_vmr", "carbon_dioxide_vmr", "ppmv", NULL, 4);
+    add_flux_variable(file, N2OVMR, "n2o_vmr", "nitrous_oxide_vmr", "ppmv", NULL, 4);
 
 
 #ifdef SINGLE_PRESCISION
@@ -795,12 +871,12 @@ void create_flux_file(Output_t **output, char const * const filepath,
 #else
     nc_type type = NC_DOUBLE;
 #endif
-    int dimids[5] = {file->dimid[TIME], file->dimid[LAT], file->dimid[LON]};
+    int dimids[4] = {file->dimid[TIME], file->dimid[LAT], file->dimid[LON]};
     nc_catch(nc_def_var(file->ncid, "ts", type, 3, dimids, &(file->varid[TS])));
     char *standard_name = "surface_temperature";
     nc_catch(nc_put_att_text(file->ncid, file->varid[TS], "standard_name", strlen(standard_name),
                              standard_name));
-    char *units = "K";
+    units = "K";
     nc_catch(nc_put_att_text(file->ncid, file->varid[TS], "units", strlen(units), units));
 
     dimids[0] = file->dimid[TIME]; dimids[1] = file->dimid[LAYER];
@@ -811,15 +887,6 @@ void create_flux_file(Output_t **output, char const * const filepath,
                              standard_name));
     units = "K";
     nc_catch(nc_put_att_text(file->ncid, file->varid[TLAY], "units", strlen(units), units));
-
-/*
-    dimids[0] = file->dimid[TIME]; dimids[1] = file->dimid[LAYER]; dimids[2] = file->dimid[LAT];
-    dimids[3] = file->dimid[LON]; dimids[4] = file->dimid[LW_WAVENUMBER];
-    nc_catch(nc_def_var(file->ncid, "tau", type, 5, dimids, &(file->varid[TAU])));
-    standard_name = "lw_optical_depth";
-    nc_catch(nc_put_att_text(file->ncid, file->varid[TAU], "standard_name", strlen(standard_name),
-                             standard_name));
-*/
 
     *output = file;
     return;
@@ -841,24 +908,7 @@ void write_output(Output_t *output, VarId_t id, fp_t *data, int time, int column
 {
     int lat = column/nlon;
     int lon = column - nlon*lat;
-
-    printf("%d, %d, %d, %d\n", time, column, lat, lon);
-
-    if (id == TAU)
-    {
-        size_t num_layers;
-        nc_catch(nc_inq_dimlen(output->ncid, output->dimid[LAYER], &num_layers));
-        size_t nw;
-        nc_catch(nc_inq_dimlen(output->ncid, output->dimid[LW_WAVENUMBER], &nw));
-        size_t start[5] = {time, 0, lat, lon, 0};
-        size_t count[5] = {1, num_layers, 1, 1, nw};
-#ifdef SINGLE_PRECISION
-        nc_catch(nc_put_vara_float(output->ncid, output->varid[id], start, count, data));
-#else
-        nc_catch(nc_put_vara_double(output->ncid, output->varid[id], start, count, data));
-#endif
-    }
-    else if (id == TS)
+    if (id == TS)
     {
         size_t start[3] = {time, lat, lon};
         size_t count[3] = {1, 1, 1};
@@ -874,6 +924,20 @@ void write_output(Output_t *output, VarId_t id, fp_t *data, int time, int column
         nc_catch(nc_inq_dimlen(output->ncid, output->dimid[LAYER], &num_layers));
         size_t start[4] = {time, 0, lat, lon};
         size_t count[4] = {1, num_layers, 1, 1};
+#ifdef SINGLE_PRECISION
+        nc_catch(nc_put_vara_float(output->ncid, output->varid[id], start, count, data));
+#else
+        nc_catch(nc_put_vara_double(output->ncid, output->varid[id], start, count, data));
+#endif
+    }
+    else if (id >= RLDAF && id <= RLUCSAF)
+    {
+        size_t num_levels;
+        nc_catch(nc_inq_dimlen(output->ncid, output->dimid[LEVEL], &num_levels));
+        size_t num_w;
+        nc_catch(nc_inq_dimlen(output->ncid, output->dimid[LW_WAVENUMBER], &num_w));
+        size_t start[5] = {time, 0, lat, lon, 0};
+        size_t count[5] = {1, num_levels, 1, 1, num_w};
 #ifdef SINGLE_PRECISION
         nc_catch(nc_put_vara_float(output->ncid, output->varid[id], start, count, data));
 #else

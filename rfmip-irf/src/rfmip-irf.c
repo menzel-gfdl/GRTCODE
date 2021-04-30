@@ -491,7 +491,7 @@ void destroy_atmosphere(Atmosphere_t * const atm)
     if (!atm->clear)
     {
         free(atm->liquid_water_droplet_radius);
-        free(atm->liquid_water_path);
+        free(atm->liquid_water_content);
     }
     int i;
     for (i=0; i<atm->num_molecules; ++i)
@@ -559,8 +559,8 @@ void create_flux_file(Output_t **output, char const * const filepath,
     file->varid = (int *)malloc(sizeof(*(file->varid))*NUM_VARS);
     nc_catch(nc_create(filepath, NC_NETCDF4, &(file->ncid)));
     nc_catch(nc_def_dim(file->ncid, "level", atm->num_levels, &(file->dimid[LEVEL])));
-    add_flux_variable(file, RLU, "rlu", "upwelling_longwave_flux_in_air", NULL);
-    add_flux_variable(file, RLD, "rld", "downwelling_longwave_flux_in_air", NULL);
+    add_flux_variable(file, RLUCSAF, "rlu", "upwelling_longwave_flux_in_air", NULL);
+    add_flux_variable(file, RLDCSAF, "rld", "downwelling_longwave_flux_in_air", NULL);
     fp_t const zero = 0;
     add_flux_variable(file, RSU, "rsu", "upwelling_shortwave_flux_in_air", &zero);
     add_flux_variable(file, RSD, "rsd", "downwelling_shortwave_flux_in_air", &zero);

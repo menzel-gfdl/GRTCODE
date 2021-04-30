@@ -417,24 +417,11 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
     atm.clear = get_argument(*parser, "-clear", NULL);
     if (!atm.clear)
     {
-        atm.cloud_param = hu_stamnes_1993;
-        if (get_argument(*parser, "-p", buffer))
-        {
-            if (strcmp(buffer, "slingo") == 0)
-            {
-                atm.cloud_param = slingo_1989;
-            }
-            else if (strcmp(buffer, "hu") != 0)
-            {
-                fprintf(stderr, "Cloud parameterization (-p) must be either hu or slingo.\n");
-                exit(EXIT_FAILURE);
-            }
-        }
-        alloc(atm.liquid_water_path, atm.num_layers*atm.num_columns, fp_t *);
+        alloc(atm.liquid_water_content, atm.num_layers*atm.num_columns, fp_t *);
         nc_catch(nc_inq_varid(ncid, "liquid_water_path", &varid));
         start = z;
         count = atm.num_layers;
-        get_var(ncid, varid, &start, &count, atm.liquid_water_path);
+        get_var(ncid, varid, &start, &count, atm.liquid_water_content);
         alloc(atm.liquid_water_droplet_radius, atm.num_layers*atm.num_columns, fp_t *);
         nc_catch(nc_inq_varid(ncid, "liquid_water_effective_particle_size", &varid));
         start = z;
@@ -472,7 +459,7 @@ void destroy_atmosphere(Atmosphere_t * const atm)
     if (!atm->clear)
     {
         free(atm->liquid_water_droplet_radius);
-        free(atm->liquid_water_path);
+        free(atm->liquid_water_content);
     }
     int i;
     for (i=0; i<atm->num_molecules; ++i)
@@ -540,8 +527,8 @@ void create_flux_file(Output_t **output, char const * const filepath,
     file->varid = (int *)malloc(sizeof(*(file->varid))*NUM_VARS);
     nc_catch(nc_create(filepath, NC_NETCDF4, &(file->ncid)));
     nc_catch(nc_def_dim(file->ncid, "level", atm->num_levels, &(file->dimid[LEVEL])));
-    add_flux_variable(file, RLU, "rlu", "upwelling_longwave_flux_in_air", NULL);
-    add_flux_variable(file, RLD, "rld", "downwelling_longwave_flux_in_air", NULL);
+    add_flux_variable(file, RLUAF, "rlu", "upwelling_longwave_flux_in_air", NULL);
+    add_flux_variable(file, RLDAF, "rld", "downwelling_longwave_flux_in_air", NULL);
     fp_t const zero = 0;
     add_flux_variable(file, RSU, "rsu", "upwelling_shortwave_flux_in_air", &zero);
     add_flux_variable(file, RSD, "rsd", "downwelling_shortwave_flux_in_air", &zero);
