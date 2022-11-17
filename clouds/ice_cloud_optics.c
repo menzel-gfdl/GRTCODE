@@ -7,8 +7,10 @@
 #include "optics_utils.h"
 
 
-/* @brief Donner parameterization.*/
-HOST DEVICE static fp_t ice_particle_size(fp_t const temperature)
+/* @brief Donner parameterization for ice particle size.*/
+HOST DEVICE static fp_t ice_particle_size(
+    fp_t const temperature /**< Temperature [K].*/
+)
 {
     fp_t const tfreeze = 273.16;
     if (temperature > tfreeze - 25.)
@@ -47,71 +49,87 @@ HOST DEVICE static fp_t ice_particle_size(fp_t const temperature)
 
 
 /* @brief Calculates cloud optics.*/
-HOST DEVICE static void optics(int const num_radius_bins, fp_t const * radii,
-                               int const num_order, int const num_bands, int const last_ir_band,
-                               fp_t const * a, fp_t const * b, fp_t const * c,
-                               fp_t const ice_concentration,
-                               fp_t const equivalent_radius,
-                               fp_t const scale_factor,
-                               fp_t const temperature,
-                               fp_t const thickness,
-                               int const band,
-                               fp_t * extinction_coefficient,
-                               fp_t * single_scatter_albedo,
-                               fp_t * asymmetry_factor)
+HOST DEVICE static void optics(
+    int const num_radius_bins, /**< Number of radius bins.*/
+    fp_t const * radii, /**< Radii [micron] (radius).*/
+    int const num_order, /**< Number of polynomial orders.*/
+    int const num_bands, /**< Number of bands.*/
+    int const last_ir_band, /**< Index of the last infrared band.*/
+    fp_t const * a, /**< a parameter (band, order).*/
+    fp_t const * b, /**< b parameter (band, order).*/
+    fp_t const * c, /**< c parameter (band, order).*/
+    fp_t const ice_concentration, /**< Ice concentration [g m-3].*/
+    fp_t const equivalent_radius, /**< Equivalent radius [micron].*/
+    fp_t const scale_factor, /**< Scaling factor.*/
+    fp_t const temperature, /**< Temperature [K].*/
+    fp_t const thickness, /**< Layer thickness [m].*/
+    int const band, /**< Band index.*/
+    fp_t * optical_depth, /**< Optical depth.*/
+    fp_t * single_scatter_albedo, /**< Single-scatter albedo.*/
+    fp_t * asymmetry_factor /**< Asymmetry factor.*/
+)
 {
-    fp_t radius = equivalent_radius > 0. ? equivalent_radius : ice_particle_size(temperature);
-    int r;
-    for (r=1; r<num_radius_bins; ++r)
+    if (ice_concentration > 0.)
     {
-        if (radii[2*r] > radius) break;
-    }
-    r -= 1;
-    fp_t const min_radius = 13.;
-    radius = min_radius > scale_factor*radius ? min_radius : scale_factor*radius;
-    fp_t d[16];
-    d[0] = 1.;
-    int i;
-    for (i=1; i<num_order; ++i)
-    {
-        d[i] = d[i - 1]*radius;
-    }
-    fp_t d_inv[16];
-    for (i=0; i<num_order; ++i)
-    {
-        d_inv[i] = 1./d[i];
-    }
-
-    fp_t asum = 0.;
-    for (i=0; i<num_order; ++i)
-    {
-        asum += a[band*num_order + i]*d_inv[i];
-    }
-    *extinction_coefficient = ice_concentration*asum*thickness;
-    if (band < last_ir_band)
-    {
-        fp_t bsum = 0.;
+        fp_t radius = equivalent_radius > 0. ? equivalent_radius : ice_particle_size(temperature);
+        int r;
+        for (r=1; r<num_radius_bins; ++r)
+        {
+            if (radii[2*r] > radius) break;
+        }
+        r -= 1;
+        fp_t const min_radius = 13.;
+        radius = min_radius > scale_factor*radius ? min_radius : scale_factor*radius;
+        fp_t d[16];
+        d[0] = 1.;
+        int i;
+        for (i=1; i<num_order; ++i)
+        {
+            d[i] = d[i - 1]*radius;
+        }
+        fp_t d_inv[16];
         for (i=0; i<num_order; ++i)
         {
-            bsum += b[band*num_order + i]*d_inv[i];
+            d_inv[i] = 1./d[i];
         }
-        *single_scatter_albedo = 1. - (ice_concentration*bsum/(*extinction_coefficient));
+
+        fp_t asum = 0.;
+        for (i=0; i<num_order; ++i)
+        {
+            asum += a[band*num_order + i]*d_inv[i];
+        }
+        *optical_depth = ice_concentration*asum*thickness;
+        if (band < last_ir_band)
+        {
+            fp_t bsum = 0.;
+            for (i=0; i<num_order; ++i)
+            {
+                bsum += b[band*num_order + i]*d_inv[i];
+            }
+            *single_scatter_albedo = 1. - (ice_concentration*bsum/(*optical_depth));
+        }
+        else
+        {
+            fp_t bsum = 0.;
+            for (i=0; i<num_order; ++i)
+            {
+                bsum += b[band*num_order + i]*d[i];
+            }
+            *single_scatter_albedo = 1. - bsum;
+        }
+        fp_t csum = 0.;
+        for (i=0; i<num_order; ++i)
+        {
+            csum += c[(r*num_bands + band)*num_order + i]*d[i];
+        }
+        *asymmetry_factor = csum;
     }
     else
     {
-        fp_t bsum = 0.;
-        for (i=0; i<num_order; ++i)
-        {
-            bsum += b[band*num_order + i]*d[i];
-        }
-        *single_scatter_albedo = 1. - bsum;
+        *optical_depth = 0.;
+        *single_scatter_albedo = 0.;
+        *asymmetry_factor = 0.;
     }
-    fp_t csum = 0.;
-    for (i=0; i<num_order; ++i)
-    {
-        csum += c[(r*num_bands + band)*num_order + i]*d[i];
-    }
-    *asymmetry_factor = csum;
     return;
 }
 
@@ -203,7 +221,7 @@ int calculate_ice_optics(int const num_radius_bins, fp_t const * radii,
                          fp_t const scale_factor,
                          fp_t const * temperature,
                          fp_t const * thickness,
-                         fp_t * extinction_coefficient,
+                         fp_t * optical_depth,
                          fp_t * single_scatter_albedo,
                          fp_t * asymmetry_factor)
 {
@@ -214,7 +232,7 @@ int calculate_ice_optics(int const num_radius_bins, fp_t const * radii,
         int const layer = i - band*num_layers;
         optics(num_radius_bins, radii, num_order, num_bands, last_ir_band, a, b, c,
                ice_concentration[i], equivalent_radius, scale_factor,
-               temperature[layer], thickness[layer], band, &(extinction_coefficient[i]),
+               temperature[layer], thickness[layer], band, &(optical_depth[i]),
                &(single_scatter_albedo[i]), &(asymmetry_factor[i]));
     }
     return GRTCODE_SUCCESS;
@@ -233,7 +251,7 @@ __global__ void calculate_ice_optics_d(int const num_radius_bins, fp_t const * r
                                        fp_t const scale_factor,
                                        fp_t const * temperature,
                                        fp_t const * thickness,
-                                       fp_t * extinction_coefficient,
+                                       fp_t * optical_depth,
                                        fp_t * single_scatter_albedo,
                                        fp_t * asymmetry_factor)
 {
@@ -244,7 +262,7 @@ __global__ void calculate_ice_optics_d(int const num_radius_bins, fp_t const * r
         int const layer = i - band*num_layers;
         optics(num_radius_bins, radii, num_order, num_bands, last_ir_band, a, b, c,
                ice_concentration[i], equivalent_radius, scale_factor,
-               temperature[layer], thickness[layer], band, &(extinction_coefficient[i]),
+               temperature[layer], thickness[layer], band, &(optical_depth[i]),
                &(single_scatter_albedo[i]), &(asymmetry_factor[i]));
     }
     return;

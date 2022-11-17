@@ -5,47 +5,57 @@
 #include "debug.h"
 
 
-int grid_band_mapping(int const grid_size,
-                      fp_t const w0,
-                      fp_t const dw,
-                      int const num_bands,
-                      fp_t * const band_limits,
-                      int * mapping);
+/** @brief Create a map from wavenumber to cloud band.*/
+int grid_band_mapping(
+    int const grid_size, /**< Wavenumber grid size.*/
+    fp_t const w0, /**< Wavenumber grid starting point [cm-1].*/
+    fp_t const dw, /**< Wavenumber grid spacing [cm-1].*/
+    int const num_bands, /**< Number of cloud bands.*/
+    fp_t * const band_limits, /**< Cloud band limits [cm-1] (band, 2).*/
+    int * mapping /**< Band number map (wavenumber).*/
+);
 
 
 #ifdef __NVCC__
-__global__ void grid_band_mapping_d(int const grid_size,
-                                    fp_t const w0,
-                                    fp_t const dw,
-                                    int const num_bands,
-                                    fp_t * const band_limits,
-                                    int * mapping);
+__global__ void grid_band_mapping_d(
+    int const grid_size, /**< Wavenumber grid size.*/
+    fp_t const w0, /**< Wavenumber grid starting point [cm-1].*/
+    fp_t const dw, /**< Wavenumber grid spacing [cm-1].*/
+    int const num_bands, /**< Number of cloud bands.*/
+    fp_t * const band_limits, /**< Cloud band limits [cm-1] (band, 2).*/
+    int * mapping /**< Band number map (wavenumber).*/
+);
 #endif
 
 
-int process_optics(int const grid_size,
-                   int const num_layers,
-                   int const num_bands,
-                   int const * mapping,
-                   fp_t const * tau,
-                   fp_t const * omega,
-                   fp_t const * g,
-                   fp_t * optics_tau,
-                   fp_t * optics_omega,
-                   fp_t * optics_g);
+/** @brief Expand optics from bands to the wavenumber grid.*/
+int process_optics(
+    int const grid_size, /**< Wavenumber grid size.*/
+    int const num_layers, /**< Number of layers.*/
+    int const num_bands, /**< Number of cloud bands.*/
+    int const * mapping, /**< Band number map (wavenumber).*/
+    fp_t const * tau, /**< Optical depth (band, layer).*/
+    fp_t const * omega, /**< Single-scatter albedo (band, layer).*/
+    fp_t const * g, /**< Asymmetry factor (band, layer).*/
+    fp_t * optics_tau, /**< Optical depth (layer, wavenumber).*/
+    fp_t * optics_omega, /**< Single-scatter albedo (layer, wavenumber).*/
+    fp_t * optics_g /**< Asymmetry factor (layer, wavenumber).*/
+);
 
 
 #ifdef __NVCC__
-__global__ void process_optics_d(int const grid_size,
-                                 int const num_layers,
-                                 int const num_bands,
-                                 int const * mapping,
-                                 fp_t const * tau,
-                                 fp_t const * omega,
-                                 fp_t const * g,
-                                 fp_t * optics_tau,
-                                 fp_t * optics_omega,
-                                 fp_t * optics_g);
+__global__ void process_optics_d(
+    int const grid_size, /**< Wavenumber grid size.*/
+    int const num_layers, /**< Number of layers.*/
+    int const num_bands, /**< Number of cloud bands.*/
+    int const * mapping, /**< Band number map (wavenumber).*/
+    fp_t const * tau, /**< Optical depth (band, layer).*/
+    fp_t const * omega, /**< Single-scatter albedo (band, layer).*/
+    fp_t const * g, /**< Asymmetry factor (band, layer).*/
+    fp_t * optics_tau, /**< Optical depth (layer, wavenumber).*/
+    fp_t * optics_omega, /**< Single-scatter albedo (layer, wavenumber).*/
+    fp_t * optics_g /**< Asymmetry factor (layer, wavenumber).*/
+);
 #endif
 
 

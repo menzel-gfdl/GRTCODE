@@ -2,6 +2,7 @@
 #include "debug.h"
 
 
+/** @brief Create a map from wavenumber to cloud band.*/
 int grid_band_mapping(int const grid_size, fp_t const w0,
                       fp_t const dw, int const num_bands,
                       fp_t * const band_limits, int * mapping)
@@ -36,6 +37,7 @@ int grid_band_mapping(int const grid_size, fp_t const w0,
 
 
 #ifdef __NVCC__
+/** @brief Create a map from wavenumber to cloud band.*/
 __global__ void grid_band_mapping_d(int const grid_size, fp_t const w0,
                                     fp_t const dw, int const num_bands,
                                     fp_t * const band_limits, int * mapping)
@@ -81,9 +83,9 @@ int process_optics(int const grid_size, int const num_layers, int const num_band
         int i;
         for (i=0; i<grid_size; ++i)
         {
-            optics_tau[j*grid_size+i] = tau[j*num_bands+mapping[i]];
-            optics_omega[j*grid_size+i] = omega[j*num_bands + mapping[i]];
-            optics_g[j*grid_size+i] = g[j*num_bands + mapping[i]];
+            optics_tau[j*grid_size + i] = tau[mapping[i]*num_layers + j];
+            optics_omega[j*grid_size + i] = omega[mapping[i]*num_layers + j];
+            optics_g[j*grid_size + i] = g[mapping[i]*num_layers + j];
         }
     }
     return GRTCODE_SUCCESS;
@@ -102,9 +104,9 @@ __global__ void process_optics_d(int const grid_size, int const num_layers, int 
         int j;
         for (j=0; j<num_layers; ++j)
         {
-            optics_tau[j*grid_size+i] = tau[j*num_bands+mapping[i]];
-            optics_omega[j*grid_size+i] = omega[j*num_bands + mapping[i]];
-            optics_g[j*grid_size+i] = g[j*num_bands + mapping[i]];
+            optics_tau[j*grid_size + i] = tau[mapping[i]*num_layers + j];
+            optics_omega[j*grid_size + i] = omega[mapping[i]*num_layers + j];
+            optics_g[j*grid_size + i] = g[mapping[i]*num_layers + j];
         }
     }
     return;

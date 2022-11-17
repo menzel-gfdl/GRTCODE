@@ -113,11 +113,12 @@ int calculate_cloud_optics(CloudOptics_t * self, int const num_layers,
     /*Calculate the altitude.*/
     fp_t const equivalent_radius = 15.; /*[microns].*/
     fp_t const scale_length = 2.; /*[km].*/
+    fp_t const mb_to_Pa = 100.;
     fp_t altitude[num_layers];
     int i;
     for (i=0; i<num_layers; ++i)
     {
-        altitude[i] = log(100.*pressure[i])*7.3; /*[km].*/
+        altitude[i] = log(mb_to_Pa*pressure[i])*7.3; /*[km].*/
     }
 
     /*Copy cloud properties to the device.*/

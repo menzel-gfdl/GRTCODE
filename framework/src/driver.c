@@ -605,17 +605,25 @@ int main(int argc, char **argv)
     int num_gpus;
     catch(get_num_gpus(&num_gpus, 0));
     Device_t device[16];
-    int i;
-    for (i=0; i<num_gpus; ++i)
+    if (num_gpus == 0)
     {
-        catch(create_device(&(device[i]), &i));
+        /*Run on the host-only.*/
+        num_gpus = 1;
+        catch(create_device(&(device[0]), NULL));
     }
-
-    /*Set one openmp thread per GPU.*/
+    else
+    {
+        int i;
+        for (i=0; i<num_gpus; ++i)
+        {
+            catch(create_device(&(device[i]), &i));
+        }
+        /*Set one openmp thread per GPU.*/
 #ifdef _OPENMP
-    omp_set_dynamic(0);
-    omp_set_num_threads(num_gpus);
+        omp_set_dynamic(0);
+        omp_set_num_threads(num_gpus);
 #endif
+    }
 
     /*Initialize the output file.*/
     char path[valuelen];

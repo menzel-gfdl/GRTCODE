@@ -31,62 +31,70 @@ typedef struct LiquidCloudOptics
 
 
 /* @brief Constructs a HuStamnes object.*/
-EXTERN int create_liquid_optics(LiquidCloudOptics_t * self,
-                                char const * path,
-                                Device_t const * const device);
+EXTERN int create_liquid_optics(
+    LiquidCloudOptics_t * self, /**< Liquid optics object.*/
+    char const * path, /**< Path to liquid optics input file.*/
+    Device_t const * const device /**< Device to run on.*/
+);
 
 
 /* @brief Destructs a HuStamnes object.*/
-EXTERN int destroy_liquid_optics(LiquidCloudOptics_t * self);
+EXTERN int destroy_liquid_optics(
+    LiquidCloudOptics_t * self /**< Liquid optics object.*/
+);
 
 
 /* @brief Calculates cloud optics.*/
-int calculate_liquid_optics(fp_t const min_radius,
-                            fp_t const max_radius,
-                            int const num_radius_bins,
-                            fp_t const * radii,
-                            int const num_bands,
-                            fp_t const * a1,
-                            fp_t const * b1,
-                            fp_t const * c1,
-                            fp_t const * a2,
-                            fp_t const * b2,
-                            fp_t const * c2,
-                            fp_t const * a3,
-                            fp_t const * b3,
-                            fp_t const * c3,
-                            int const num_layers,
-                            fp_t const * water_concentration,
-                            fp_t const equivalent_radius,
-                            fp_t const * thickness,
-                            fp_t * extinction_coefficient,
-                            fp_t * single_scatter_albedo,
-                            fp_t * asymmetry_factor);
+int calculate_liquid_optics(
+    fp_t const min_radius, /**< Minimum radius [micron].*/
+    fp_t const max_radius, /**< Maximum radius [micron].*/
+    int const num_radius_bins, /**< Number of radius bins.*/
+    fp_t const * radii, /**< Radii [micron] (radius).*/
+    int const num_bands, /**< Number of bands.*/
+    fp_t const * a1, /**< a1 parameter (radius, band).*/
+    fp_t const * b1, /**< b1 parameter (radisu, band).*/
+    fp_t const * c1, /**< c1 parameter (radius, band).*/
+    fp_t const * a2, /**< a2 parameter (radius, band).*/
+    fp_t const * b2, /**< b2 parameter (radius, band).*/
+    fp_t const * c2, /**< c2 parameter (radius, band).*/
+    fp_t const * a3, /**< a3 parameter (radius, band).*/
+    fp_t const * b3, /**< b3 parameter (radius, band).*/
+    fp_t const * c3, /**< c3 parameter (radius, band).*/
+    int const num_layers, /**< Number of layers.*/
+    fp_t const * water_concentration, /**< Water concentration [g m-3] (band, layer).*/
+    fp_t const equivalent_radius, /**< Equivalent radius [micron].*/
+    fp_t const * thickness, /**< Layer thickness [m] (layer).*/
+    fp_t * optical_depth, /**< Optical depth (band, layer).*/
+    fp_t * single_scatter_albedo, /**< Single-scatter albedo (band, layer).*/
+    fp_t * asymmetry_factor /**< Asymmetry factor (band, layer).*/
+);
 
 
 #ifdef __NVCC__
 /* @brief Calculates liquid cloud optics for all bands.*/
-__global__ void calculate_liquid_optics_d(fp_t const min_radius,
-                                          fp_t const max_radius,
-                                          int const num_radius_bins,
-                                          fp_t const * radii,
-                                          int const num_bands,
-                                          fp_t const * a1,
-                                          fp_t const * b1,
-                                          fp_t const * c1,
-                                          fp_t const * a2,
-                                          fp_t const * b2,
-                                          fp_t const * c2,
-                                          fp_t const * a3,
-                                          fp_t const * b3,
-                                          fp_t const * c3,
-                                          int const num_layers,
-                                          fp_t const * water_concentration,
-                                          fp_t const equivalent_radius,
-                                          fp_t const * thickness,
-                                          fp_t * extinction_coefficient,
-                                          fp_t * single_scatter_albedo,
-                                          fp_t * asymmetry_factor);
+__global__ void calculate_liquid_optics_d(
+    fp_t const min_radius, /**< Minimum radius [micron].*/
+    fp_t const max_radius, /**< Maximum radius [micron].*/
+    int const num_radius_bins, /**< Number of radius bins.*/
+    fp_t const * radii, /**< Radii [micron] (radius).*/
+    int const num_bands, /**< Number of bands.*/
+    fp_t const * a1, /**< a1 parameter (radius, band).*/
+    fp_t const * b1, /**< b1 parameter (radisu, band).*/
+    fp_t const * c1, /**< c1 parameter (radius, band).*/
+    fp_t const * a2, /**< a2 parameter (radius, band).*/
+    fp_t const * b2, /**< b2 parameter (radius, band).*/
+    fp_t const * c2, /**< c2 parameter (radius, band).*/
+    fp_t const * a3, /**< a3 parameter (radius, band).*/
+    fp_t const * b3, /**< b3 parameter (radius, band).*/
+    fp_t const * c3, /**< c3 parameter (radius, band).*/
+    int const num_layers, /**< Number of layers.*/
+    fp_t const * water_concentration, /**< Water concentration [g m-3] (band, layer).*/
+    fp_t const equivalent_radius, /**< Equivalent radius [micron].*/
+    fp_t const * thickness, /**< Layer thickness [m] (layer).*/
+    fp_t * optical_depth, /**< Optical depth (band, layer).*/
+    fp_t * single_scatter_albedo, /**< Single-scatter albedo (band, layer).*/
+    fp_t * asymmetry_factor /**< Asymmetry factor (band, layer).*/
+);
 #endif
 
 

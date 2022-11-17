@@ -25,54 +25,62 @@ typedef struct IceCloudOptics
 
 
 /* @brief Constructs a IceCloudOptics object.*/
-EXTERN int create_ice_optics(IceCloudOptics_t * self,
-                             char const * path,
-                             Device_t const * const device);
+EXTERN int create_ice_optics(
+    IceCloudOptics_t * self, /**< Ice optics object.*/
+    char const * path, /**< Path to the ice optics input file.*/
+    Device_t const * const device /**< Device to run on.*/
+);
 
 
 /* @brief Constructs a IceCloudOptics object.*/
-EXTERN int destroy_ice_optics(IceCloudOptics_t * self);
+EXTERN int destroy_ice_optics(
+    IceCloudOptics_t * self /**< Ice optics object.*/
+);
 
 
 /* @brief Calculates cloud optics.*/
-int calculate_ice_optics(int const num_radius_bins,
-                         fp_t const * radii,
-                         int const num_order,
-                         int const num_bands,
-                         int const last_ir_band,
-                         fp_t const * a,
-                         fp_t const * b,
-                         fp_t const * c,
-                         int const num_layers,
-                         fp_t const * ice_concentration,
-                         fp_t const equivalent_radius,
-                         fp_t const scale_factor,
-                         fp_t const * temperature,
-                         fp_t const * thickness,
-                         fp_t * extinction_coefficient,
-                         fp_t * single_scatter_albedo,
-                         fp_t * asymmetry_factor);
+int calculate_ice_optics(
+    int const num_radius_bins, /**< Number of radius bins.*/
+    fp_t const * radii, /**< Radii [micron] (radius).*/
+    int const num_order, /**< Number of polynomial orders.*/
+    int const num_bands, /**< Number of bands.*/
+    int const last_ir_band, /**< Index of the last infrared band.*/
+    fp_t const * a, /**< a parameter (band, order).*/
+    fp_t const * b, /**< b parameter (band, order).*/
+    fp_t const * c, /**< c parameter (band, order).*/
+    int const num_layers, /**< Number of layers.*/
+    fp_t const * ice_concentration, /**< Ice concentration [g m-3] (band, layer).*/
+    fp_t const equivalent_radius, /**< Equivalent radius [micron].*/
+    fp_t const scale_factor, /**< Scaling factor.*/
+    fp_t const * temperature, /**< Temperature [K] (layer).*/
+    fp_t const * thickness, /**< Layer thickness [m] (layer).*/
+    fp_t * optical_depth, /**< Optical depth (band, layer).*/
+    fp_t * single_scatter_albedo, /**< Single-scatter albedo (band, layer).*/
+    fp_t * asymmetry_factor /**< Asymmetry factor (band, layer).*/
+);
 
 
 #ifdef __NVCC__
 /* @brief Calculates cloud optics.*/
-__global__ void calculate_ice_optics_d(int const num_radius_bins,
-                                       fp_t const * radii,
-                                       int const num_order,
-                                       int const num_bands,
-                                       int const last_ir_band,
-                                       fp_t const * a,
-                                       fp_t const * b,
-                                       fp_t const * c,
-                                       int const num_layers,
-                                       fp_t const * ice_concentration,
-                                       fp_t const equivalent_radius,
-                                       fp_t const scale_factor,
-                                       fp_t const * temperature,
-                                       fp_t const * thickness,
-                                       fp_t * extinction_coefficient,
-                                       fp_t * single_scatter_albedo,
-                                       fp_t * asymmetry_factor);
+__global__ void calculate_ice_optics_d(
+    int const num_radius_bins, /**< Number of radius bins.*/
+    fp_t const * radii, /**< Radii [micron] (radius).*/
+    int const num_order, /**< Number of polynomial orders.*/
+    int const num_bands, /**< Number of bands.*/
+    int const last_ir_band, /**< Index of the last infrared band.*/
+    fp_t const * a, /**< a parameter (band, order).*/
+    fp_t const * b, /**< b parameter (band, order).*/
+    fp_t const * c, /**< c parameter (band, order).*/
+    int const num_layers, /**< Number of layers.*/
+    fp_t const * ice_concentration, /**< Ice concentration [g m-3] (band, layer).*/
+    fp_t const equivalent_radius, /**< Equivalent radius [micron].*/
+    fp_t const scale_factor, /**< Scaling factor.*/
+    fp_t const * temperature, /**< Temperature [K] (layer).*/
+    fp_t const * thickness, /**< Layer thickness [m] (layer).*/
+    fp_t * optical_depth, /**< Optical depth (band, layer).*/
+    fp_t * single_scatter_albedo, /**< Single-scatter albedo (band, layer).*/
+    fp_t * asymmetry_factor /**< Asymmetry factor (band, layer).*/
+);
 #endif
 
 

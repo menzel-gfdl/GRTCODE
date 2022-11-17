@@ -11,29 +11,52 @@
 
 
 /* @brief Calculates cloud optics for a single band.*/
-HOST DEVICE static void optics(fp_t const min_radius, fp_t const max_radius,
-                               int const num_radius_bins, fp_t const * radii,
-                               int const num_bands, fp_t const * a1, fp_t const * b1,
-                               fp_t const * c1, fp_t const * a2, fp_t const * b2,
-                               fp_t const * c2, fp_t const * a3, fp_t const * b3,
-                               fp_t const * c3, fp_t const water_concentration,
-                               fp_t const equivalent_radius, fp_t const thickness,
-                               int const band, fp_t * extinction_coefficient,
-                               fp_t * single_scatter_albedo, fp_t * asymmetry_factor)
+HOST DEVICE static void optics(
+    fp_t const min_radius, /**< Minimum radius [micron].*/
+    fp_t const max_radius, /**< Maximum radius [micron].*/
+    int const num_radius_bins, /**< Number of radius bins.*/
+    fp_t const * radii, /**< Radii [micron] (radius).*/
+    int const num_bands, /**< Number of bands.*/
+    fp_t const * a1, /**< a1 parameter (radius, band).*/
+    fp_t const * b1, /**< b1 parameter (radisu, band).*/
+    fp_t const * c1, /**< c1 parameter (radius, band).*/
+    fp_t const * a2, /**< a2 parameter (radius, band).*/
+    fp_t const * b2, /**< b2 parameter (radius, band).*/
+    fp_t const * c2, /**< c2 parameter (radius, band).*/
+    fp_t const * a3, /**< a3 parameter (radius, band).*/
+    fp_t const * b3, /**< b3 parameter (radius, band).*/
+    fp_t const * c3, /**< c3 parameter (radius, band).*/
+    fp_t const water_concentration, /**< Water concentration [g m-3].*/
+    fp_t const equivalent_radius, /**< Equivalent radius [micron].*/
+    fp_t const thickness, /**< Layer thickness [m].*/
+    int const band, /**< Band index.*/
+    fp_t * optical_depth, /**< Optical depth.*/
+    fp_t * single_scatter_albedo, /**< Single-scatter albedo.*/
+    fp_t * asymmetry_factor /**< Asymmetry factor.*/
+)
 {
-    fp_t r = min_radius > equivalent_radius ? min_radius : equivalent_radius;
-    r = max_radius < r ? max_radius : r;
-    int i;
-    for (i=1; i<num_radius_bins; ++i)
+    if (water_concentration > 0.)
     {
-        if (radii[i] > r) break;
+        fp_t r = min_radius > equivalent_radius ? min_radius : equivalent_radius;
+        r = max_radius < r ? max_radius : r;
+        int i;
+        for (i=1; i<num_radius_bins; ++i)
+        {
+            if (radii[i] > r) break;
+        }
+        i = (i - 1)*num_bands + band;
+        fp_t const m_to_km = 1.e-3; /*[km m-1].*/
+        *optical_depth = water_concentration*m_to_km*(a1[i]*
+                         pow(r, b1[i]) + c1[i])*thickness; /*Equation 13.*/
+        *single_scatter_albedo = 1. - (a2[i]*pow(r, b2[i]) + c2[i]); /*Equation 14.*/
+        *asymmetry_factor = a3[i]*pow(r, b3[i]) + c3[i]; /*Equation 15.*/
     }
-    i = (i - 1)*num_bands + band;
-    fp_t const m_to_km = 1.e-3;
-    *extinction_coefficient = water_concentration*m_to_km*(a1[i]*
-                              pow(r, b1[i]) + c1[i])*thickness; /*Equation 13.*/
-    *single_scatter_albedo = 1. - (a2[i]*pow(r, b2[i]) + c2[i]); /*Equation 14.*/
-    *asymmetry_factor = a3[i]*pow(r, b3[i]) + c3[i]; /*Equation 15.*/
+    else
+    {
+        *optical_depth = 0.;
+        *single_scatter_albedo = 0.;
+        *asymmetry_factor = 0.;
+    }
     return;
 }
 
@@ -133,7 +156,7 @@ int calculate_liquid_optics(fp_t const min_radius, fp_t const max_radius,
                             fp_t const * water_concentration,
                             fp_t const equivalent_radius,
                             fp_t const * thickness,
-                            fp_t * extinction_coefficient,
+                            fp_t * optical_depth,
                             fp_t * single_scatter_albedo,
                             fp_t * asymmetry_factor)
 {
@@ -144,7 +167,7 @@ int calculate_liquid_optics(fp_t const min_radius, fp_t const max_radius,
         int const layer = i - band*num_layers;
         optics(min_radius, max_radius, num_radius_bins, radii, num_bands, a1, b1, c1,
                a2, b2, c2, a3, b3, c3, water_concentration[i],
-               equivalent_radius, thickness[layer], band, &(extinction_coefficient[i]),
+               equivalent_radius, thickness[layer], band, &(optical_depth[i]),
                &(single_scatter_albedo[i]), &(asymmetry_factor[i]));
     }
     return GRTCODE_SUCCESS;
@@ -162,7 +185,7 @@ __global__ void calculate_liquid_optics_d(fp_t const min_radius, fp_t const max_
                                           fp_t const * water_concentration,
                                           fp_t const equivalent_radius,
                                           fp_t const * thickness,
-                                          fp_t * extinction_coefficient,
+                                          fp_t * optical_depth,
                                           fp_t * single_scatter_albedo,
                                           fp_t * asymmetry_factor)
 {
@@ -173,7 +196,7 @@ __global__ void calculate_liquid_optics_d(fp_t const min_radius, fp_t const max_
         int const layer = i - band*num_layers;
         optics(min_radius, max_radius, num_radius_bins, radii, num_bands, a1, b1, c1,
                a2, b2, c2, a3, b3, c3, water_concentration[i],
-               equivalent_radius, thickness[layer], band, &(extinction_coefficient[i]),
+               equivalent_radius, thickness[layer], band, &(optical_depth[i]),
                &(single_scatter_albedo[i]), &(asymmetry_factor[i]));
     }
     return;
