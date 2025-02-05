@@ -123,7 +123,7 @@ static int simple_test(void)
     catch(create_longwave(&lw, atmos.num_levels, &grid, &atmos.device));
     catch(calculate_lw_fluxes(&lw, &optics, atmos.surface_temperature, atmos.layer_temperature,
                               atmos.level_temperature, atmos.emissivity, atmos.flux_up,
-                              atmos.flux_down, NULL, NULL));
+                              atmos.flux_down));
     catch(destroy_longwave(&lw));
     catch(breakdown(&optics, &atmos));
     return GRTCODE_SUCCESS;
@@ -151,7 +151,7 @@ static int optically_thick(void)
     catch(create_longwave(&lw, atmos.num_levels, &grid, &atmos.device));
     catch(calculate_lw_fluxes(&lw, &optics, atmos.surface_temperature, atmos.layer_temperature,
                               atmos.level_temperature, atmos.emissivity, atmos.flux_up,
-                              atmos.flux_down, NULL, NULL));
+                              atmos.flux_down));
     catch(destroy_longwave(&lw));
     catch(breakdown(&optics, &atmos));
     return GRTCODE_SUCCESS;
@@ -179,7 +179,7 @@ static int optically_thin(void)
     catch(create_longwave(&lw, atmos.num_levels, &grid, &atmos.device));
     catch(calculate_lw_fluxes(&lw, &optics, atmos.surface_temperature, atmos.layer_temperature,
                               atmos.level_temperature, atmos.emissivity, atmos.flux_up,
-                              atmos.flux_down, NULL, NULL));
+                              atmos.flux_down));
     catch(destroy_longwave(&lw));
     catch(breakdown(&optics, &atmos));
     return GRTCODE_SUCCESS;
@@ -216,7 +216,7 @@ static int strong_absorption(void)
     catch(create_longwave(&lw, atmos.num_levels, &grid, &atmos.device));
     catch(calculate_lw_fluxes(&lw, &optics, atmos.surface_temperature, atmos.layer_temperature,
                               atmos.level_temperature, atmos.emissivity, atmos.flux_up,
-                              atmos.flux_down, NULL, NULL));
+                              atmos.flux_down));
     catch(destroy_longwave(&lw));
     catch(breakdown(&optics, &atmos));
     return GRTCODE_SUCCESS;

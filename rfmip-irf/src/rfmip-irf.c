@@ -469,8 +469,7 @@ int main(int argc, char **argv)
         catch(create_spectral_grid(&lw_solver_grid, lw_solver_w0, lw_solver_wn, grid.dw));
         catch(calculate_lw_fluxes(&longwave, &optics_ghgs, surface_temperature,
                                   layer_temperature, level_temperature,
-                                  surface_emissivity, flux_up, flux_down,
-                                  &(lw_solver_grid.w0), &(lw_solver_grid.wn)));
+                                  surface_emissivity, flux_up, flux_down));
 
         /*Integrate fluxes and write them to the output file.*/
         fp_t flux_up_total[atm.num_levels];

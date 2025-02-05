@@ -8,7 +8,7 @@ check_PROGRAMS = test_shortwave
 test_shortwave_SOURCES = test_shortwave.c
 test_shortwave_LDADD = ${top_builddir}/shortwave/src/libshortwave.a \
                        ${top_builddir}/utilities/src/libgrtcode_utilities.a \
-                       -lm
+                       -lnetcdf -lm
 if ENABLE_CUDA
 test_shortwave_LDADD += -lcudart
 nodist_EXTRA_test_shortwave_SOURCES = dummy.cpp

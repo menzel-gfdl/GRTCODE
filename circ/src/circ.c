@@ -215,7 +215,7 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
         char *name;
     };
     int const num_molecules = 7;
-    struct MoleculeMeta molecules[num_molecules] = {{CH4, "-CH4", "CH4_abundance"},
+    struct MoleculeMeta molecules[7] = {{CH4, "-CH4", "CH4_abundance"},
         {CO, "-CO", "CO_abundance"}, {CO2, "-CO2", "CO2_abundance"},
         {H2O, "-H2O", "H2O_abundance"}, {N2O, "-N2O", "N2O_abundance"},
         {O2, "-O2", "O2_abundance"}, {O3, "-O3", "O3_abundance"}};
@@ -260,7 +260,7 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
 
     /*CFC abundances.*/
     int const num_cfcs = 3;
-    struct MoleculeMeta cfcs[num_cfcs] = {{CFC11, "-CFC-11", "CFC11_abundance"},
+    struct MoleculeMeta cfcs[3] = {{CFC11, "-CFC-11", "CFC11_abundance"},
         {CFC12, "-CFC-12", "CFC12_abundance"}, {CCl4, "-CCl4", "CCl4_abundance"}};
     alloc(atm.cfc, num_cfcs, Cfc_t *);
     atm.num_cfcs = 0;
@@ -298,7 +298,7 @@ Atmosphere_t create_atmosphere(Parser_t *parser)
         int species2;
         char *flag;
     };
-    struct CiaMeta cias[num_cias] = {{CIA_N2, CIA_N2, "-N2-N2"},
+    struct CiaMeta cias[3] = {{CIA_N2, CIA_N2, "-N2-N2"},
         {CIA_O2, CIA_N2, "-O2-N2"}, {CIA_O2, CIA_O2, "-O2-O2"}};
     alloc(atm.cia, num_cias, Cia_t *);
     atm.num_cias = 0;
